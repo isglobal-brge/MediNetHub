@@ -29,7 +29,7 @@ We are currently working on improving the security measures.
 ## Links
 
 - **For Hospitals**: If you are a hospital and want to allow researchers to access your data, please check **MediNetNode**
-- **Documentation**: Coming soon
+- **Documentation**: [Medinet Documentation](https://isglobal-brge.github.io/MediNet/index.html)
 - **Application Note Paper**: Coming soon
 
 ## Contact
