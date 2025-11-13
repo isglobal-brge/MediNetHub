@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MediNet - Federated Learning Platform{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-network-wired me-2"></i>MediNet
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    {% if not user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">Home</a>
+                    </li>
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}" href="{% url 'user_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Panel
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'datasets' %}">
+                            <i class="fas fa-database me-1"></i> Datasets
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'model_studio' %}active{% endif %}" href="{% url 'model_studio' %}">
+                            <i class="fas fa-cube me-1"></i> Model Studio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'training' %}">
+                            <i class="fas fa-cogs me-1"></i> Training
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bell"></i>
+                            {% if unread_notifications_count > 0 %}
+                                <span class="notification-indicator" id="notifications-badge"></span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" id="notifications-list">
+                            <li>
+                                <h6 class="dropdown-header">Notificacions</h6>
+                            </li>
+                            {% with recent_notifications=user.notifications.all|slice:":5" %}
+                                {% if recent_notifications %}
+                                    {% for notification in recent_notifications %}
+                                        <li>
+                                            <a class="dropdown-item {% if not notification.is_read %}fw-bold{% endif %}" href="{{ notification.link|default:'#' }}">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span>{{ notification.title }}</span>
+                                                    {% if not notification.is_read %}
+                                                        <span class="badge bg-primary">Nova</span>
+                                                    {% endif %}
+                                                </div>
+                                                <small class="text-muted">{{ notification.created_at|date:"j M, H:i" }}</small>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-center" href="{% url 'notifications' %}">
+                                           View all notifications
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <span class="dropdown-item text-center text-muted">
+                                            No notifications
+                                        </span>
+                                    </li>
+                                {% endif %}
+                            {% endwith %}
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}" class="m-0 p-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">Log Out</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">
+                            <i class="fas fa-sign-in-alt me-1"></i> Log In
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">
+                            <i class="fas fa-user-plus me-1"></i> Register
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                {% for message in messages %}
+                showToast('{{ message|escapejs }}', '{{ message.tags }}');
+                {% endfor %}
+            });
+        </script>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light text-center text-lg-start mt-5">
+        <div class="container p-4">
+            <div class="row">
+                <div class="col-lg-6 col-md-12 mb-4 mb-md-0">
+                    <h5>MediNet</h5>
+                    <p>
+                        A advanced platform for federated training in medical sciences.
+                    </p>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
+                    <h5>Links</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li><a href="{% url 'home' %}" class="text-dark">Home</a></li>
+                        <li><a href="{% url 'datasets' %}" class="text-dark">Datasets</a></li>
+                        <li><a href="{% url 'model_studio' %}" class="text-dark">Model Studio</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
+                    <h5>Resources</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-dark">Documentation</a></li>
+                        <li><a href="#" class="text-dark">API</a></li>
+                        <li><a href="#" class="text-dark">Support</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
+            © 2025 MediNet - All rights reserved
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="/static/js/main.js"></script>
+    
+    <!-- Global Toast Notification System -->
+    <script>
+        // Global function for centered floating notifications
+        window.showToast = function(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `toast-notification toast-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%) translateY(-100%);
+                z-index: 9999;
+                min-width: 300px;
+                max-width: 500px;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                display: flex;
+                align-items: center;
+                font-weight: 500;
+                transition: transform 0.3s ease-out;
+                cursor: pointer;
+                margin-bottom: 10px;
+            `;
+            
+            // Colors and icons based on type - Map error to danger
+            const styles = {
+                'success': { bg: '#28a745', color: 'white', icon: 'fas fa-check-circle' },
+                'error': { bg: '#dc3545', color: 'white', icon: 'fas fa-exclamation-circle' },
+                'danger': { bg: '#dc3545', color: 'white', icon: 'fas fa-exclamation-circle' },
+                'warning': { bg: '#ffc107', color: '#000', icon: 'fas fa-exclamation-triangle' },
+                'info': { bg: '#17a2b8', color: 'white', icon: 'fas fa-info-circle' }
+            };
+            
+            const style = styles[type] || styles['info'];
+            notification.style.backgroundColor = style.bg;
+            notification.style.color = style.color;
+            
+            notification.innerHTML = `
+                <i class="${style.icon} me-2"></i>
+                <span>${message}</span>
+                <i class="fas fa-times ms-auto" style="cursor: pointer; opacity: 0.7; margin-left: 12px;"></i>
+            `;
+            
+            // Stack notifications vertically
+            const existingNotifications = document.querySelectorAll('.toast-notification');
+            let topOffset = 20;
+            existingNotifications.forEach(notif => {
+                topOffset += notif.offsetHeight + 10;
+            });
+            notification.style.top = topOffset + 'px';
+            
+            document.body.appendChild(notification);
+            
+            // Animate in (slide down from top)
+            setTimeout(() => {
+                notification.style.transform = 'translateX(-50%) translateY(0)';
+            }, 10);
+            
+            // Auto hide after 4 seconds
+            const autoHide = setTimeout(() => {
+                hideNotification(notification);
+            }, 4000);
+            
+            // Click to dismiss
+            notification.addEventListener('click', () => {
+                clearTimeout(autoHide);
+                hideNotification(notification);
+            });
+            
+            function hideNotification(element) {
+                element.style.transform = 'translateX(-50%) translateY(-100%)';
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                        // Reposition remaining notifications
+                        repositionNotifications();
+                    }
+                }, 300);
+            }
+            
+            function repositionNotifications() {
+                const notifications = document.querySelectorAll('.toast-notification');
+                let topOffset = 20;
+                notifications.forEach(notif => {
+                    notif.style.top = topOffset + 'px';
+                    topOffset += notif.offsetHeight + 10;
+                });
+            }
+        };
+    </script>
+    
+    {% block extra_js %}
+    {% if user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Funció per actualitzar el comptador i les notificacions
+            function updateNotifications() {
+                fetch('/api/get-notifications-count/')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Actualitzar el badge amb el compte
+                        const badge = document.getElementById('notifications-badge');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.textContent = data.count;
+                                badge.classList.remove('d-none');
+                            } else {
+                                badge.classList.add('d-none');
+                            }
+                        }
+                        
+                        const dropdown = document.getElementById('notificationsDropdown');
+                        if (dropdown && dropdown.classList.contains('show')) {
+                            updateNotificationsList();
+                        }
+                    })
+                    .catch(error => console.error('Error updating notifications:', error));
+            }
+            
+            function updateNotificationsList() {
+                fetch('/api/get-recent-notifications/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.querySelector('#notificationsDropdown + .dropdown-menu');
+                        if (container) {
+                            // Netejar contingut actual (excepte l'header)
+                            container.innerHTML = '<li><h6 class="dropdown-header">Notificacions</h6></li>';
+                            
+                            // Afegir les noves notificacions
+                            if (data.notifications && data.notifications.length > 0) {
+                                data.notifications.forEach(notification => {
+                                    const item = document.createElement('li');
+                                    item.innerHTML = `
+                                        <a class="dropdown-item ${!notification.is_read ? 'fw-bold' : ''}" href="${notification.link || '#'}">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span>${notification.title}</span>
+                                                ${!notification.is_read ? '<span class="badge bg-primary">Nova</span>' : ''}
+                                            </div>
+                                            <small class="text-muted">${notification.created_at}</small>
+                                        </a>
+                                    `;
+                                    container.appendChild(item);
+                                });
+                                
+                                // Afegir separator i enllaç "Veure tots"
+                                const separator = document.createElement('li');
+                                separator.innerHTML = '<hr class="dropdown-divider">';
+                                container.appendChild(separator);
+                                
+                                const viewAll = document.createElement('li');
+                                viewAll.innerHTML = `
+                                    <a class="dropdown-item text-center" href="/notifications/">
+                                        Veure totes les notificacions
+                                    </a>
+                                `;
+                                container.appendChild(viewAll);
+                            } else {
+                                const emptyItem = document.createElement('li');
+                                emptyItem.innerHTML = `
+                                    <span class="dropdown-item text-center text-muted">
+                                        You have no notifications
+                                    </span>
+                                `;
+                                container.appendChild(emptyItem);
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error updating notifications list:', error));
+            }
+            
+            // Actualitzar cada 10 segons
+            setInterval(updateNotifications, 10000);
+            
+            // Actualitzar immediatament
+            updateNotifications();
+            
+            // Actualitzar el desplegable quan s'obre
+            const notificationsDropdown = document.getElementById('notificationsDropdown');
+            if (notificationsDropdown) {
+                notificationsDropdown.addEventListener('show.bs.dropdown', function() {
+                    updateNotificationsList();
+                });
+            }
+        });
+    </script>
+    {% endif %}
+    {% endblock %}
+<style>
+    /* Estil específic per al desplegable de notificacions */
+    .navbar .dropdown {
+        position: relative !important;
+    }
+    
+    .navbar .dropdown-menu {
+        position: absolute !important;
+        right: 0;
+        left: auto;
+        width: 300px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    /* Només aplica els estils globals de dropdown a les taules, no a la navegació */
+    .table .dropdown {
+        position: static;
+    }
+    
+    .table .dropdown-menu {
+        z-index: 1030;
+    }
+    
+    /* Indicador de notificacions (punt vermell) */
+    .notification-dot {
+        display: block;
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: #ff3e3e;
+        border-radius: 50%;
+        top: 6px;
+        right: 6px;
+        border: 1px solid #ffffff;
+        box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Fer que la icona de la campana tingui posició relativa */
+    #notificationsDropdown {
+        position: relative;
+        padding-right: 15px;
+    }
+</style>
+</body>
+</html>

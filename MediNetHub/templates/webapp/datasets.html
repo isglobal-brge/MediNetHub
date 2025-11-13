@@ -1,0 +1,978 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load webapp_filters %}
+
+{% block title %}MediNet - Datasets{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Workflow Stepper -->
+    {% include 'webapp/includes/stepper.html' with active_step=1 %}
+    
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0"><i class="fas fa-database me-2"></i>Datasets</h2>
+            <p class="text-muted">Check available datasets in hospital clients</p>
+        </div>
+        <div class="col-auto">
+            <div class="d-flex align-items-center gap-3">
+                <!-- Project Selector -->
+                <div class="d-flex align-items-center">
+                    <small class="text-muted me-2">Project:</small>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-hospital me-1"></i>
+                            {% if selected_project %}
+                                <i class="fas fa-circle me-1" style="color: {{ selected_project.color }};"></i>{{ selected_project.name }}
+                            {% else %}
+                                <i class="fas fa-folder-open me-1 text-muted"></i>No Project
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% if not selected_project %}
+                            <li>
+                                <span class="dropdown-item-text text-muted">
+                                    <i class="fas fa-folder-open me-2"></i>No Project (current)
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            {% for project in projects %}
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="switchProject({{ project.id }})">
+                                    <i class="fas fa-circle me-2" style="color: {{ project.color }};"></i>
+                                    {{ project.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            {% if projects %}
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            {% if selected_project %}
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="switchProject(null)">
+                                    <i class="fas fa-folder-open me-2 text-muted"></i>No Project
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                                    <i class="fas fa-plus me-2"></i>New Project
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConnectionModal">
+                    <i class="fas fa-plus me-2"></i>Add Connection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conexiones -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-server me-2"></i>Connections to Hospitals</h5>
+        </div>
+        <div class="card-body">
+            {% if connections %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>IP</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for connection in connections %}
+                        <tr data-connection-id="{{ connection.id }}" data-connection-ip="{{ connection.ip }}" data-connection-port="{{ connection.port }}">
+                            <td>{{ connection.name }}</td>
+                            <td>{{ connection.ip }}:{{ connection.port }}</td>
+                            <td>
+                                {% if connection.active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="fetch_datasets">
+                                        <input type="hidden" name="connection_id" value="{{ connection.id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" {% if not connection.active %}disabled{% endif %}>
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editConnectionModal" 
+                                            data-connection-id="{{ connection.id }}"
+                                            data-connection-name="{{ connection.name }}"
+                                            data-connection-ip="{{ connection.ip }}"
+                                            data-connection-port="{{ connection.port }}"
+                                            data-connection-username="{{ connection.username }}"
+                                            data-connection-active="{{ connection.active }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConnectionModal" data-connection-id="{{ connection.id }}" data-connection-name="{{ connection.name }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                <p>No connections configured.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConnectionModal">
+                    <i class="fas fa-plus me-2"></i>Add Connection
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Datasets disponibles -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>Available Datasets</h5>
+        </div>
+        <div class="card-body">
+            {% if datasets %}
+            <div class="row">
+                {% for dataset in datasets %}
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white d-flex align-items-center py-3">
+                            <div class="flex-grow-1">
+                                <h4 class="mb-0 fw-semibold">
+                                    <i class="fas fa-database me-2"></i>{{ dataset.dataset_name }}
+                                </h4>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-white text-primary fw-medium">{{ dataset.connection.name }}</span>
+                                <a href="{% url 'dataset_details' dataset.id %}" 
+                                   class="btn btn-outline-light btn-sm" 
+                                   title="View Details"
+                                   style="border-radius: 8px;">
+                                    <i class="fas fa-search"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <!-- Target Information -->
+                            <div class="p-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-bullseye text-primary me-2"></i>
+                                    <h6 class="mb-0">Target Information</h6>
+                                </div>
+                                <div class="bg-light rounded-3 p-3">
+                                    <div class="row g-3">
+                                        <!-- Variable Name -->
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center">
+                                                <div class="flex-grow-1">
+                                                    <div class="small text-muted">Target Variable</div>
+                                                    <div class="fw-medium">{{ dataset.target_info.name }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Classification Type -->
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center h-100">
+                                                {% if dataset.target_info.type == 'binary_classification' %}
+                                                <div class="d-flex align-items-center bg-white rounded-3 px-3 py-2 w-100">
+                                                    <div class="me-3">
+                                                        <div class="d-flex flex-column align-items-center" style="gap: 3px;">
+                                                            <div class="bg-success rounded" style="width: 12px; height: 3px;"></div>
+                                                            <div class="bg-danger rounded" style="width: 12px; height: 3px;"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">Binary Classification</div>
+                                                        <div class="small text-muted">{{ dataset.target_info.num_classes }} classes</div>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <div class="d-flex align-items-center bg-white rounded-3 px-3 py-2 w-100">
+                                                    <div class="me-3">
+                                                        <i class="fas fa-layer-group text-info"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">{{ dataset.target_info.type|title }}</div>
+                                                        <div class="small text-muted">{{ dataset.target_info.num_classes }} classes</div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Features Information -->
+                            <div class="p-3 border-bottom">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-table text-info me-2"></i>
+                                    <h6 class="mb-0">Features Information</h6>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-sm-4">
+                                        <div class="text-center p-2 rounded bg-light">
+                                            <div class="small text-muted">Input Features</div>
+                                            <div class="h4 mb-0">{{ dataset.features_info.input_features }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="text-center p-2 rounded bg-light">
+                                            <div class="small text-muted">Numeric</div>
+                                            <div class="h4 mb-0">{{ dataset.features_info.feature_types.numeric }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="text-center p-2 rounded bg-light">
+                                            <div class="small text-muted">Categorical</div>
+                                            <div class="h4 mb-0">{{ dataset.features_info.feature_types.categorical }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dataset Statistics -->
+                            <div class="p-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-chart-bar text-success me-2"></i>
+                                    <h6 class="mb-0">Dataset Statistics</h6>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-sm-4">
+                                        <div class="text-center p-2 rounded bg-light">
+                                            <div class="small text-muted">Rows</div>
+                                            <div class="h4 mb-0">{{ dataset.num_rows|intcomma }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="text-center p-2 rounded bg-light">
+                                            <div class="small text-muted">Columns</div>
+                                            <div class="h4 mb-0">{{ dataset.num_columns }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <div class="text-center p-2 rounded bg-light">
+                                            <div class="small text-muted">Size</div>
+                                            <div class="h4 mb-0">{{ dataset.size|filesizeformat }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-0 p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="small text-muted">
+                                    <i class="fas fa-network-wired me-1"></i>
+                                    {{ dataset.connection.ip }}:{{ dataset.connection.port }}
+                                </div>
+                                <button type="button" 
+                                        class="btn btn-sm {% if dataset.is_selected %}btn-success{% else %}btn-primary{% endif %} add-to-training-btn" 
+                                        data-dataset-id="{{ dataset.dataset_id }}"
+                                        data-dataset-name="{{ dataset.dataset_name }}"
+                                        data-features-info="{{ dataset.features_info|json_string }}"
+                                        data-target-info="{{ dataset.target_info|json_string }}"
+                                        data-num-columns="{{ dataset.num_columns }}"
+                                        data-num-rows="{{ dataset.num_rows }}"
+                                        data-size="{{ dataset.size }}"
+                                        data-connection-name="{{ dataset.connection.name }}"
+                                        data-connection-ip="{{ dataset.connection.ip }}"
+                                        data-connection-port="{{ dataset.connection.port }}"
+                                        style="border-radius: 8px;">
+                                    <i class="fas {% if dataset.is_selected %}fa-check{% else %}fa-plus{% endif %} me-1"></i>
+                                    {% if dataset.is_selected %}Added to Training{% else %}Add to Training{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center mt-4">
+                <button id="go-to-designer-btn" class="btn btn-primary" {% if not has_selected_datasets %}disabled{% endif %}>
+                    <i class="fas fa-project-diagram me-2"></i>Go to Model Studio
+                </button>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                <p>There are no available datasets. Add connections and click the synchronization button to get data.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Connection Modal -->
+<div class="modal fade" id="addConnectionModal" tabindex="-1" aria-labelledby="addConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addConnectionModalLabel"><i class="fas fa-plus-circle me-2"></i>Add Connection</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addConnectionForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_connection">
+                    
+                    <div class="mb-3">
+                        <label for="connection-name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="connection-name" name="name" required>
+                        <div class="form-text">Descriptive name to identify this connection</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="connection-ip" class="form-label">IP Address</label>
+                        <input type="text" class="form-control" id="connection-ip" name="ip" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="connection-port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="connection-port" name="port" min="1" max="65535" value="5000" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="connection-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="connection-username" name="username">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="connection-password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="connection-password" name="password">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="connection-api-key" class="form-label">API Key</label>
+                        <input type="password" class="form-control" id="connection-api-key" name="api_key" placeholder="Insert your API KEY here" required>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="connection-active" name="active" checked>
+                        <label class="form-check-label" for="connection-active">Active Connection</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="addConnectionForm" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Connection Modal -->
+<div class="modal fade" id="editConnectionModal" tabindex="-1" aria-labelledby="editConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editConnectionModalLabel"><i class="fas fa-edit me-2"></i>Edit Connection</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editConnectionForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_connection">
+                    <input type="hidden" name="connection_id" id="edit-connection-id">
+                    
+                    <div class="mb-3">
+                        <label for="edit-connection-name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="edit-connection-name" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-connection-ip" class="form-label">IP Address</label>
+                        <input type="text" class="form-control" id="edit-connection-ip" name="ip" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-connection-port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="edit-connection-port" name="port" min="1" max="65535" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-connection-username" class="form-label">Username (optional)</label>
+                        <input type="text" class="form-control" id="edit-connection-username" name="username">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-connection-password" class="form-label">Password (Leave blank to keep current)</label>
+                        <input type="password" class="form-control" id="edit-connection-password" name="password">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit-connection-api-key" class="form-label">API Key (Leave blank to keep current)</label>
+                        <input type="password" class="form-control" id="edit-connection-api-key" name="api_key" placeholder="Insert your API KEY here">
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="edit-connection-active" name="active">
+                        <label class="form-check-label" for="edit-connection-active">Active Connection</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="editConnectionForm" class="btn btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Connection Modal -->
+<div class="modal fade" id="deleteConnectionModal" tabindex="-1" aria-labelledby="deleteConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConnectionModalLabel"><i class="fas fa-trash me-2"></i>Delete Connection</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the connection "<span id="delete-connection-name"></span>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+                
+                <form id="deleteConnectionForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_connection">
+                    <input type="hidden" name="connection_id" id="delete-connection-id">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="deleteConnectionForm" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connect to Dataset Modal -->
+<div class="modal fade" id="connectToDatasetModal" tabindex="-1" aria-labelledby="connectToDatasetModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="connectToDatasetModalLabel"><i class="fas fa-plug me-2"></i>Connect Dataset</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Do you want to use the dataset <strong id="connect-dataset-name"></strong> to design a model?</p>
+                <p class="text-muted">This will take you to the model designer with this dataset pre-configured.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <a href="#" class="btn btn-primary" id="go-to-designer-btn">
+                    <i class="fas fa-project-diagram me-2"></i>Go to Designer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Designer Modal -->
+<div class="modal fade" id="confirmDesignerModal" tabindex="-1" aria-labelledby="confirmDesignerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="confirmDesignerModalLabel">
+                    <i class="fas fa-project-diagram me-2"></i>Go to Model Designer
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to proceed to the Model Designer? Selected datasets will be used for training.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-designer-btn">
+                    <i class="fas fa-arrow-right me-2"></i>Proceed
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Funció per verificar l'estat del dataset
+        function checkDatasetStatus(button) {
+            const datasetInfo = {
+                dataset_name: button.getAttribute('data-dataset-name'),
+                connection: {
+                    name: button.getAttribute('data-connection-name'),
+                    ip: button.getAttribute('data-connection-ip'),
+                    port: button.getAttribute('data-connection-port')
+                }
+            };
+
+            fetch('/api/check-dataset-status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ dataset: datasetInfo })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.is_selected) {
+                    updateButtonState(button, true);
+                } else {
+                    updateButtonState(button, false);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Funció per actualitzar l'estat del botó
+        function updateButtonState(button, isSelected) {
+            if (isSelected) {
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-success');
+                button.innerHTML = '<i class="fas fa-check me-1"></i>Added to Training';
+            } else {
+                button.classList.remove('btn-success');
+                button.classList.add('btn-primary');
+                button.innerHTML = '<i class="fas fa-plus me-1"></i>Add to Training';
+            }
+        }
+
+        // Verificar l'estat inicial dels botons
+        document.querySelectorAll('.add-to-training-btn').forEach(button => {
+            checkDatasetStatus(button);
+            button.addEventListener('click', function() {
+                const isSelected = this.classList.contains('btn-success');
+                if (isSelected) {
+                    // Si ja està seleccionat, l'eliminem
+                    const datasetInfo = {
+                        dataset_name: this.getAttribute('data-dataset-name'),
+                        connection: {
+                            name: this.getAttribute('data-connection-name'),
+                            ip: this.getAttribute('data-connection-ip'),
+                            port: this.getAttribute('data-connection-port')
+                        }
+                    };
+
+                    fetch('/api/remove-selected-dataset/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({ dataset: datasetInfo })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateButtonState(this, false);
+                            document.getElementById('go-to-designer-btn').disabled = document.querySelectorAll('.btn-success.add-to-training-btn').length === 0;
+                            showMessage('Dataset removed from training', 'success');
+                        } else {
+                            showMessage(data.error || 'Error removing dataset', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showMessage('Error processing request', 'danger');
+                    });
+                } else {
+                    // Si no està seleccionat, l'afegim
+                    try {
+                        // Parse target_info and features_info from data attributes
+                        const targetInfoStr = this.getAttribute('data-target-info');
+                        const featuresInfoStr = this.getAttribute('data-features-info');
+
+                        let targetInfo = {};
+                        let featuresInfo = {};
+
+                        try {
+                            if (!targetInfoStr) {
+                                console.error('[ERROR] data-target-info attribute is missing or null!');
+                            }
+                            targetInfo = targetInfoStr ? JSON.parse(targetInfoStr) : {
+                                name: "unknown",
+                                type: "unknown",
+                                num_classes: 0
+                            };
+                            console.log('✅ [SUCCESS] Parsed target_info:', targetInfo);
+                        } catch (e) {
+                            console.error('❌ [ERROR] Error parsing target_info:', e);
+                            console.error('  - String that failed to parse:', targetInfoStr);
+                            targetInfo = {
+                                name: "unknown",
+                                type: "unknown",
+                                num_classes: 0
+                            };
+                        }
+
+                        try {
+                            featuresInfo = featuresInfoStr ? JSON.parse(featuresInfoStr) : {
+                                input_features: parseInt(this.getAttribute('data-num-columns')) - 1,
+                                feature_types: {
+                                    numeric: parseInt(this.getAttribute('data-num-columns')) - 1,
+                                    categorical: 0
+                                }
+                            };
+                        } catch (e) {
+                            console.error('Error parsing features_info:', e);
+                            featuresInfo = {
+                                input_features: parseInt(this.getAttribute('data-num-columns')) - 1,
+                                feature_types: {
+                                    numeric: parseInt(this.getAttribute('data-num-columns')) - 1,
+                                    categorical: 0
+                                }
+                            };
+                        }
+
+                        const datasetInfo = {
+                            dataset_id: this.getAttribute('data-dataset-id'),
+                            dataset_name: this.getAttribute('data-dataset-name'),
+                            features_info: featuresInfo,
+                            target_info: targetInfo,
+                            num_columns: parseInt(this.getAttribute('data-num-columns')),
+                            num_rows: parseInt(this.getAttribute('data-num-rows')),
+                            size: parseInt(this.getAttribute('data-size')),
+                            connection: {
+                                name: this.getAttribute('data-connection-name'),
+                                ip: this.getAttribute('data-connection-ip'),
+                                port: this.getAttribute('data-connection-port')
+                            }
+                        };
+
+                        console.log('📊 [DEBUG] Sending dataset info to server:', datasetInfo);
+
+                        fetch('/api/store-selected-datasets/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({ dataset: datasetInfo })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                updateButtonState(this, true);
+                                document.getElementById('go-to-designer-btn').disabled = false;
+                                showMessage('Dataset added to training successfully', 'success');
+                            } else {
+                                showMessage(data.error || 'Error adding dataset', 'danger');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            showMessage('Error processing request', 'danger');
+                        });
+                    } catch (error) {
+                        console.error('Error processing dataset:', error);
+                        showMessage('Error processing dataset information', 'danger');
+                    }
+                }
+            });
+        });
+
+        // Setup para el modal de editar conexión
+        const editConnectionModal = document.getElementById('editConnectionModal');
+        if (editConnectionModal) {
+            editConnectionModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                
+                const connectionId = button.getAttribute('data-connection-id');
+                const connectionName = button.getAttribute('data-connection-name');
+                const connectionIp = button.getAttribute('data-connection-ip');
+                const connectionPort = button.getAttribute('data-connection-port');
+                const connectionUsername = button.getAttribute('data-connection-username');
+                const connectionActive = button.getAttribute('data-connection-active');
+                
+                document.getElementById('edit-connection-id').value = connectionId;
+                document.getElementById('edit-connection-name').value = connectionName;
+                document.getElementById('edit-connection-ip').value = connectionIp;
+                document.getElementById('edit-connection-port').value = connectionPort;
+                document.getElementById('edit-connection-username').value = connectionUsername || '';
+                document.getElementById('edit-connection-active').checked = connectionActive === 'True';
+            });
+        }
+        
+        // Setup para el modal de eliminar conexión
+        const deleteConnectionModal = document.getElementById('deleteConnectionModal');
+        if (deleteConnectionModal) {
+            deleteConnectionModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                
+                const connectionId = button.getAttribute('data-connection-id');
+                const connectionName = button.getAttribute('data-connection-name');
+                
+                document.getElementById('delete-connection-id').value = connectionId;
+                document.getElementById('delete-connection-name').textContent = connectionName;
+            });
+        }
+        
+        // I modificar els event listeners dels botons de sincronització
+        document.querySelectorAll('form[name="action"][value="fetch_datasets"]').forEach(form => {
+            // Eliminar qualsevol event listener existent
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            // Afegir només un missatge de sincronització
+            newForm.addEventListener('submit', function(e) {
+                const connectionId = this.querySelector('input[name="connection_id"]').value;
+                const connectionRow = document.querySelector(`tr[data-connection-id="${connectionId}"]`);
+                
+                let connectionIP = "unknown";
+                let connectionPort = "unknown";
+                
+                if (connectionRow) {
+                    connectionIP = connectionRow.getAttribute('data-connection-ip') || connectionIP;
+                    connectionPort = connectionRow.getAttribute('data-connection-port') || connectionPort;
+                }
+                
+                // Mostrar missatge i deixar que el formulari es processi normalment
+                showMessage(`Synchronizing datasets from ${connectionIP}:${connectionPort}...`, 'info');
+            });
+        });
+        
+        // Setup para el modal de conectar dataset
+        const connectToDatasetModal = document.getElementById('connectToDatasetModal');
+        if (connectToDatasetModal) {
+            connectToDatasetModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const datasetId = button.getAttribute('data-dataset-id');
+                const datasetName = button.getAttribute('data-dataset-name');
+                
+                // Obtenir també la informació de connexió
+                const connectionIp = button.getAttribute('data-connection-ip');
+                const connectionPort = button.getAttribute('data-connection-port');
+                
+                document.getElementById('connect-dataset-name').textContent = datasetName;
+                
+            });
+        }
+
+        // Handle go to designer button
+        document.getElementById('go-to-designer-btn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('confirmDesignerModal'));
+            modal.show();
+        });
+
+        // Handle confirm button in modal
+        document.getElementById('confirm-designer-btn').addEventListener('click', function() {
+            window.location.href = '/model-studio/';
+        });
+
+
+    });
+    
+    // CSRF Token function
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Project functions
+    function switchProject(projectId) {
+        // Show loading state
+        const dropdownButton = document.querySelector('.dropdown-toggle');
+        if (dropdownButton) {
+            dropdownButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Switching...';
+            dropdownButton.disabled = true;
+        }
+        
+        fetch('/api/switch-project/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({project_id: projectId})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message briefly before reload
+                const message = data.project ? `Switched to project "${data.project.name}"` : 'Switched to "No Project" mode';
+                showToast(message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            } else {
+                showToast('Error switching project: ' + (data.error || 'Unknown error'), 'danger');
+                // Restore button state
+                if (dropdownButton) {
+                    dropdownButton.disabled = false;
+                    dropdownButton.innerHTML = '<i class="fas fa-hospital me-1"></i>Select Project';
+                }
+            }
+        })
+        .catch(error => {
+            showToast('Network error switching project', 'danger');
+            // Restore button state
+            if (dropdownButton) {
+                dropdownButton.disabled = false;
+                dropdownButton.innerHTML = '<i class="fas fa-hospital me-1"></i>Select Project';
+            }
+        });
+    }
+</script>
+
+<!-- New Project Modal -->
+<div class="modal fade" id="newProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-hospital me-2"></i>Create New Hospital Project
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_project">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-4">
+                                <label for="project_name" class="form-label fw-semibold">
+                                    <i class="fas fa-tag me-1"></i>Project Name
+                                </label>
+                                <input type="text" class="form-control form-control-lg" 
+                                       id="project_name" name="project_name" 
+                                       placeholder="e.g., Hospital General Barcelona" 
+                                       required maxlength="100">
+                                <div class="form-text">Choose a descriptive name for your hospital or research center</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-4">
+                                <label for="project_description" class="form-label fw-semibold">
+                                    <i class="fas fa-align-left me-1"></i>Description <span class="text-muted">(optional)</span>
+                                </label>
+                                <textarea class="form-control" id="project_description" name="project_description" 
+                                          rows="3" placeholder="Brief description of the project, research goals, or hospital department..."></textarea>
+                                <div class="form-text">Optional: Add details about the project's purpose or scope</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-palette me-1"></i>Project Color Theme
+                                </label>
+                                <div class="color-selector d-flex flex-wrap gap-3 mt-2">
+                                    {% for color, name in project_colors %}
+                                    <label class="color-choice">
+                                        <input type="radio" name="project_color" value="{{ color }}" 
+                                               {% if forloop.first %}checked{% endif %} class="d-none">
+                                        <div class="color-option" style="background: {{ color }};" title="{{ name }}">
+                                            <i class="fas fa-check text-white"></i>
+                                        </div>
+                                        <small class="color-name">{{ name }}</small>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="form-text">Select a color to help identify this project visually</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.color-choice { 
+    cursor: pointer; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.color-option { 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 50%; 
+    border: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.color-option i { 
+    opacity: 0; 
+    transition: opacity 0.2s ease;
+    font-size: 14px;
+}
+.color-choice input:checked + .color-option { 
+    border-color: #343a40;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.color-choice input:checked + .color-option i { 
+    opacity: 1; 
+}
+.color-name {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #6c757d;
+}
+.color-choice:hover .color-option {
+    transform: scale(1.05);
+}
+</style>
+{% endblock %} 

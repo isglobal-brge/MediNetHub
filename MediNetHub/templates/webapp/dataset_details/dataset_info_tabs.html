@@ -1,0 +1,345 @@
+{% load humanize %}
+{% load webapp_filters %}
+<!-- Redesigned Tabbed Dataset Information - 2 Tabs with Real Tab Look -->
+<div class="card border-0 shadow-sm">
+    <!-- Card Header -->
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-database me-2"></i>Dataset Information
+        </h5>
+    </div>
+
+    <!-- Tabs Navigation with Real Tab Look -->
+    <div style="background-color: #f8f9fa; padding-top: 0.5rem; padding-left: 1rem; padding-right: 1rem; border-bottom: 2px solid #dee2e6;">
+        <ul class="nav nav-tabs" id="datasetTabs" role="tablist" style="border-bottom: none;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="features-tab" data-bs-toggle="tab" data-bs-target="#features-content" type="button" role="tab" aria-controls="features-content" aria-selected="true">
+                    <i class="fas fa-columns me-2"></i>Features
+                    {% if dataset.features_info %}
+                        <span class="badge bg-primary rounded-pill ms-1">{{ dataset.features_info.input_features }}</span>
+                    {% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="target-tab" data-bs-toggle="tab" data-bs-target="#target-content" type="button" role="tab" aria-controls="target-content" aria-selected="false">
+                    <i class="fas fa-crosshairs me-2"></i>Target
+                    {% if dataset.target_info %}
+                        <span class="badge bg-warning text-dark rounded-pill ms-1">{{ dataset.target_info.num_classes }} cls</span>
+                    {% endif %}
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="card-body">
+        <div class="tab-content" id="datasetTabsContent">
+            <!-- Features Tab -->
+            <div class="tab-pane fade show active" id="features-content" role="tabpanel" aria-labelledby="features-tab">
+                {% if dataset.features_statistics %}
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-chart-bar me-2"></i>Statistical Summary
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Type</th>
+                                    <th>Mean</th>
+                                    <th>Std Dev</th>
+                                    <th>Median</th>
+                                    <th>P5</th>
+                                    <th>P95</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for feature_name, stats in dataset.features_statistics.items %}
+                                    {% if feature_name != dataset.target_column %}
+                                    <tr>
+                                        <td><strong>{{ feature_name }}</strong></td>
+                                        <td>
+                                            {% with column_types=dataset.column_types %}
+                                                {% if column_types %}
+                                                    {% with feature_type=column_types|get_item:feature_name %}
+                                                        {% if feature_type %}
+                                                            {% if feature_type == 'numeric' %}
+                                                                <span class="badge bg-success">numeric</span>
+                                                            {% else %}
+                                                                <span class="badge bg-warning text-dark">{{ feature_type }}</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="text-muted small">N/A ({{ feature_name }})</span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                {% else %}
+                                                    <span class="text-danger small">No types dict</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>{{ stats.mean|floatformat:3|default:"N/A" }}</td>
+                                        <td>{{ stats.std|floatformat:3|default:"N/A" }}</td>
+                                        <td>{{ stats.median|floatformat:3|default:"N/A" }}</td>
+                                        <td>{{ stats.p5|floatformat:3|default:"N/A" }}</td>
+                                        <td>{{ stats.p95|floatformat:3|default:"N/A" }}</td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No statistical summary available for features
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Target Tab -->
+            <div class="tab-pane fade" id="target-content" role="tabpanel" aria-labelledby="target-tab">
+                {% if dataset.target_info %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Target Information
+                            </h6>
+                            <table class="table table-sm table-borderless">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted" style="width: 50%;">Column Name:</td>
+                                        <td><span class="value-box value-box-primary">{{ dataset.target_info.column_name }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Data Type:</td>
+                                        <td><span class="value-box value-box-info">{{ dataset.target_info.data_type|capfirst }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Task Type:</td>
+                                        <td><span class="value-box value-box-success">{{ dataset.target_info.task_type|capfirst }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Task Subtype:</td>
+                                        <td><span class="value-box value-box-warning">{{ dataset.target_info.task_subtype|default:"N/A" }}</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">
+                                <i class="fas fa-cogs me-2"></i>Model Configuration
+                            </h6>
+                            <table class="table table-sm table-borderless">
+                                <tbody>
+                                    <tr>
+                                        <td class="text-muted" style="width: 60%;">Number of Classes:</td>
+                                        <td><span class="value-box value-box-secondary">{{ dataset.target_info.num_classes }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Output Neurons:</td>
+                                        <td><span class="value-box value-box-secondary">{{ dataset.target_info.output_neurons }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Recommended Activation:</td>
+                                        <td><span class="value-box value-box-purple">{{ dataset.target_info.recommended_activation }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Recommended Loss:</td>
+                                        <td><span class="value-box value-box-purple">{{ dataset.target_info.recommended_loss }}</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if dataset.target_info.classes %}
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="text-muted mb-3">
+                            <i class="fas fa-tags me-2"></i>Classes ({{ dataset.target_info.classes|length }})
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for class in dataset.target_info.classes %}
+                                <span class="badge bg-secondary" style="font-size: 13px; padding: 8px 12px;">{{ class }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No target information available
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Tab Styles -->
+<style>
+    /* Real Tab Look */
+    #datasetTabs .nav-link {
+        color: #6c757d;
+        background-color: #e9ecef;
+        border: 1px solid #dee2e6;
+        border-bottom: none;
+        border-radius: 0.375rem 0.375rem 0 0;
+        margin-right: 4px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        position: relative;
+        top: 2px;
+    }
+
+    #datasetTabs .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        border-color: #dee2e6;
+    }
+
+    #datasetTabs .nav-link.active {
+        background-color: #fff;
+        color: #0d6efd;
+        border-color: #dee2e6 #dee2e6 #fff #dee2e6;
+        font-weight: 600;
+    }
+
+    #datasetTabs .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #fff;
+    }
+
+    #datasetTabs .nav-link .badge {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    #datasetTabs .nav-link.active .badge.bg-primary {
+        background-color: #0d6efd !important;
+        color: white;
+    }
+
+    /* Table enhancements */
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+
+    /* Value box styling for Target tab values */
+    .value-box {
+        display: inline-block;
+        min-width: 180px;
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+
+    /* Primary - Blue (Column Name) */
+    .value-box-primary {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 1px solid #90caf9;
+        color: #1565c0;
+    }
+
+    .value-box-primary:hover {
+        background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+        border-color: #42a5f5;
+    }
+
+    /* Info - Cyan (Data Type) */
+    .value-box-info {
+        background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+        border: 1px solid #80deea;
+        color: #00838f;
+    }
+
+    .value-box-info:hover {
+        background: linear-gradient(135deg, #b2ebf2 0%, #80deea 100%);
+        border-color: #26c6da;
+    }
+
+    /* Success - Green (Task Type) */
+    .value-box-success {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        border: 1px solid #a5d6a7;
+        color: #2e7d32;
+    }
+
+    .value-box-success:hover {
+        background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+        border-color: #66bb6a;
+    }
+
+    /* Warning - Orange (Task Subtype) */
+    .value-box-warning {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border: 1px solid #ffcc80;
+        color: #e65100;
+    }
+
+    .value-box-warning:hover {
+        background: linear-gradient(135deg, #ffe0b2 0%, #ffcc80 100%);
+        border-color: #ffa726;
+    }
+
+    /* Secondary - Gray (Numbers) */
+    .value-box-secondary {
+        background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+        border: 1px solid #bdbdbd;
+        color: #424242;
+    }
+
+    .value-box-secondary:hover {
+        background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+        border-color: #9e9e9e;
+    }
+
+    /* Purple - Violet (Activation & Loss) */
+    .value-box-purple {
+        background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+        border: 1px solid #ce93d8;
+        color: #6a1b9a;
+    }
+
+    .value-box-purple:hover {
+        background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%);
+        border-color: #ab47bc;
+    }
+</style>
+
+<!-- JavaScript for logging -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('#datasetTabs button[data-bs-toggle="tab"]');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('shown.bs.tab', function(event) {
+                console.log('📊 Tab switched to:', event.target.id);
+            });
+        });
+
+        console.log('✅ Dataset tabs initialized with 2 tabs');
+
+        // Debug: Log column_types data
+        {% if dataset.column_types %}
+        console.log('🔍 Column Types Available:', {{ dataset.column_types|safe }});
+        {% else %}
+        console.warn('⚠️ Column Types NOT available - dataset.column_types is empty or undefined');
+        {% endif %}
+
+        // Debug: Log features_statistics structure
+        {% if dataset.features_statistics %}
+        console.log('📊 Features Statistics:', {{ dataset.features_statistics|safe }});
+        {% else %}
+        console.warn('⚠️ Features Statistics NOT available');
+        {% endif %}
+    });
+</script>

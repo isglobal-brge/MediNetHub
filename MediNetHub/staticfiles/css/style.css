@@ -1,0 +1,236 @@
+/* Custom styles for MediNet */
+
+:root {
+    --primary-color: #2C3E50;
+    --secondary-color: #3498DB;
+    --accent-color: #E74C3C;
+    --light-color: #ECF0F1;
+    --dark-color: #2C3E50;
+    --success-color: #2ECC71;
+    --warning-color: #F39C12;
+    --danger-color: #E74C3C;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--dark-color);
+    background-color: #f8f9fa;
+}
+
+/* Navbar customization */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+/* Card customization */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    font-weight: 600;
+    background-color: rgba(44, 62, 80, 0.05);
+}
+
+/* Button customization */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #34495E;
+    border-color: #34495E;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Network diagram styles */
+.network-container {
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.layer-node {
+    background-color: var(--light-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    text-align: center;
+    position: relative;
+    min-width: 180px;
+}
+
+.layer-node.active {
+    border-color: var(--accent-color);
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
+.layer-connector {
+    height: 30px;
+    width: 2px;
+    background-color: var(--primary-color);
+    margin: 0 auto;
+}
+
+.layer-node .badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+}
+
+/* Forms customization */
+.form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+/* Helper classes */
+.bg-gradient-primary {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.border-primary {
+    border-color: var(--primary-color) !important;
+}
+
+/* Dashboard tiles */
+.dashboard-tile {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    height: 100%;
+    transition: transform 0.3s ease;
+}
+
+.dashboard-tile:hover {
+    transform: translateY(-5px);
+}
+
+.dashboard-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .dashboard-tile {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Help icon customization */
+.help-icon {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    cursor: help;
+    transition: color 0.3s ease;
+}
+
+.help-icon:hover {
+    color: var(--primary-color);
+}
+
+/* Custom tooltip */
+.tooltip .tooltip-inner {
+    background-color: var(--dark-color);
+    color: var(--light-color);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    max-width: 300px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: var(--dark-color);
+}
+
+
+.alert {
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.alert-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+.alert-success {
+    background-color: #28a745;
+    color: white;
+    border: none;
+}
+
+.alert-warning {
+    background-color: #ffc107;
+    color: #000;
+    border: none;
+}
+
+.alert-info {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+}
+
+.btn-close {
+    filter: brightness(0) invert(1);
+}
+.alert-error {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+
+
+
+

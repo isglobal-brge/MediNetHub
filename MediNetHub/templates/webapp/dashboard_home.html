@@ -1,0 +1,645 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - MediNet{% endblock %}
+
+{% block extra_css %}
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+:root {
+    --primary-color: #1976d2;
+    --primary-light: #e3f2fd;
+    --primary-dark: #0d47a1;
+    --secondary-color: #6c757d;
+    --success-color: #2e7d32;
+    --success-light: #e8f5e8;
+    --info-color: #0288d1;
+    --info-light: #e1f5fe;
+    --warning-color: #f57c00;
+    --warning-light: #fff3e0;
+    --danger-color: #d32f2f;
+    --danger-light: #ffebee;
+    --light-color: #f8f9fa;
+    --white-color: #ffffff;
+    
+    --gray-50: #fafafa;
+    --gray-100: #f5f5f5;
+    --gray-200: #eeeeee;
+    --gray-600: #757575;
+    --gray-800: #424242;
+    --body-bg: #f7f9fc;
+}
+
+body {
+    background-color: var(--body-bg);
+}
+
+.material-icons {
+    vertical-align: middle;
+    font-size: 1.25rem; /* Default size */
+}
+
+.dashboard-card {
+    background-color: var(--white-color);
+    border: none;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+.section-header {
+    background: var(--white-color);
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1rem 1.5rem;
+}
+
+.section-header .h5 {
+    color: var(--gray-800);
+}
+
+.stat-card-mini {
+    background-color: var(--white-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid var(--gray-200);
+}
+
+.stat-card-mini:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    border-color: var(--primary-color);
+}
+
+.stat-card-mini .material-icons {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-card-mini .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.stat-card-mini .stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.welcome-header {
+    background: linear-gradient(135deg, #1e90ff 0%, #007bff 100%);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-header::after {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+}
+
+.progress-modern {
+    height: 6px;
+    border-radius: 3px;
+    background-color: var(--gray-200);
+}
+
+.progress-modern .progress-bar {
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--success-color) 0%, #4caf50 100%);
+}
+
+.status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-right: 6px;
+}
+
+.status-running { 
+    background: var(--info-light); 
+    color: var(--info-color); 
+    border: 1px solid var(--info-color);
+}
+.status-pending { 
+    background: var(--warning-light); 
+    color: var(--warning-color); 
+    border: 1px solid var(--warning-color);
+}
+.status-server-ready { 
+    background: var(--primary-light); 
+    color: var(--primary-color); 
+    border: 1px solid var(--primary-color);
+}
+.status-completed { 
+    background: var(--success-light); 
+    color: var(--success-color); 
+    border: 1px solid var(--success-color);
+}
+.status-failed { 
+    background: var(--danger-light); 
+    color: var(--danger-color); 
+    border: 1px solid var(--danger-color);
+}
+
+.activity-item {
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.activity-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    transform: translateY(-2px);
+}
+
+.activity-item:last-child {
+    margin-bottom: 0;
+}
+
+.job-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.job-meta {
+    font-size: 13px;
+    color: var(--gray-600);
+    opacity: 0.8;
+}
+
+.status-text {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.empty-state {
+    background: var(--gray-50);
+    border: 2px dashed var(--gray-200);
+    border-radius: 12px;
+    padding: 2.5rem 1.25rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.empty-state:hover {
+    background: var(--gray-100);
+    border-color: var(--primary-color);
+}
+
+.notification-modern {
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.notification-modern:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+}
+
+.notification-modern:last-child {
+    margin-bottom: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-item {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.animate-item:nth-child(1) { animation-delay: 0.1s; }
+.animate-item:nth-child(2) { animation-delay: 0.2s; }
+.animate-item:nth-child(3) { animation-delay: 0.3s; }
+.animate-item:nth-child(4) { animation-delay: 0.4s; }
+.animate-item:nth-child(5) { animation-delay: 0.5s; }
+
+.material-icons.rotate-hover {
+    transition: transform 0.3s ease;
+}
+
+.activity-item:hover .material-icons.rotate-hover {
+    transform: rotate(15deg);
+}
+
+.progress-modern {
+    height: 6px;
+    border-radius: 3px;
+    background-color: var(--gray-200);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-modern .progress-bar {
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--success-color) 0%, #4caf50 100%);
+    position: relative;
+    transition: width 0.8s ease;
+}
+
+.progress-modern .progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.6),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.nav-tabs-modern {
+    border-bottom: 0;
+}
+.nav-tabs-modern .nav-link {
+    border: 0;
+    background-color: transparent;
+    color: var(--gray-600);
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+}
+.nav-tabs-modern .nav-link.active,
+.nav-tabs-modern .nav-item.show .nav-link {
+    color: var(--primary-color);
+    background-color: var(--primary-light);
+}
+.nav-tabs-modern .nav-link:hover:not(.active) {
+    color: var(--primary-color);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Welcome Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="welcome-header text-white p-4 p-md-5">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-2 display-5 fw-bold">Hello, {{ user.first_name|default:user.username }}!</h2>
+                        <p class="mb-4 lead" style="opacity: 0.9;">Ready for a new breakthrough? Start a new training session.</p>
+                        
+                        <!-- Quick Actions -->
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <a href="{% url 'training' %}" class="btn btn-light px-4 py-2 fw-bold">
+                                <span class="material-icons me-2">play_arrow</span>
+                                New Training
+                            </a>
+                             <a href="{% url 'model_studio' %}" class="btn btn-light px-4 py-2 fw-bold">
+                                <span class="material-icons me-2">architecture</span>
+                                Create Model
+                            </a>
+                            <a href="{% url 'datasets' %}" class="btn btn-outline-light px-4 py-2 fw-bold">
+                                <span class="material-icons me-2">storage</span>
+                                View Datasets
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center d-none d-md-block">
+                        <span class="material-icons" style="font-size: 120px; opacity: 0.15;">analytics</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content Column -->
+        <div class="col-lg-8">
+            <!-- Active Training Jobs -->
+            <div class="dashboard-card {% if active_jobs|length < 3 %}mb-4{% endif %}">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">
+                        <span class="material-icons me-2 text-primary">play_circle</span>
+                        Active Trainings
+                    </h5>
+                    <a href="{% url 'training' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-4 {% if not active_jobs %}d-flex align-items-center justify-content-center{% endif %}">
+                    {% if active_jobs %}
+                        {% for job in active_jobs %}
+                        <div class="activity-item primary animate-item">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        {% if job.status == 'running' %}
+                                            <span class="status-badge status-running">Running</span>
+                                        {% elif job.status == 'pending' %}
+                                            <span class="status-badge status-pending">Pending</span>
+                                        {% else %}
+                                            <span class="status-badge status-server-ready">Ready</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <h6 class="job-title">{{ job.name }}</h6>
+                                    
+                                    <div class="progress-modern mb-2">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ job.progress }}%"></div>
+                                    </div>
+                                    
+                                    <div class="job-meta">
+                                        Round {{ job.current_round }}/{{ job.total_rounds }}
+                                        {% if job.progress > 0 %}
+                                            • {{ job.progress }}% completed
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="ms-3">
+                                    <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary">
+                                        <span class="material-icons">visibility</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center p-lg-5">
+                            <div class="mb-3">
+                                 <span class="material-icons" style="font-size: 4.5rem; color: var(--primary-color); opacity: 0.3;">science</span>
+                            </div>
+                            <h3 class="fw-bold mb-2">Awaiting Your Next Discovery</h3>
+                            <p class="text-muted mb-4 lead" style="font-size: 1rem;">
+                                Active trainings will appear here, ready for you to monitor their progress.
+                            </p>
+                            <a href="{% url 'datasets' %}" class="btn btn-outline-primary btn-lg px-4 py-2">
+                                <span class="material-icons me-1">play_arrow</span>
+                                Start a New Training
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if active_jobs|length < 3 %}
+            <!-- Pro Tip Panel -->
+            <div class="dashboard-card">
+                <div class="section-header d-flex align-items-center">
+                    <span class="material-icons me-2 text-warning">lightbulb</span>
+                    <h5 class="mb-0 fw-bold">Pro Tip</h5>
+                </div>
+                <div class="card-body p-4">
+                    <figure>
+                        <blockquote class="blockquote">
+                            <p id="tip-quote" class="fs-6 fst-italic"></p>
+                        </blockquote>
+                        <figcaption id="tip-caption" class="blockquote-footer mb-0"></figcaption>
+                    </figure>
+                </div>
+            </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const tips = [
+                    {
+                        quote: "Naming your training jobs descriptively (e.g., `architecture-dataset-date`) will save you hours of searching in the future. Clean metadata is key!",
+                        caption: "Tip for good practices"
+                    },
+                    {
+                        quote: "For image classification, data augmentation like random rotations and flips can drastically improve your model's robustness and prevent overfitting.",
+                        caption: "Tip for model performance"
+                    },
+                    {
+                        quote: "Use a smaller learning rate when your model's loss plateaus. This 'fine-tuning' can help the model find a more precise minimum.",
+                        caption: "Tip for optimization"
+                    },
+                    {
+                        quote: "Did you know? You can compare multiple training results side-by-side in the 'Model Comparison' section. It's great for analyzing experiments.",
+                        caption: "Tip for using MediNet"
+                    },
+                    {
+                        quote: "A `batch size` that is too large can sometimes lead to poor generalization. Experiment with smaller batches to see if it improves your validation accuracy.",
+                        caption: "Tip for experimentation"
+                    },
+                    {
+                        quote: "If training accuracy is high but validation accuracy is low, your model is likely overfitting. Try adding dropout layers or more regularization.",
+                        caption: "Tip for debugging"
+                    },
+                    {
+                        quote: "Don't just guess hyperparameters! Use techniques like Grid Search or Randomized Search to systematically find the best combination for your model.",
+                        caption: "Tip for hyperparameter tuning"
+                    },
+                    {
+                        quote: "Normalizing your input data (scaling it to a range like 0-1 or using standardization) is crucial. It helps your model converge faster and more reliably.",
+                        caption: "Tip for data preprocessing"
+                    },
+                    {
+                        quote: "Why train from scratch? Using a pre-trained model (Transfer Learning) and fine-tuning it on your data can yield amazing results with less data and time.",
+                        caption: "Tip for efficient training"
+                    },
+                    {
+                        quote: "Accuracy isn't always the best metric, especially with imbalanced datasets. Look at Precision, Recall, and the F1-score for a more complete picture.",
+                        caption: "Tip for model evaluation"
+                    },
+                    {
+                        quote: "Always log your experiments, including hyperparameters and results. This discipline is essential for reproducibility and learning from your work.",
+                        caption: "Tip for experiment tracking"
+                    },
+                    {
+                        quote: "A fixed learning rate isn't always optimal. Using a scheduler (like `StepLR` or `ReduceLROnPlateau`) can significantly improve training performance.",
+                        caption: "Tip for optimization"
+                    }
+                ];
+
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
+
+                document.getElementById('tip-quote').textContent = randomTip.quote;
+                document.getElementById('tip-caption').textContent = randomTip.caption;
+            });
+            </script>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Column -->
+        <div class="col-lg-4 d-flex flex-column">
+            <!-- Key Stats -->
+            <div class="dashboard-card mb-4">
+                <div class="section-header">
+                     <h5 class="mb-0 fw-bold">Key Stats</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <span class="fw-medium">Total Models</span>
+                        <a href="{% url 'models_list' %}" class="fw-bold fs-5 text-decoration-none">{{ stats.total_models }}</a>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <span class="fw-medium">Total Trainings</span>
+                        <a href="{% url 'training' %}" class="fw-bold fs-5 text-decoration-none">{{ stats.total_jobs }}</a>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <span class="fw-medium">Connections</span>
+                        <a href="{% url 'datasets' %}" class="fw-bold fs-5 text-decoration-none">{{ stats.active_connections }}</a>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-medium">Success Rate</span>
+                        <span class="fw-bold fs-5 text-success">{{ stats.success_rate }}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Updates Card -->
+            <div class="dashboard-card flex-grow-1">
+                <div class="section-header">
+                    <ul class="nav nav-tabs-modern" id="updatesTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity-pane" type="button" role="tab" aria-controls="activity-pane" aria-selected="true">
+                                <span class="material-icons me-1" style="font-size: 1.1rem;">history</span>
+                                Recent Activity
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications-pane" type="button" role="tab" aria-controls="notifications-pane" aria-selected="false">
+                                 <span class="material-icons me-1" style="font-size: 1.1rem;">notifications</span>
+                                Notifications
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body p-4">
+                    <div class="tab-content" id="updatesTabContent">
+                        <!-- Recent Activity Pane -->
+                        <div class="tab-pane fade show active" id="activity-pane" role="tabpanel" aria-labelledby="activity-tab">
+                             {% if recent_jobs %}
+                                {% for job in recent_jobs %}
+                                <div class="activity-item {% if job.status == 'completed' %}success{% elif job.status == 'failed' %}danger{% elif job.status == 'running' %}primary{% else %}warning{% endif %} animate-item">
+                                    <div class="d-flex align-items-start justify-content-between">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-2">
+                                                {% if job.status == 'completed' %}
+                                                    <span class="status-badge status-completed">Completed</span>
+                                                {% elif job.status == 'failed' %}
+                                                    <span class="status-badge status-failed">Failed</span>
+                                                {% elif job.status == 'running' %}
+                                                    <span class="status-badge status-running">Running</span>
+                                                {% else %}
+                                                    <span class="status-badge status-pending">Pending</span>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <h6 class="job-title">{{ job.name }}</h6>
+                                            
+                                            <div class="job-meta">
+                                                <span class="material-icons" style="font-size: 1rem;">access_time</span>
+                                                {{ job.created_at|timesince }} ago
+                                                {% if job.completed_at %}
+                                                    • Duration: {{ job.completed_at|timesince:job.started_at }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if job.status == 'running' %}
+                                        <div class="ms-3">
+                                            <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary">
+                                                <span class="material-icons">visibility</span>
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <span class="material-icons large text-muted mb-3 d-block" style="font-size: 2.5rem;">history</span>
+                                    <h6 class="text-muted mb-2">No recent activity</h6>
+                                    <p class="text-muted small mb-3">Your trainings will appear here once you start</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <!-- Notifications Pane -->
+                        <div class="tab-pane fade" id="notifications-pane" role="tabpanel" aria-labelledby="notifications-tab">
+                             {% if recent_notifications %}
+                                {% for notification in recent_notifications %}
+                                <div class="notification-modern animate-item">
+                                    <div class="d-flex align-items-start">
+                                        <div class="me-3">
+                                            <div class="d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: var(--primary-light); border-radius: 10px;">
+                                                <span class="material-icons text-primary">notifications</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="job-title mb-1">{{ notification.title }}</h6>
+                                            <p class="job-meta mb-2">{{ notification.message|truncatechars:100 }}</p>
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <small class="text-muted">
+                                                    <span class="material-icons" style="font-size: 1rem;">schedule</span>
+                                                    {{ notification.created_at|timesince }} ago
+                                                </small>
+                                                {% if notification.link %}
+                                                <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary">
+                                                    <span class="material-icons">open_in_new</span>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <span class="material-icons large text-success mb-3 d-block" style="font-size: 2.5rem;">check_circle</span>
+                                    <h6 class="text-success mb-2">All up to date!</h6>
+                                    <p class="text-muted small">You have no pending notifications</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

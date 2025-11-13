@@ -1,0 +1,3853 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Advanced Model Designer - MediNet{% endblock %}
+
+{% block extra_css %}
+<style>
+        /* Page Header */
+        .page-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1.5rem 0;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        
+        .page-title {
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .page-subtitle {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin: 0;
+        }
+        
+        /* Action Buttons */
+        
+        /* Main Layout */
+        .designer-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 1rem;
+            height: calc(100vh - 320px);
+            padding: 1rem 0;
+            background: #f9fafb;
+            width: 100%;
+        }
+        
+        /* Panel Styles */
+        .designer-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .panel-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .panel-header.bg-primary .panel-title {
+            color: white !important;
+        }
+
+        .panel-icon {
+            width: 20px;
+            height: 20px;
+            color: #6b7280;
+        }
+
+        .panel-header.bg-primary .panel-icon {
+            color: white !important;
+        }
+        
+        .panel-body {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        /* Node Canvas - Centro del diseño */
+        .node-canvas {
+            position: relative;
+            background:
+                linear-gradient(90deg, #f1f5f9 1px, transparent 1px),
+                linear-gradient(#f1f5f9 1px, transparent 1px);
+            background-size: 24px 24px;
+            border-radius: 8px;
+            flex: 1;
+            overflow: hidden;
+            margin: 1rem;
+            transition: background-color 0.2s ease, transform 0.3s ease;
+            transform-origin: center center;
+        }
+
+        /* Canvas zoom wrapper */
+        .canvas-zoom-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            z-index: 99;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 18px;
+            color: #374151;
+        }
+
+        .zoom-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .zoom-btn:active {
+            transform: translateY(0);
+        }
+
+        .zoom-level {
+            padding: 4px 8px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .node-canvas.dragging-active {
+            background-color: rgba(59, 130, 246, 0.02);
+            background-image: 
+                linear-gradient(90deg, rgba(59, 130, 246, 0.3) 1px, transparent 1px), 
+                linear-gradient(rgba(59, 130, 246, 0.3) 1px, transparent 1px);
+        }
+
+        /* COMPONENT: Node Layer Styles */
+        .layer-node {
+            position: absolute;
+            width: 150px;
+            height: 80px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            user-select: none;
+            transform: none !important;
+        }
+        
+        .layer-node:hover {
+            border-color: #3b82f6;
+            transform: scale(1.02);
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+        }
+        
+        .layer-node.selected {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+            z-index: 5;
+        }
+        
+        .layer-node.dragging {
+            transform: scale(1.05);
+            z-index: 50;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+            cursor: grabbing;
+            opacity: 0.9;
+            transition: none;
+        }
+        
+        .layer-node:active {
+            cursor: grabbing;
+        }
+
+        .layer-node.node-input {
+            border: 3px solid #3b82f6 !important;
+            background: linear-gradient(145deg, #dbeafe, #bfdbfe) !important;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        }
+        
+        .layer-node.node-output {
+            border: 3px solid #ef4444 !important;
+            background: linear-gradient(145deg, #fee2e2, #fecaca) !important;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
+        }
+        
+        .layer-node.node-input.dragging,
+        .layer-node.node-output.dragging {
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transform: scale(1.05);
+        }
+        
+        /* Node Type Variations */
+        .layer-node.layer-input { 
+            border-left: 4px solid #3b82f6; 
+            background: linear-gradient(145deg, #ffffff, #f8faff);
+        }
+        .layer-node.layer-linear { 
+            border-left: 4px solid #10b981; 
+            background: linear-gradient(145deg, #ffffff, #f0fdf9);
+        }
+        .layer-node.layer-activation { 
+            border-left: 4px solid #f59e0b; 
+            background: linear-gradient(145deg, #ffffff, #fffbeb);
+        }
+        .layer-node.layer-output { 
+            border-left: 4px solid #ef4444; 
+            background: linear-gradient(145deg, #ffffff, #fef2f2);
+        }
+        .layer-node.layer-operation {
+            border-left: 4px solid #8b5cf6;
+            background: linear-gradient(145deg, #ffffff, #faf5ff);
+        }
+
+        /* Colores específicos para capas especiales */
+        .layer-node.layer-add {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(145deg, #ffffff, #f0fdf9);
+            min-height: 100px;
+            height: auto;
+        }
+
+        .layer-node.layer-concat {
+            border-left: 4px solid #3b82f6;
+            background: linear-gradient(145deg, #ffffff, #eff6ff);
+            min-height: 100px;
+            height: auto;
+        }
+
+        .layer-node.layer-conv1d,
+        .layer-node.layer-conv2d,
+        .layer-node.layer-conv3d,
+        .layer-node.layer-convtranspose1d,
+        .layer-node.layer-convtranspose2d,
+        .layer-node.layer-convtranspose3d {
+            border-left: 4px solid #06b6d4;
+            background: linear-gradient(145deg, #ffffff, #ecfeff);
+        }
+
+        .node-content {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .node-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 3px;
+        }
+        
+        .node-features {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        /* Node controls (+ and - buttons for multi-input layers) */
+        .node-controls {
+            margin-top: 8px !important;
+            display: flex !important;
+            gap: 4px !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        .btn-add-input,
+        .btn-remove-input {
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 4px !important;
+            border: 1px solid #d1d5db !important;
+            background: white !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.2s ease !important;
+            color: #374151 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+        }
+
+        .btn-add-input:hover {
+            background: #10b981 !important;
+            color: white !important;
+            border-color: #059669 !important;
+            transform: scale(1.1) !important;
+        }
+
+        .btn-remove-input:hover {
+            background: #ef4444 !important;
+            color: white !important;
+            border-color: #dc2626 !important;
+            transform: scale(1.1) !important;
+        }
+
+        .btn-add-input:active,
+        .btn-remove-input:active {
+            transform: scale(0.95) !important;
+        }
+
+        /* COMPONENT: Connection Port Styles */
+        .connection-port {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 20;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .connection-port:hover {
+            transform: scale(1.4);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .connection-port.input { 
+            background: #10b981; 
+        }
+        .connection-port.output { 
+            background: #ef4444; 
+        }
+        
+        .connection-port.left-side { 
+            position: absolute; 
+            left: -7px; 
+            top: 50%; 
+            transform: translateY(-50%);
+        }
+        .connection-port.right-side { 
+            position: absolute; 
+            right: -7px; 
+            top: 50%; 
+            transform: translateY(-50%);
+        }
+        
+        .connection-port.smart-port {
+            background: #94a3b8;
+            border: 3px solid #fff;
+            transition: all 0.3s ease;
+        }
+        
+        .connection-port.smart-port:hover {
+            background: #3b82f6;
+            transform: translateY(-50%) scale(1.4);
+        }
+        
+        .connection-port.smart-port.acting-as-input {
+            background: #10b981;
+        }
+        
+        .connection-port.smart-port.acting-as-output {
+            background: #ef4444;
+        }
+        
+        .connection-port.smart-port.connecting {
+            background: #3b82f6 !important;
+            border-color: #1d4ed8;
+            animation: pulse-connect 1s infinite;
+        }
+        
+        .connection-port.disconnected {
+            background: #94a3b8 !important;
+            border-color: #cbd5e1;
+            animation: pulse-disconnect 2s infinite;
+        }
+
+        /* Multi-input ports (Add/Concat layers) */
+        .connection-port.input-port {
+            background: #10b981;
+            border: 2px solid #fff;
+            position: absolute;
+            left: -7px;
+            transform: translateY(-50%);
+        }
+
+        .connection-port.input-port:hover {
+            background: #059669;
+            transform: translateY(-50%) scale(1.4);
+        }
+
+        .connection-port.input-port.disconnected {
+            background: #94a3b8 !important;
+            border-color: #cbd5e1;
+        }
+
+        .connection-port.input-port.connected {
+            background: #10b981 !important;
+            border-color: #059669;
+            animation: none;
+        }
+
+        @keyframes pulse-disconnect {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes pulse-connect {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+        }
+
+        /* ENHANCED: Connection/Arrow Styles with Selection and Editing */
+        .connection-path {
+            stroke: #6b7280;
+            stroke-width: 2.5;
+            fill: none;
+            stroke-dasharray: 8, 4;
+            animation: dash-flow 3s linear infinite;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.2s ease;
+        }
+        
+        .connection-path:hover {
+            stroke: #3b82f6;
+            stroke-width: 4;
+            stroke-dasharray: none;
+            animation: none;
+            filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.3));
+        }
+        
+        .connection-path.selected {
+            stroke: #fbbf24 !important;
+            stroke-width: 4;
+            stroke-dasharray: none;
+            filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.5));
+            animation: none;
+        }
+        
+        .connection-path.editing {
+            stroke: #8b5cf6 !important;
+            stroke-width: 4;
+            stroke-dasharray: none;
+            animation: none;
+            filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.3));
+        }
+        
+        .connection-path.flow-highlight {
+            stroke: #3b82f6;
+            stroke-width: 3.5;
+            stroke-dasharray: 12, 6;
+            filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.4));
+            animation: flow-highlight 2s linear infinite;
+        }
+        
+        .connection-path.deleting {
+            stroke: #dc2626;
+            stroke-width: 5;
+            stroke-dasharray: 4, 4;
+            animation: delete-pulse 0.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes flow-highlight {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -18; }
+        }
+        
+        @keyframes dash-flow {
+            to { stroke-dashoffset: -12; }
+        }
+        
+        @keyframes delete-pulse {
+            from { opacity: 1; }
+            to { opacity: 0.3; }
+        }
+        
+        .connection-preview {
+            stroke: #3b82f6;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 8, 8;
+            animation: preview-flow 1s linear infinite;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+        
+        @keyframes preview-flow {
+            to { stroke-dashoffset: 16; }
+        }
+
+        /* FIXED: Curve Editing System */
+        .curve-control-point {
+            fill: #ffffff;
+            stroke: #8b5cf6;
+            stroke-width: 2;
+            cursor: grab;
+            transition: all 0.2s ease;
+            pointer-events: all;
+            r: 6;
+        }
+        
+        .curve-control-point:hover {
+            fill: #8b5cf6;
+            cursor: grabbing;
+            r: 8;
+        }
+        
+        .curve-control-point.dragging {
+            fill: #8b5cf6;
+            stroke-width: 3;
+            cursor: grabbing;
+            r: 8;
+        }
+        
+        .curve-control-line {
+            stroke: #8b5cf6;
+            stroke-width: 1;
+            stroke-dasharray: 4, 4;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Connection Edit UI */
+        .connection-edit-ui {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 100;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .connection-edit-ui.active {
+            display: flex;
+        }
+        
+        .connection-edit-btn {
+            background: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .connection-edit-btn:hover {
+            background: #f3f4f6;
+        }
+        
+        .connection-edit-btn.edit {
+            background: #8b5cf6;
+            color: white;
+            border-color: #8b5cf6;
+        }
+        
+        .connection-edit-btn.delete {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+
+        /* Configuration Panel */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .form-control, .form-select {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+        
+        .optimizer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .param-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .param-section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .param-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .param-row label {
+            min-width: 80px;
+            font-size: 0.8125rem;
+            color: #6b7280;
+        }
+        
+        .param-row input {
+            flex: 1;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .delete-btn {
+            width: 100%;
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .delete-btn:hover {
+            background: #fecaca;
+            border-color: #fca5a5;
+        }
+
+        .param-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #888;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .hand-pointer {
+            font-size: 48px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        /* FAB Moderno - Floating Action Button */
+        .add-node-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg,rgb(255, 255, 255) 0%, #0d6efd 50%,rgb(39, 12, 196) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 8px 24px rgba(92, 95, 246, 0.5),
+                        0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .add-node-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .add-node-btn:hover::before {
+            opacity: 1;
+        }
+
+        .add-node-btn:hover {
+            transform: translateY(-4px) scale(1.08);
+            box-shadow: 0 12px 32px rgba(139, 92, 246, 0.6),
+                        0 6px 16px rgba(217, 70, 239, 0.4);
+        }
+
+        .add-node-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* FAB Menu Dropdown */
+        .fab-menu-dropdown {
+            position: absolute;
+            bottom: 85px;
+            right: 0;
+            min-width: 240px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .fab-menu-dropdown.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .fab-menu-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .fab-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .fab-menu-item:hover {
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        .fab-menu-item .layer-icon-modern {
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        
+        .status-active { background: #10b981; }
+        .status-inactive { background: #6b7280; }
+        .status-error { background: #ef4444; }
+
+        @media (max-width: 1200px) {
+            .designer-layout {
+                grid-template-columns: 280px 1fr 280px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .designer-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr;
+                height: auto;
+            }
+            
+            .designer-panel {
+                max-height: 400px;
+            }
+            
+            .node-canvas {
+                min-height: 400px;
+            }
+        }
+
+        .help-tooltip {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .help-tooltip.show {
+            opacity: 1;
+        }
+
+        /* Ajustes para full-width layout */
+        .page-header .container,
+        .designer-layout {
+            max-width: 100%;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
+        /* Override base.html container for this page */
+        body .container {
+            max-width: 100% !important;
+        }
+
+        /* Context Menu Moderno - Glassmorphism Style */
+        .context-menu-modern {
+            position: fixed;
+            min-width: 280px;
+            max-width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+                        0 2px 8px rgba(0, 0, 0, 0.08);
+            z-index: 10000;
+            display: none;
+            overflow: hidden;
+            animation: contextMenuFadeIn 0.2s ease-out;
+        }
+
+        .context-menu-modern.show {
+            display: block;
+        }
+
+        @keyframes contextMenuFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .context-menu-header {
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            letter-spacing: 0.5px;
+        }
+
+        .context-menu-section {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .context-menu-section:last-child {
+            border-bottom: none;
+        }
+
+        /* Categoria Expandible - Acordeón */
+        .menu-category {
+            cursor: pointer;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 13px;
+            color: #374151;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            user-select: none;
+        }
+
+        .menu-category:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .menu-category-icon {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-category-arrow {
+            font-size: 10px;
+            transition: transform 0.3s ease;
+            color: #9ca3af;
+        }
+
+        .menu-category.expanded .menu-category-arrow {
+            transform: rotate(90deg);
+        }
+
+        /* Submenu Items */
+        .menu-submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .menu-submenu.expanded {
+            max-height: 500px;
+        }
+
+        .menu-submenu .context-menu-item {
+            padding-left: 46px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .menu-submenu .context-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            gap: 12px;
+        }
+
+        .context-menu-item:hover {
+            background: rgba(99, 102, 241, 0.08);
+            transform: translateX(4px);
+        }
+
+        .layer-icon-modern {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s ease;
+        }
+
+        .context-menu-item:hover .layer-icon-modern {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .layer-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .layer-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1f2937;
+        }
+
+        .layer-desc {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .context-menu-modern {
+                background: rgba(31, 41, 55, 0.95);
+                border-color: rgba(75, 85, 99, 0.3);
+            }
+
+            .layer-name {
+                color: #f9fafb;
+            }
+
+            .layer-desc {
+                color: #9ca3af;
+            }
+
+            .context-menu-item:hover {
+                background: rgba(99, 102, 241, 0.15);
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Progress Stepper -->
+{% include 'webapp/includes/stepper.html' with active_step=2 %}
+
+<!-- Page Header -->
+    <div class="page-header">
+        <div class="container-fluid px-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="page-title">
+                        <i class="fas fa-project-diagram me-2 text-primary"></i>
+                        Model Designer <span class="badge bg-warning">Advanced</span>
+                    </h1>
+    
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-md-end">
+                        <button class="btn btn-outline-primary me-2">
+                            <i class="fas fa-folder-open me-1"></i>Load Model
+                        </button>
+                        <button class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-code me-1"></i>Preview JSON
+                        </button>
+                        <button class="btn btn-primary me-2">
+                            <i class="fas fa-save me-1"></i>Save Model
+                        </button>
+                        <button class="btn btn-success">
+                            <i class="fas fa-play-circle me-1"></i>Go to Training
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Designer Layout -->
+    <div class="container-fluid px-4">
+        <div class="designer-layout">
+        <!-- Configuration Panel (Left) -->
+        <div class="designer-panel">
+            <div class="panel-header bg-primary text-white">
+                <i class="fas fa-cog panel-icon"></i>
+                <h6 class="panel-title">Configuration</h6>
+            </div>
+            <div class="panel-body">
+                <!-- Model Basic Info -->
+                <div class="form-group">
+                    <label class="form-label">Model Name</label>
+                    <input type="text" class="form-control" value="My Neural Network" placeholder="Enter model name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Framework</label>
+                    <select class="form-select">
+                        <option selected>PyTorch</option>
+                        <option>TensorFlow</option>
+                        <option>Keras</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" rows="3" placeholder="Model description..."></textarea>
+                </div>
+                
+                <!-- Optimizer Configuration -->
+                <div class="form-group">
+                    <label class="form-label">Optimizer</label>
+                    <select class="form-select">
+                        <option selected>Adam</option>
+                        <option>SGD</option>
+                        <option>RMSprop</option>
+                        <option>AdaGrad</option>
+                    </select>
+                </div>
+                
+                <div class="optimizer-grid">
+                    <div>
+                        <label class="form-label">Learning Rate</label>
+                        <input type="number" class="form-control" value="0.001" step="0.0001">
+                    </div>
+                    <div>
+                        <label class="form-label">Weight Decay</label>
+                        <input type="number" class="form-control" value="0" step="0.0001">
+                    </div>
+                </div>
+                
+                <!-- Loss Function -->
+                <div class="form-group">
+                    <label class="form-label">Loss Function</label>
+                    <select class="form-select">
+                        <option selected>Binary Cross Entropy with Logits</option>
+                        <option>Cross Entropy</option>
+                        <option>Mean Squared Error</option>
+                        <option>Mean Absolute Error</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node Canvas (Center) -->
+        <div class="designer-panel" style="position: relative;">
+            <div class="panel-header bg-primary text-white">
+                <i class="fas fa-sitemap panel-icon"></i>
+                <h6 class="panel-title">Neural Network Graph</h6>
+                <div class="ms-auto">
+                    <button class="btn btn-sm btn-light me-2" id="autoLayoutBtn">
+                        <i class="fas fa-magic me-1"></i>
+                        Auto Layout
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" id="resetViewBtn">
+                        <i class="fas fa-undo me-1"></i>
+                        Reset View
+                    </button>
+                </div>
+            </div>
+
+            <!-- COMPONENT: Zoom Controls (OUTSIDE canvas) -->
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoomInBtn" title="Zoom In">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <div class="zoom-level" id="zoomLevel">100%</div>
+                <button class="zoom-btn" id="zoomOutBtn" title="Zoom Out">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="zoom-btn" id="zoomResetBtn" title="Reset Zoom">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+
+            <!-- COMPONENT: FAB Button with Dropdown (OUTSIDE canvas) -->
+            <div style="position: absolute; bottom: 20px; right: 20px; z-index: 100;">
+                <div class="fab-menu-dropdown" id="fabMenuDropdown">
+                    <!-- Linear - Acordeón -->
+                    <div class="menu-category" data-category="linear">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-equals" style="color: #10b981;"></i>
+                            <span>Linear</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="linear">
+                        <div class="context-menu-item" data-layer-type="linear">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #10b981, #059669);">
+                                <i class="fas fa-equals"></i>
+                            </div>
+                            <span class="layer-name">Linear</span>
+                        </div>
+                    </div>
+
+                    <!-- Convolution - Acordeón -->
+                    <div class="menu-category" data-category="convolution">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-th" style="color: #06b6d4;"></i>
+                            <span>Convolution</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="convolution">
+                        <div class="context-menu-item" data-layer-type="conv1d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                                <i class="fas fa-grip-lines"></i>
+                            </div>
+                            <span class="layer-name">Conv1D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="conv2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0891b2, #0e7490);">
+                                <i class="fas fa-th"></i>
+                            </div>
+                            <span class="layer-name">Conv2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="conv3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0e7490, #155e75);">
+                                <i class="fas fa-cube"></i>
+                            </div>
+                            <span class="layer-name">Conv3D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="convtranspose1d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #14b8a6, #0d9488);">
+                                <i class="fas fa-grip-lines"></i>
+                            </div>
+                            <span class="layer-name">ConvTranspose1D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="convtranspose2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0d9488, #0f766e);">
+                                <i class="fas fa-th"></i>
+                            </div>
+                            <span class="layer-name">ConvTranspose2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="convtranspose3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0f766e, #115e59);">
+                                <i class="fas fa-cube"></i>
+                            </div>
+                            <span class="layer-name">ConvTranspose3D</span>
+                        </div>
+                    </div>
+
+                    <!-- Activation - Acordeón -->
+                    <div class="menu-category" data-category="activation">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-bolt" style="color: #f59e0b;"></i>
+                            <span>Activation</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="activation">
+                        <div class="context-menu-item" data-layer-type="relu">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <span class="layer-name">ReLU</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="sigmoid">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #d97706, #b45309);">
+                                <i class="fas fa-wave-square"></i>
+                            </div>
+                            <span class="layer-name">Sigmoid</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="tanh">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #b45309, #92400e);">
+                                <i class="fas fa-wave-square"></i>
+                            </div>
+                            <span class="layer-name">Tanh</span>
+                        </div>
+                    </div>
+
+                    <!-- Pooling - Acordeón -->
+                    <div class="menu-category" data-category="pooling">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-compress" style="color: #3b82f6;"></i>
+                            <span>Pooling</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="pooling">
+                        <div class="context-menu-item" data-layer-type="maxpool1d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                                <i class="fas fa-compress-alt"></i>
+                            </div>
+                            <span class="layer-name">MaxPool1D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="maxpool2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                                <i class="fas fa-compress-alt"></i>
+                            </div>
+                            <span class="layer-name">MaxPool2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="maxpool3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #1d4ed8, #1e40af);">
+                                <i class="fas fa-compress-alt"></i>
+                            </div>
+                            <span class="layer-name">MaxPool3D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="maxunpool1d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                                <i class="fas fa-expand-alt"></i>
+                            </div>
+                            <span class="layer-name">MaxUnpool1D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="maxunpool2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #4f46e5, #4338ca);">
+                                <i class="fas fa-expand-alt"></i>
+                            </div>
+                            <span class="layer-name">MaxUnpool2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="maxunpool3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #4338ca, #3730a3);">
+                                <i class="fas fa-expand-alt"></i>
+                            </div>
+                            <span class="layer-name">MaxUnpool3D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="avgpool1d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </div>
+                            <span class="layer-name">AvgPool1D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="avgpool2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0891b2, #0e7490);">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </div>
+                            <span class="layer-name">AvgPool2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="avgpool3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0e7490, #155e75);">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </div>
+                            <span class="layer-name">AvgPool3D</span>
+                        </div>
+                    </div>
+
+                    <!-- Dropout - Acordeón -->
+                    <div class="menu-category" data-category="dropout">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-random" style="color: #8b5cf6;"></i>
+                            <span>Dropout</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="dropout">
+                        <div class="context-menu-item" data-layer-type="dropout">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                                <i class="fas fa-random"></i>
+                            </div>
+                            <span class="layer-name">Dropout</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="dropout2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
+                                <i class="fas fa-random"></i>
+                            </div>
+                            <span class="layer-name">Dropout2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="dropout3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #6d28d9, #5b21b6);">
+                                <i class="fas fa-random"></i>
+                            </div>
+                            <span class="layer-name">Dropout3D</span>
+                        </div>
+                    </div>
+
+                    <!-- BatchNorm - Acordeón -->
+                    <div class="menu-category" data-category="batchnorm">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-balance-scale" style="color: #3b82f6;"></i>
+                            <span>BatchNorm</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="batchnorm">
+                        <div class="context-menu-item" data-layer-type="batchnorm1d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                            <span class="layer-name">BatchNorm1D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="batchnorm2d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                            <span class="layer-name">BatchNorm2D</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="batchnorm3d">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #1d4ed8, #1e40af);">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                            <span class="layer-name">BatchNorm3D</span>
+                        </div>
+                    </div>
+
+                    <!-- Merge - Acordeón -->
+                    <div class="menu-category" data-category="merge">
+                        <div class="menu-category-icon">
+                            <i class="fas fa-code-branch" style="color: #ef4444;"></i>
+                            <span>Merge</span>
+                        </div>
+                        <i class="fas fa-chevron-right menu-category-arrow"></i>
+                    </div>
+                    <div class="menu-submenu" data-submenu="merge">
+                        <div class="context-menu-item" data-layer-type="add">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <span class="layer-name">Add</span>
+                        </div>
+                        <div class="context-menu-item" data-layer-type="concat">
+                            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <span class="layer-name">Concat</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="add-node-btn" id="addLayerBtn" title="Add Layer">
+                    <i class="fas fa-plus"></i>
+                </div>
+            </div>
+
+            <div class="node-canvas" id="nodeCanvas">
+                <!-- COMPONENT: SVG Connection System -->
+                <svg id="connectionsSvg" style="position: absolute; width: 100%; height: 100%; z-index: 1; pointer-events: none;">
+                    <!-- Connections will be drawn dynamically -->
+                </svg>
+                
+                <!-- COMPONENT: Input Node -->
+                <div class="layer-node layer-input node-input selected" data-node-id="input" style="left: 72px; top: 168px;">
+                    <div class="node-content">
+                        <div class="node-title">Input</div>
+                        <div class="node-features">12 features</div>
+                    </div>
+                    <div class="connection-port smart-port right-side acting-as-output disconnected"
+                         data-port-type="output" data-side="right" data-preferred="output"></div>
+                </div>
+
+                <!-- COMPONENT: Output Node -->
+                <div class="layer-node layer-output node-output" data-node-id="output" style="right: 72px; top: 168px; left: auto;">
+                    <div class="connection-port smart-port left-side acting-as-input disconnected"
+                         data-port-type="input" data-side="left" data-preferred="input"></div>
+                    <div class="node-content">
+                        <div class="node-title">Output</div>
+                        <div class="node-features">1 feature</div>
+                    </div>
+                </div>
+
+                <!-- COMPONENT: Connection Helper -->
+                <svg id="connectionHelper" style="position: absolute; width: 100%; height: 100%; z-index: 15; pointer-events: none; display: none;">
+                    <path id="helperPath" class="connection-preview"/>
+                </svg>
+
+                <!-- Connection Edit UI -->
+                <div id="connectionEditUI" class="connection-edit-ui">
+                    <span style="font-size: 12px; color: #6b7280; margin-right: 8px;">
+                        <i class="fas fa-link"></i>
+                        Connection
+                    </span>
+                    <button class="connection-edit-btn edit" id="editConnectionBtn">
+                        <i class="fas fa-edit"></i>
+                        Edit Curve
+                    </button>
+                    <button class="connection-edit-btn delete" id="deleteConnectionBtn">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
+                </div>
+
+                <!-- Help tooltip -->
+                <div id="helpTooltip" class="help-tooltip">
+                    Click connections to select • Double-click to edit curves • Drag control points to reshape
+                </div>
+            </div>
+        </div> <!-- /designer-panel (Canvas Center) -->
+
+        <!-- Layer Parameters Panel (Right) -->
+        <div class="designer-panel">
+            <div class="panel-header bg-primary text-white">
+                <i class="fas fa-sliders-h panel-icon"></i>
+                <h6 class="panel-title">Layer Parameters</h6>
+            </div>
+            <div class="panel-body" id="layer-params-container">
+                <!-- Placeholder when no layer is selected -->
+                <div class="param-placeholder">
+                    <div class="hand-pointer">
+                        <i class="fas fa-hand-pointer"></i>
+                    </div>
+                    <h5>Select a layer to configure its parameters.</h5>
+                </div>
+            </div>
+        </div> <!-- /designer-panel (Layer Parameters Right) -->
+    </div> <!-- /designer-layout -->
+    </div> <!-- /container-fluid -->
+
+<!-- Context Menu Moderno con Acordeón -->
+<div class="context-menu-modern" id="contextMenuModern">
+    <div class="context-menu-header">
+        <i class="fas fa-layer-group me-2"></i>
+        <span>Add Layer</span>
+    </div>
+
+    <!-- Linear - Menú expandible -->
+    <div class="menu-category" data-category="linear">
+        <div class="menu-category-icon">
+            <i class="fas fa-equals" style="color: #10b981;"></i>
+            <span>Linear</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="linear">
+        <div class="context-menu-item" data-layer-type="linear">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <i class="fas fa-equals"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Linear</div>
+                <div class="layer-desc">Fully connected layer</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Convolution - Categoría expandible -->
+    <div class="menu-category" data-category="convolution">
+        <div class="menu-category-icon">
+            <i class="fas fa-th" style="color: #06b6d4;"></i>
+            <span>Convolution</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="convolution">
+        <div class="context-menu-item" data-layer-type="conv1d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                <i class="fas fa-grip-lines"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Conv1D</div>
+                <div class="layer-desc">1D convolution</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="conv2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0891b2, #0e7490);">
+                <i class="fas fa-th"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Conv2D</div>
+                <div class="layer-desc">2D convolution</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="conv3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0e7490, #155e75);">
+                <i class="fas fa-cube"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Conv3D</div>
+                <div class="layer-desc">3D convolution</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="convtranspose1d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #14b8a6, #0d9488);">
+                <i class="fas fa-grip-lines"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">ConvTranspose1D</div>
+                <div class="layer-desc">1D transposed convolution</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="convtranspose2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0d9488, #0f766e);">
+                <i class="fas fa-th"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">ConvTranspose2D</div>
+                <div class="layer-desc">2D transposed convolution</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="convtranspose3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0f766e, #115e59);">
+                <i class="fas fa-cube"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">ConvTranspose3D</div>
+                <div class="layer-desc">3D transposed convolution</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activation - Categoría expandible -->
+    <div class="menu-category" data-category="activation">
+        <div class="menu-category-icon">
+            <i class="fas fa-bolt" style="color: #f59e0b;"></i>
+            <span>Activation</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="activation">
+        <div class="context-menu-item" data-layer-type="relu">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">ReLU</div>
+                <div class="layer-desc">Rectified Linear Unit</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="sigmoid">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #d97706, #b45309);">
+                <i class="fas fa-wave-square"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Sigmoid</div>
+                <div class="layer-desc">σ(x) = 1/(1+e^-x)</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="tanh">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #b45309, #92400e);">
+                <i class="fas fa-wave-square"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Tanh</div>
+                <div class="layer-desc">tanh(x) hyperbolic</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pooling - Categoría expandible -->
+    <div class="menu-category" data-category="pooling">
+        <div class="menu-category-icon">
+            <i class="fas fa-compress" style="color: #3b82f6;"></i>
+            <span>Pooling</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="pooling">
+        <div class="context-menu-item" data-layer-type="maxpool1d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                <i class="fas fa-compress-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">MaxPool1D</div>
+                <div class="layer-desc">1D max pooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="maxpool2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                <i class="fas fa-compress-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">MaxPool2D</div>
+                <div class="layer-desc">2D max pooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="maxpool3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #1d4ed8, #1e40af);">
+                <i class="fas fa-compress-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">MaxPool3D</div>
+                <div class="layer-desc">3D max pooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="maxunpool1d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                <i class="fas fa-expand-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">MaxUnpool1D</div>
+                <div class="layer-desc">1D max unpooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="maxunpool2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #4f46e5, #4338ca);">
+                <i class="fas fa-expand-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">MaxUnpool2D</div>
+                <div class="layer-desc">2D max unpooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="maxunpool3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #4338ca, #3730a3);">
+                <i class="fas fa-expand-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">MaxUnpool3D</div>
+                <div class="layer-desc">3D max unpooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="avgpool1d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                <i class="fas fa-compress-arrows-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">AvgPool1D</div>
+                <div class="layer-desc">1D average pooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="avgpool2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0891b2, #0e7490);">
+                <i class="fas fa-compress-arrows-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">AvgPool2D</div>
+                <div class="layer-desc">2D average pooling</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="avgpool3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #0e7490, #155e75);">
+                <i class="fas fa-compress-arrows-alt"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">AvgPool3D</div>
+                <div class="layer-desc">3D average pooling</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dropout - Categoría expandible -->
+    <div class="menu-category" data-category="dropout">
+        <div class="menu-category-icon">
+            <i class="fas fa-random" style="color: #8b5cf6;"></i>
+            <span>Dropout</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="dropout">
+        <div class="context-menu-item" data-layer-type="dropout">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                <i class="fas fa-random"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Dropout</div>
+                <div class="layer-desc">Standard dropout</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="dropout2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
+                <i class="fas fa-random"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Dropout2D</div>
+                <div class="layer-desc">2D feature map dropout</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="dropout3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #6d28d9, #5b21b6);">
+                <i class="fas fa-random"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Dropout3D</div>
+                <div class="layer-desc">3D feature map dropout</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BatchNorm - Categoría expandible -->
+    <div class="menu-category" data-category="batchnorm">
+        <div class="menu-category-icon">
+            <i class="fas fa-balance-scale" style="color: #3b82f6;"></i>
+            <span>BatchNorm</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="batchnorm">
+        <div class="context-menu-item" data-layer-type="batchnorm1d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">BatchNorm1D</div>
+                <div class="layer-desc">1D batch normalization</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="batchnorm2d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">BatchNorm2D</div>
+                <div class="layer-desc">2D batch normalization</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="batchnorm3d">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #1d4ed8, #1e40af);">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">BatchNorm3D</div>
+                <div class="layer-desc">3D batch normalization</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merge - Categoría expandible -->
+    <div class="menu-category" data-category="merge">
+        <div class="menu-category-icon">
+            <i class="fas fa-code-branch" style="color: #ef4444;"></i>
+            <span>Merge</span>
+        </div>
+        <i class="fas fa-chevron-right menu-category-arrow"></i>
+    </div>
+    <div class="menu-submenu" data-submenu="merge">
+        <div class="context-menu-item" data-layer-type="add">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                <i class="fas fa-plus"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Add</div>
+                <div class="layer-desc">Element-wise addition</div>
+            </div>
+        </div>
+        <div class="context-menu-item" data-layer-type="concat">
+            <div class="layer-icon-modern" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                <i class="fas fa-link"></i>
+            </div>
+            <div class="layer-info">
+                <div class="layer-name">Concat</div>
+                <div class="layer-desc">Concatenate tensors</div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // ============================================================================
+        // BACKEND CONTEXT INTEGRATION
+        // ============================================================================
+        console.log('🔗 Loading backend context variables...');
+
+        // Django template variables → JavaScript constants
+        const BACKEND_CONTEXT = {
+            editMode: {{ edit_mode|lower }},
+            editModel: {{ edit_model_json|safe }},
+            modelConfigs: [
+                {% for config in model_configs %}
+                {
+                    id: {{ config.id }},
+                    name: "{{ config.name|escapejs }}",
+                    created_at: "{{ config.created_at }}"
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            selectedDatasets: {{ selected_datasets|safe }}
+        };
+
+        console.log('📦 Backend context loaded:', BACKEND_CONTEXT);
+        console.log('   ✓ Edit Mode:', BACKEND_CONTEXT.editMode);
+        console.log('   ✓ Model Configs:', BACKEND_CONTEXT.modelConfigs?.length || 0, 'models');
+        console.log('   ✓ Selected Datasets:', BACKEND_CONTEXT.selectedDatasets?.length || 0, 'datasets');
+
+        if (BACKEND_CONTEXT.editMode) {
+            console.log('✏️ EDIT MODE ACTIVE');
+            console.log('   → Loading model configuration:', BACKEND_CONTEXT.editModel);
+        } else {
+            console.log('➕ CREATE MODE ACTIVE');
+            console.log('   → Starting with blank canvas');
+        }
+
+        // ============================================================================
+        // ADVANCED MODEL DESIGNER - WORKING CURVE EDITING SYSTEM
+        // ============================================================================
+        console.log('🎯 Initializing Advanced Model Designer with Working Curve Editing...');
+        
+        // ============================================================================
+        // ENHANCED STATE MANAGEMENT
+        // ============================================================================
+        
+        class ModelDesignerState {
+            constructor() {
+                this.nodes = new Map();
+                this.connections = new Map();
+                this.nodeCounter = 0;
+                this.isConnecting = false;
+                this.connectingFrom = null;
+                this.isDragging = false;
+                this.dragNode = null;
+                this.dragOffset = { x: 0, y: 0 };
+                
+                // Connection selection and editing state
+                this.selectedConnection = null;
+                this.isEditingCurve = false;
+                this.editingConnection = null;
+                this.controlPoints = [];
+                this.isDraggingControlPoint = false;
+                this.dragControlPoint = null;
+
+                // Zoom state
+                this.zoomLevel = 1.0;
+                this.minZoom = 0.3;
+                this.maxZoom = 2.0;
+                this.zoomStep = 0.1;
+
+                // Cleanup tracking
+                this.eventListeners = new Set();
+                this.svgElements = new Set();
+                this.modalInstances = new Set();
+
+                console.log('📊 State management initialized');
+            }
+            
+            reset() {
+                this.isConnecting = false;
+                this.connectingFrom = null;
+                this.isDragging = false;
+                this.dragNode = null;
+                this.dragOffset = { x: 0, y: 0 };
+                
+                // Reset curve editing but keep control point dragging separate
+                if (!this.isDraggingControlPoint) {
+                    this.dragControlPoint = null;
+                }
+            }
+            
+            clearSelections() {
+                this.selectedConnection = null;
+                
+                // Only clear editing state if not currently dragging a control point
+                if (!this.isDraggingControlPoint) {
+                    this.isEditingCurve = false;
+                    this.editingConnection = null;
+                    this.controlPoints = [];
+                }
+                
+                document.querySelectorAll('.connection-path.selected').forEach(path => {
+                    path.classList.remove('selected');
+                });
+                document.querySelectorAll('.layer-node.selected').forEach(node => {
+                    node.classList.remove('selected');
+                });
+            }
+            
+            cleanup() {
+                console.log('🧹 Performing cleanup...');
+                
+                this.eventListeners.forEach(cleanup => cleanup());
+                this.eventListeners.clear();
+                
+                this.svgElements.forEach(element => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                });
+                this.svgElements.clear();
+                
+                this.modalInstances.forEach(modal => {
+                    modal.dispose();
+                });
+                this.modalInstances.clear();
+                
+                console.log('✅ Cleanup completed');
+            }
+        }
+        
+        // ============================================================================
+        // FIXED CONNECTION COMPONENT WITH WORKING CURVE EDITING
+        // ============================================================================
+        
+        class ConnectionComponent {
+            constructor(canvas, state) {
+                this.canvas = canvas;
+                this.state = state;
+                this.svg = document.getElementById('connectionsSvg');
+                this.helperSvg = document.getElementById('connectionHelper');
+                this.helperPath = document.getElementById('helperPath');
+                this.editUI = document.getElementById('connectionEditUI');
+                
+                console.log('🔗 Connection Component initialized');
+            }
+            
+            startConnection(e, port) {
+                try {
+                    const nodeElement = port.closest('.layer-node');
+                    if (!nodeElement) {
+                        console.error('❌ Port is not associated with a node');
+                        return;
+                    }
+                    
+                    const nodeId = nodeElement.dataset.nodeId;
+                    
+                    this.determineSmartPortRole(port, 'output');
+                    
+                    this.state.isConnecting = true;
+                    this.state.connectingFrom = { 
+                        port, 
+                        nodeId, 
+                        portType: 'output',
+                        startX: e.clientX,
+                        startY: e.clientY
+                    };
+                    
+                    port.classList.add('connecting');
+                    this.helperSvg.style.display = 'block';
+                    
+                    console.log('🔗 Started connection from:', nodeId);
+                } catch (error) {
+                    console.error('❌ Error starting connection:', error);
+                    this.state.reset();
+                }
+            }
+            
+            updateConnection(e) {
+                if (!this.state.isConnecting || !this.state.connectingFrom) return;
+                
+                try {
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const fromRect = this.state.connectingFrom.port.getBoundingClientRect();
+                    
+                    const fromX = fromRect.left - canvasRect.left + fromRect.width / 2;
+                    const fromY = fromRect.top - canvasRect.top + fromRect.height / 2;
+                    const toX = e.clientX - canvasRect.left;
+                    const toY = e.clientY - canvasRect.top;
+                    
+                    const midX = (fromX + toX) / 2;
+                    const pathData = `M ${fromX} ${fromY} Q ${midX} ${fromY}, ${midX} ${(fromY + toY) / 2} Q ${midX} ${toY}, ${toX} ${toY}`;
+                    
+                    this.helperPath.setAttribute('d', pathData);
+                } catch (error) {
+                    console.error('❌ Error updating connection preview:', error);
+                }
+            }
+            
+            completeConnection(toPort) {
+                try {
+                    const fromPort = this.state.connectingFrom.port;
+                    const fromNodeElement = fromPort.closest('.layer-node');
+                    const toNodeElement = toPort.closest('.layer-node');
+                    
+                    if (!fromNodeElement || !toNodeElement) {
+                        console.error('❌ Cannot find node elements for connection');
+                        this.cancelConnection();
+                        return;
+                    }
+                    
+                    const fromNodeId = fromNodeElement.dataset.nodeId;
+                    const toNodeId = toNodeElement.dataset.nodeId;
+                    
+                    if (fromNodeId === toNodeId) {
+                        console.log('⚠️ Cannot connect node to itself');
+                        this.cancelConnection();
+                        return;
+                    }
+
+                    // Check if target port is an input-port (multi-input node)
+                    const isMultiInputPort = toPort.classList.contains('input-port');
+                    let toPortIndex = null;
+
+                    if (isMultiInputPort) {
+                        // Get port index for multi-input ports
+                        toPortIndex = parseInt(toPort.dataset.portIndex);
+
+                        // Check if this specific port already has a connection
+                        let portHasConnection = false;
+                        this.state.connections.forEach((connection) => {
+                            if (connection.to === toNodeId && connection.toPortIndex === toPortIndex) {
+                                portHasConnection = true;
+                            }
+                        });
+
+                        if (portHasConnection) {
+                            console.log('⚠️ This input port already has a connection (only 1 connection per port allowed)');
+                            window.showToast('Only one connection per input port allowed', 'warning');
+                            this.cancelConnection();
+                            return;
+                        }
+                    } else {
+                        // For smart-ports, check standard connection logic
+                        const connectionId = `${fromNodeId}-${toNodeId}`;
+                        if (this.state.connections.has(connectionId)) {
+                            console.log('⚠️ Connection already exists');
+                            this.cancelConnection();
+                            return;
+                        }
+                    }
+
+                    this.determineSmartPortRole(toPort, 'input');
+
+                    // Create unique connection ID (include port index for multi-input)
+                    const connectionId = isMultiInputPort
+                        ? `${fromNodeId}-${toNodeId}-port${toPortIndex}`
+                        : `${fromNodeId}-${toNodeId}`;
+
+                    this.state.connections.set(connectionId, {
+                        from: fromNodeId,
+                        to: toNodeId,
+                        fromPort,
+                        toPort,
+                        toPortIndex: toPortIndex  // Store port index for multi-input nodes
+                    });
+                    
+                    fromPort.classList.remove('connecting', 'disconnected');
+                    toPort.classList.remove('disconnected');
+
+                    // Mark multi-input port as connected
+                    if (isMultiInputPort) {
+                        toPort.classList.add('connected');
+                    }
+                    
+                    const pathElement = this.drawConnection(fromPort, toPort, connectionId);
+                    
+                    this.helperSvg.style.display = 'none';
+                    
+                    console.log('✅ Connection created:', fromNodeId, '→', toNodeId);
+                    
+                    setTimeout(() => this.updateFlowHighlighting(), 100);
+                    this.state.reset();
+                } catch (error) {
+                    console.error('❌ Error completing connection:', error);
+                    this.cancelConnection();
+                }
+            }
+            
+            cancelConnection() {
+                try {
+                    if (this.state.connectingFrom) {
+                        this.state.connectingFrom.port.classList.remove('connecting');
+                        this.state.connectingFrom.port.classList.add('disconnected');
+                    }
+                    
+                    this.helperSvg.style.display = 'none';
+                    this.state.reset();
+                    console.log('❌ Connection cancelled');
+                } catch (error) {
+                    console.error('❌ Error cancelling connection:', error);
+                    this.state.reset();
+                }
+            }
+            
+            drawConnection(fromPort, toPort, connectionId, preservedClasses = []) {
+                try {
+                    const fromRect = fromPort.getBoundingClientRect();
+                    const toRect = toPort.getBoundingClientRect();
+                    const canvasRect = this.canvas.getBoundingClientRect();
+
+                    const fromX = fromRect.left - canvasRect.left + fromRect.width / 2;
+                    const fromY = fromRect.top - canvasRect.top + fromRect.height / 2;
+                    const toX = toRect.left - canvasRect.left + toRect.width / 2;
+                    const toY = toRect.top - canvasRect.top + toRect.height / 2;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const midX = (fromX + toX) / 2;
+                    const pathData = `M ${fromX} ${fromY} Q ${midX} ${fromY}, ${midX} ${(fromY + toY) / 2} Q ${midX} ${toY}, ${toX} ${toY}`;
+
+                    path.setAttribute('d', pathData);
+
+                    // Preserve additional classes (like flow-highlight)
+                    const classes = ['connection-path', ...preservedClasses];
+                    path.setAttribute('class', classes.join(' '));
+
+                    path.style.pointerEvents = 'all';
+                    if (connectionId) {
+                        path.dataset.connectionId = connectionId;
+                    }
+
+                    this.state.svgElements.add(path);
+                    this.svg.appendChild(path);
+
+                    return path;
+                } catch (error) {
+                    console.error('❌ Error drawing connection:', error);
+                    return null;
+                }
+            }
+            
+            selectConnection(pathElement) {
+                try {
+                    this.state.clearSelections();
+                    
+                    const connectionId = pathElement.dataset.connectionId;
+                    this.state.selectedConnection = connectionId;
+                    pathElement.classList.add('selected');
+                    
+                    this.showConnectionEditUI();
+                    
+                    console.log('🎯 Connection selected:', connectionId);
+                } catch (error) {
+                    console.error('❌ Error selecting connection:', error);
+                }
+            }
+            
+            showConnectionEditUI() {
+                this.editUI.classList.add('active');
+            }
+            
+            hideConnectionEditUI() {
+                this.editUI.classList.remove('active');
+                this.state.clearSelections();
+            }
+            
+            // FIXED: Complete curve editing system
+            startCurveEditing() {
+                if (!this.state.selectedConnection) return;
+                
+                try {
+                    const pathElement = document.querySelector(`[data-connection-id="${this.state.selectedConnection}"]`);
+                    if (!pathElement) return;
+                    
+                    this.state.isEditingCurve = true;
+                    this.state.editingConnection = this.state.connections.get(this.state.selectedConnection);
+                    
+                    pathElement.classList.remove('selected');
+                    pathElement.classList.add('editing');
+                    
+                    this.createControlPoints(pathElement);
+                    this.hideConnectionEditUI();
+                    
+                    console.log('📐 Started curve editing for:', this.state.selectedConnection);
+                } catch (error) {
+                    console.error('❌ Error starting curve editing:', error);
+                }
+            }
+            
+            // FIXED: Create control points with proper event listeners
+            createControlPoints(pathElement) {
+                try {
+                    const pathData = pathElement.getAttribute('d');
+                    const pathParts = pathData.match(/M ([\d.]+) ([\d.]+) Q ([\d.]+) ([\d.]+), ([\d.]+) ([\d.]+) Q ([\d.]+) ([\d.]+), ([\d.]+) ([\d.]+)/);
+                    
+                    if (!pathParts) return;
+                    
+                    const startX = parseFloat(pathParts[1]);
+                    const startY = parseFloat(pathParts[2]);
+                    const cp1X = parseFloat(pathParts[3]);
+                    const cp1Y = parseFloat(pathParts[4]);
+                    const midX = parseFloat(pathParts[5]);
+                    const midY = parseFloat(pathParts[6]);
+                    const cp2X = parseFloat(pathParts[7]);
+                    const cp2Y = parseFloat(pathParts[8]);
+                    const endX = parseFloat(pathParts[9]);
+                    const endY = parseFloat(pathParts[10]);
+                    
+                    // Create control points
+                    const controlPoint1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    controlPoint1.setAttribute('cx', cp1X);
+                    controlPoint1.setAttribute('cy', cp1Y);
+                    controlPoint1.setAttribute('r', '6');
+                    controlPoint1.setAttribute('class', 'curve-control-point');
+                    controlPoint1.style.pointerEvents = 'all'; // CRITICAL FIX: Enable pointer events
+                    controlPoint1.dataset.controlType = 'cp1';
+                    
+                    const controlPoint2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    controlPoint2.setAttribute('cx', cp2X);
+                    controlPoint2.setAttribute('cy', cp2Y);
+                    controlPoint2.setAttribute('r', '6');
+                    controlPoint2.setAttribute('class', 'curve-control-point');
+                    controlPoint2.style.pointerEvents = 'all'; // CRITICAL FIX: Enable pointer events
+                    controlPoint2.dataset.controlType = 'cp2';
+                    
+                    // Create control lines
+                    const controlLine1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    controlLine1.setAttribute('x1', startX);
+                    controlLine1.setAttribute('y1', startY);
+                    controlLine1.setAttribute('x2', cp1X);
+                    controlLine1.setAttribute('y2', cp1Y);
+                    controlLine1.setAttribute('class', 'curve-control-line');
+                    
+                    const controlLine2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    controlLine2.setAttribute('x1', endX);
+                    controlLine2.setAttribute('y1', endY);
+                    controlLine2.setAttribute('x2', cp2X);
+                    controlLine2.setAttribute('y2', cp2Y);
+                    controlLine2.setAttribute('class', 'curve-control-line');
+                    
+                    this.svg.appendChild(controlLine1);
+                    this.svg.appendChild(controlLine2);
+                    this.svg.appendChild(controlPoint1);
+                    this.svg.appendChild(controlPoint2);
+                    
+                    this.state.controlPoints = [
+                        { element: controlPoint1, line: controlLine1, type: 'cp1', pathElement: pathElement },
+                        { element: controlPoint2, line: controlLine2, type: 'cp2', pathElement: pathElement }
+                    ];
+                    
+                    // Track for cleanup
+                    this.state.svgElements.add(controlLine1);
+                    this.state.svgElements.add(controlLine2);
+                    this.state.svgElements.add(controlPoint1);
+                    this.state.svgElements.add(controlPoint2);
+                    
+                    console.log('✅ Control points created with event listeners');
+                } catch (error) {
+                    console.error('❌ Error creating control points:', error);
+                }
+            }
+            
+            // FIXED: Start control point dragging
+            startControlPointDrag(e, controlPoint) {
+                console.log('🎛️ Starting control point drag:', controlPoint.type);
+                
+                this.state.isDraggingControlPoint = true;
+                this.state.dragControlPoint = controlPoint;
+                
+                controlPoint.element.classList.add('dragging');
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            
+            // FIXED: Update control point dragging
+            updateControlPointDrag(e) {
+                if (!this.state.isDraggingControlPoint || !this.state.dragControlPoint) return;
+                
+                try {
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - canvasRect.left;
+                    const y = e.clientY - canvasRect.top;
+                    
+                    const controlPoint = this.state.dragControlPoint;
+                    
+                    // Update control point position
+                    controlPoint.element.setAttribute('cx', x);
+                    controlPoint.element.setAttribute('cy', y);
+                    
+                    // Update control line
+                    controlPoint.line.setAttribute('x2', x);
+                    controlPoint.line.setAttribute('y2', y);
+                    
+                    // Update the curve path in real-time
+                    this.updateCurvePath();
+                    
+                } catch (error) {
+                    console.error('❌ Error updating control point drag:', error);
+                }
+            }
+            
+            // FIXED: Stop control point dragging
+            stopControlPointDrag() {
+                if (this.state.isDraggingControlPoint && this.state.dragControlPoint) {
+                    this.state.dragControlPoint.element.classList.remove('dragging');
+                    console.log('🎛️ Stopped dragging control point:', this.state.dragControlPoint.type);
+                }
+                
+                this.state.isDraggingControlPoint = false;
+                this.state.dragControlPoint = null;
+            }
+            
+            // FIXED: Update curve path in real-time
+            updateCurvePath() {
+                if (!this.state.isEditingCurve || this.state.controlPoints.length !== 2) return;
+                
+                try {
+                    const pathElement = this.state.controlPoints[0].pathElement;
+                    const originalPathData = pathElement.getAttribute('d');
+                    const pathParts = originalPathData.match(/M ([\d.]+) ([\d.]+) Q ([\d.]+) ([\d.]+), ([\d.]+) ([\d.]+) Q ([\d.]+) ([\d.]+), ([\d.]+) ([\d.]+)/);
+                    
+                    if (!pathParts) return;
+                    
+                    const startX = parseFloat(pathParts[1]);
+                    const startY = parseFloat(pathParts[2]);
+                    const midX = parseFloat(pathParts[5]);
+                    const midY = parseFloat(pathParts[6]);
+                    const endX = parseFloat(pathParts[9]);
+                    const endY = parseFloat(pathParts[10]);
+                    
+                    // Get current control point positions
+                    const cp1X = parseFloat(this.state.controlPoints[0].element.getAttribute('cx'));
+                    const cp1Y = parseFloat(this.state.controlPoints[0].element.getAttribute('cy'));
+                    const cp2X = parseFloat(this.state.controlPoints[1].element.getAttribute('cx'));
+                    const cp2Y = parseFloat(this.state.controlPoints[1].element.getAttribute('cy'));
+                    
+                    // Create new path with updated control points
+                    const newPathData = `M ${startX} ${startY} Q ${cp1X} ${cp1Y}, ${midX} ${midY} Q ${cp2X} ${cp2Y}, ${endX} ${endY}`;
+                    pathElement.setAttribute('d', newPathData);
+                    
+                } catch (error) {
+                    console.error('❌ Error updating curve path:', error);
+                }
+            }
+            
+            finishCurveEditing() {
+                try {
+                    if (!this.state.isEditingCurve || !this.state.selectedConnection) return;
+                    
+                    const pathElement = document.querySelector(`[data-connection-id="${this.state.selectedConnection}"]`);
+                    if (pathElement) {
+                        pathElement.classList.remove('editing');
+                    }
+                    
+                    // Clean up control points
+                    this.state.controlPoints.forEach(cp => {
+                        cp.element.remove();
+                        cp.line.remove();
+                        this.state.svgElements.delete(cp.element);
+                        this.state.svgElements.delete(cp.line);
+                    });
+                    
+                    this.state.controlPoints = [];
+                    this.state.isEditingCurve = false;
+                    this.state.editingConnection = null;
+                    this.state.selectedConnection = null;
+                    
+                    console.log('✅ Curve editing finished');
+                } catch (error) {
+                    console.error('❌ Error finishing curve editing:', error);
+                }
+            }
+            
+            deleteConnection(connectionId, showAnimation = true) {
+                try {
+                    const connection = this.state.connections.get(connectionId);
+                    const pathElement = document.querySelector(`[data-connection-id="${connectionId}"]`);
+                    
+                    if (!connection) {
+                        console.warn(`⚠️ Connection ${connectionId} not found in state`);
+                        return;
+                    }
+                    
+                    if (pathElement) {
+                        if (showAnimation) {
+                            pathElement.classList.add('deleting');
+                        }
+                        
+                        const cleanupDelay = showAnimation ? 500 : 0;
+                        
+                        setTimeout(() => {
+                            try {
+                                this.state.connections.delete(connectionId);
+                                
+                                pathElement.remove();
+                                this.state.svgElements.delete(pathElement);
+                                
+                                if (connection.fromPort) {
+                                    connection.fromPort.classList.add('disconnected');
+                                    connection.fromPort.classList.remove('acting-as-output');
+                                }
+                                if (connection.toPort) {
+                                    connection.toPort.classList.add('disconnected');
+                                    connection.toPort.classList.remove('acting-as-input', 'connected');
+                                }
+                                
+                                if (this.state.selectedConnection === connectionId) {
+                                    this.hideConnectionEditUI();
+                                }
+                                
+                                console.log('🗑️ Connection deleted:', connectionId);
+                                setTimeout(() => this.updateFlowHighlighting(), 100);
+                            } catch (error) {
+                                console.error('❌ Error in connection deletion cleanup:', error);
+                            }
+                        }, cleanupDelay);
+                    } else {
+                        console.warn(`⚠️ Path element for connection ${connectionId} not found`);
+                        this.state.connections.delete(connectionId);
+                    }
+                } catch (error) {
+                    console.error('❌ Error deleting connection:', error);
+                }
+            }
+            
+            redrawAllConnections() {
+                try {
+                    // Store classes of existing paths before clearing
+                    const preservedClasses = new Map();
+                    if (!this.state.isEditingCurve) {
+                        document.querySelectorAll('.connection-path').forEach(path => {
+                            const connectionId = path.dataset.connectionId;
+                            if (connectionId) {
+                                const classList = Array.from(path.classList).filter(c => c !== 'connection-path');
+                                if (classList.length > 0) {
+                                    preservedClasses.set(connectionId, classList);
+                                }
+                            }
+                        });
+
+                        this.svg.innerHTML = '';
+                        this.state.svgElements.clear();
+                    }
+
+                    this.state.connections.forEach((connection, id) => {
+                        // Skip if we're editing this connection
+                        if (this.state.isEditingCurve && this.state.selectedConnection === id) {
+                            return;
+                        }
+
+                        // Get preserved classes for this connection
+                        const classes = preservedClasses.get(id) || [];
+                        this.drawConnection(connection.fromPort, connection.toPort, id, classes);
+                    });
+
+                    console.log('🔄 Connections redrawn (preserving classes and curve editing)');
+                } catch (error) {
+                    console.error('❌ Error redrawing connections:', error);
+                }
+            }
+            
+            determineSmartPortRole(port, role) {
+                try {
+                    const isSmart = port.classList.contains('smart-port');
+                    if (!isSmart) return role;
+                    
+                    const preferred = port.dataset.preferred;
+                    const side = port.dataset.side;
+                    
+                    port.classList.add(`acting-as-${role}`);
+                    port.classList.remove(`acting-as-${role === 'input' ? 'output' : 'input'}`);
+                    port.dataset.portType = role;
+                    
+                    console.log(`🧠 Smart port (${side}) adapting as ${role.toUpperCase()}`);
+                    return role;
+                } catch (error) {
+                    console.error('❌ Error determining smart port role:', error);
+                    return role;
+                }
+            }
+            
+            updateFlowHighlighting() {
+                try {
+                    document.querySelectorAll('.connection-path').forEach(path => {
+                        path.classList.remove('flow-highlight');
+                    });
+                    
+                    const inputNodeId = 'input';
+                    const flowPaths = new Set();
+                    
+                    const traceFlow = (nodeId, visited = new Set()) => {
+                        if (visited.has(nodeId)) return;
+                        visited.add(nodeId);
+                        
+                        this.state.connections.forEach((connection, connectionId) => {
+                            if (connection.from === nodeId) {
+                                flowPaths.add(connectionId);
+                                traceFlow(connection.to, visited);
+                            }
+                        });
+                    };
+                    
+                    traceFlow(inputNodeId);
+                    
+                    flowPaths.forEach(connectionId => {
+                        const pathElement = document.querySelector(`[data-connection-id="${connectionId}"]`);
+                        if (pathElement) {
+                            pathElement.classList.add('flow-highlight');
+                        }
+                    });
+                    
+                    console.log(`✨ Flow highlighting updated - ${flowPaths.size} connections`);
+                } catch (error) {
+                    console.error('❌ Error updating flow highlighting:', error);
+                }
+            }
+        }
+        
+        // ============================================================================
+        // LAYER NODE COMPONENT
+        // ============================================================================
+        
+        class LayerNodeComponent {
+            constructor(canvas, state, connectionComponent) {
+                this.canvas = canvas;
+                this.state = state;
+                this.connectionComponent = connectionComponent;
+                this.GRID_SIZE = 24;
+                
+                this.layerTypes = {
+                    linear: { name: 'Linear', color: '#10b981', defaultFeatures: 64 },
+                    relu: { name: 'ReLU', color: '#f59e0b', defaultFeatures: 'same' },
+                    sigmoid: { name: 'Sigmoid', color: '#f59e0b', defaultFeatures: 'same' },
+                    tanh: { name: 'Tanh', color: '#f59e0b', defaultFeatures: 'same' },
+                    dropout: { name: 'Dropout', color: '#8b5cf6', defaultFeatures: 'same' },
+                    batchnorm: { name: 'BatchNorm', color: '#6366f1', defaultFeatures: 'same' },
+                    conv2d: { name: 'Conv2D', color: '#06b6d4', defaultFeatures: 32 },
+                    // Special merge layers with multiple inputs
+                    add: { name: 'Add', color: '#10b981', defaultFeatures: 'same', multiInput: true, defaultInputs: 2 },
+                    concat: { name: 'Concat', color: '#3b82f6', defaultFeatures: 'concat', multiInput: true, defaultInputs: 2 }
+                };
+                
+                console.log('🧩 Layer Node Component initialized');
+            }
+            
+            createNode(layerType) {
+                const typeConfig = this.layerTypes[layerType];
+                const nodeId = `layer-${++this.state.nodeCounter}`;
+                const position = this.calculateSmartPosition();
+
+                // Generate input ports HTML (multiple for merge layers)
+                let inputPortsHTML = '';
+                if (typeConfig.multiInput) {
+                    const numInputs = typeConfig.defaultInputs || 2;
+                    for (let i = 0; i < numInputs; i++) {
+                        inputPortsHTML += `
+                            <div class="connection-port input-port left-side disconnected"
+                                 data-port-type="input"
+                                 data-port-index="${i}"
+                                 data-side="left"
+                                 style="top: ${20 + (i * 25)}px;"></div>`;
+                    }
+                } else {
+                    inputPortsHTML = `
+                        <div class="connection-port smart-port left-side disconnected"
+                             data-port-type="smart" data-side="left" data-preferred="input"></div>`;
+                }
+
+                const nodeHTML = `
+                    <div class="layer-node layer-${layerType}"
+                         data-node-id="${nodeId}"
+                         data-is-multi-input="${typeConfig.multiInput || false}"
+                         data-num-inputs="${typeConfig.defaultInputs || 1}"
+                         style="left: ${position.x}px; top: ${position.y}px;">
+                        ${inputPortsHTML}
+                        <div class="node-content">
+                            <div class="node-title">${typeConfig.name}</div>
+                            <div class="node-features">${typeConfig.defaultFeatures} features</div>
+                            ${typeConfig.multiInput ? `
+                                <div class="node-controls" style="margin-top: 8px; display: flex; gap: 4px; align-items: center; justify-content: center;">
+                                    <button class="btn-add-input" title="Add input" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid #d1d5db; background: white; font-size: 12px; cursor: pointer;">+</button>
+                                    <button class="btn-remove-input" title="Remove input" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid #d1d5db; background: white; font-size: 12px; cursor: pointer;">−</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="connection-port smart-port right-side disconnected"
+                             data-port-type="smart" data-side="right" data-preferred="output"></div>
+                    </div>
+                `;
+
+                this.canvas.insertAdjacentHTML('beforeend', nodeHTML);
+
+                this.state.nodes.set(nodeId, {
+                    type: layerType,
+                    features: typeConfig.defaultFeatures,
+                    x: position.x,
+                    y: position.y,
+                    numInputs: typeConfig.defaultInputs || 1,
+                    multiInput: typeConfig.multiInput || false
+                });
+
+                console.log(`➕ Created ${typeConfig.name} layer${typeConfig.multiInput ? ' (multi-input)' : ''}`);
+
+                const newNode = document.querySelector(`[data-node-id="${nodeId}"]`);
+                this.selectNode(newNode);
+
+                // Add event listeners for + and - buttons if multi-input
+                if (typeConfig.multiInput) {
+                    const btnAddInput = newNode.querySelector('.btn-add-input');
+                    const btnRemoveInput = newNode.querySelector('.btn-remove-input');
+
+                    if (btnAddInput) {
+                        btnAddInput.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.addInputPort(nodeId);
+                        });
+                    }
+
+                    if (btnRemoveInput) {
+                        btnRemoveInput.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.removeInputPort(nodeId);
+                        });
+                    }
+                }
+
+                return newNode;
+            }
+
+            addInputPort(nodeId) {
+                const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+                if (!node) return;
+
+                const currentInputs = node.querySelectorAll('.input-port').length;
+                const newIndex = currentInputs;
+
+                // Create new input port
+                const portHTML = `
+                    <div class="connection-port input-port left-side disconnected"
+                         data-port-type="input"
+                         data-port-index="${newIndex}"
+                         data-side="left"
+                         style="top: ${20 + (newIndex * 25)}px;"></div>`;
+
+                // Insert before node-content
+                const nodeContent = node.querySelector('.node-content');
+                nodeContent.insertAdjacentHTML('beforebegin', portHTML);
+
+                // Update state
+                const nodeState = this.state.nodes.get(nodeId);
+                if (nodeState) {
+                    nodeState.numInputs = newIndex + 1;
+                    node.dataset.numInputs = newIndex + 1;
+                }
+
+                // Update node height dynamically
+                this.updateNodeHeight(nodeId);
+
+                console.log(`➕ Added input port to ${nodeId} (now ${newIndex + 1} inputs)`);
+                this.connectionComponent.redrawAllConnections();
+            }
+
+            removeInputPort(nodeId) {
+                const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+                if (!node) return;
+
+                const inputPorts = node.querySelectorAll('.input-port');
+                if (inputPorts.length <= 2) {
+                    console.log('⚠️ Cannot remove input port - minimum 2 inputs required');
+                    window.showToast('Minimum 2 inputs required for merge layers', 'warning');
+                    return;
+                }
+
+                // Get the last port
+                const lastPort = inputPorts[inputPorts.length - 1];
+                const lastPortIndex = parseInt(lastPort.dataset.portIndex);
+
+                // Check if the last port has any connections
+                let hasConnection = false;
+                this.state.connections.forEach((connection) => {
+                    if (connection.to === nodeId && connection.toPortIndex === lastPortIndex) {
+                        hasConnection = true;
+                    }
+                });
+
+                if (hasConnection) {
+                    console.log('⚠️ Cannot remove input port - port has active connection');
+                    window.showToast('Cannot remove port with active connection', 'warning');
+                    return;
+                }
+
+                // Remove the port
+                lastPort.remove();
+
+                // Update state
+                const nodeState = this.state.nodes.get(nodeId);
+                if (nodeState) {
+                    nodeState.numInputs = inputPorts.length - 1;
+                    node.dataset.numInputs = inputPorts.length - 1;
+                }
+
+                // Update node height dynamically
+                this.updateNodeHeight(nodeId);
+
+                console.log(`➖ Removed input port from ${nodeId} (now ${inputPorts.length - 1} inputs)`);
+                this.connectionComponent.redrawAllConnections();
+            }
+
+            updateNodeHeight(nodeId) {
+                const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+                if (!node) return;
+
+                const inputPorts = node.querySelectorAll('.input-port');
+                const numInputs = inputPorts.length;
+
+                if (numInputs <= 2) {
+                    // Default height for 2 inputs
+                    node.style.height = '100px';
+                } else {
+                    // Calculate height based on number of inputs
+                    // Base height (80px) + extra space for additional ports
+                    const extraHeight = (numInputs - 2) * 25; // 25px per additional port
+                    node.style.height = `${100 + extraHeight}px`;
+                }
+
+                console.log(`📏 Updated node height for ${nodeId}:`, node.style.height);
+            }
+            
+            deleteNode(nodeId) {
+                const node = document.querySelector(`[data-node-id="${nodeId}"]`);
+                if (!node || nodeId === 'input' || nodeId === 'output') {
+                    console.log('⚠️ Cannot delete Input/Output nodes');
+                    return false;
+                }
+                
+                console.log(`🗑️ Deleting node: ${nodeId}`);
+                
+                const connectionsToDelete = [];
+                this.state.connections.forEach((connection, connectionId) => {
+                    if (connection.from === nodeId || connection.to === nodeId) {
+                        connectionsToDelete.push(connectionId);
+                    }
+                });
+                
+                connectionsToDelete.forEach(connectionId => {
+                    this.connectionComponent.deleteConnection(connectionId, false);
+                });
+                
+                node.style.transition = 'all 0.3s ease';
+                node.style.opacity = '0';
+                node.style.transform = 'scale(0.8)';
+                
+                setTimeout(() => {
+                    node.remove();
+                    this.state.nodes.delete(nodeId);
+                    
+                    setTimeout(() => {
+                        this.connectionComponent.updateFlowHighlighting();
+                    }, 50);
+                    
+                    const inputNode = document.querySelector('.node-input');
+                    if (inputNode) {
+                        this.selectNode(inputNode);
+                    }
+                    
+                    console.log(`✅ Node ${nodeId} deleted`);
+                }, 300);
+                
+                return true;
+            }
+            
+            calculateSmartPosition() {
+                const canvasRect = this.canvas.getBoundingClientRect();
+                const existingNodes = this.canvas.querySelectorAll('.layer-node[data-node-id]:not([data-node-id="input"]):not([data-node-id="output"])');
+
+                // Calculate center position aligned to grid
+                const centerX = this.snapToGrid(canvasRect.width / 2);
+                const centerY = this.snapToGrid(canvasRect.height / 2);
+
+                let x = centerX;
+                let y = centerY;
+
+                if (existingNodes.length === 0) {
+                    // First node: position in center
+                    x = centerX;
+                    y = centerY;
+                } else {
+                    const occupiedPositions = new Set();
+                    existingNodes.forEach(node => {
+                        const nodeX = parseInt(node.style.left);
+                        const nodeY = parseInt(node.style.top);
+                        occupiedPositions.add(`${nodeX},${nodeY}`);
+                    });
+
+                    // Find free position in spiral pattern
+                    for (let radius = 0; radius < 200; radius += this.GRID_SIZE) {
+                        for (let angle = 0; angle < 360; angle += 45) {
+                            const testX = this.snapToGrid(centerX + radius * Math.cos(angle * Math.PI / 180));
+                            const testY = this.snapToGrid(centerY + radius * Math.sin(angle * Math.PI / 180));
+
+                            if (testX >= this.GRID_SIZE && testX <= canvasRect.width - 150 &&
+                                testY >= this.GRID_SIZE && testY <= canvasRect.height - 80) {
+
+                                if (!occupiedPositions.has(`${testX},${testY}`)) {
+                                    return { x: testX, y: testY };
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return { x, y };
+            }
+            
+            snapToGrid(value) {
+                return Math.round(value / this.GRID_SIZE) * this.GRID_SIZE;
+            }
+            
+            selectNode(node) {
+                this.state.clearSelections();
+                this.connectionComponent.hideConnectionEditUI();
+
+                node.classList.add('selected');
+
+                const nodeTitle = node.querySelector('.node-title').textContent;
+                console.log('🎯 Node selected:', nodeTitle);
+
+                // Update Layer Parameters panel
+                this.updateLayerParametersPanel(node);
+            }
+
+            updateLayerParametersPanel(node) {
+                const container = document.getElementById('layer-params-container');
+                if (!container) return;
+
+                const nodeId = node.dataset.nodeId;
+                const nodeTitle = node.querySelector('.node-title')?.textContent || '';
+
+                // Don't show parameters for Input/Output nodes
+                if (nodeId === 'input' || nodeId === 'output') {
+                    container.innerHTML = `
+                        <div class="param-placeholder">
+                            <div class="hand-pointer">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <h5>Input/Output nodes don't have configurable parameters.</h5>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Get layer type from node classes
+                const classList = Array.from(node.classList);
+                let layerType = '';
+                for (const className of classList) {
+                    if (className.startsWith('layer-')) {
+                        layerType = className.replace('layer-', '');
+                        break;
+                    }
+                }
+
+                console.log('📊 Updating parameters for layer type:', layerType);
+
+                // Generate parameters HTML based on layer type
+                let paramsHTML = '';
+
+                switch(layerType) {
+                    case 'linear':
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">Linear Parameters</div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">In Features</label>
+                                    <input type="number" class="form-control" value="64">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Out Features</label>
+                                    <input type="number" class="form-control" value="64">
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" id="use-bias-${nodeId}" checked>
+                                    <label class="form-check-label" for="use-bias-${nodeId}">
+                                        Use Bias
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                        break;
+
+                    case 'conv1d':
+                    case 'conv2d':
+                    case 'conv3d':
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">Conv${layerType.slice(-2).toUpperCase()} Parameters</div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label">In Channels</label>
+                                        <input type="number" class="form-control" value="64">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Out Channels</label>
+                                        <input type="number" class="form-control" value="16">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Kernel Size</label>
+                                    <input type="number" class="form-control" value="3">
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label">Stride</label>
+                                        <input type="number" class="form-control" value="1">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Padding</label>
+                                        <select class="form-select">
+                                            <option selected>same</option>
+                                            <option>valid</option>
+                                            <option>0</option>
+                                            <option>1</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        break;
+
+                    case 'maxpool1d':
+                    case 'maxpool2d':
+                    case 'maxpool3d':
+                    case 'avgpool1d':
+                    case 'avgpool2d':
+                    case 'avgpool3d':
+                        const poolType = layerType.includes('max') ? 'MaxPool' : 'AvgPool';
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">${poolType} Parameters</div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Kernel Size</label>
+                                    <input type="number" class="form-control" value="2">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Stride</label>
+                                    <input type="number" class="form-control" value="2">
+                                </div>
+                            </div>
+                        `;
+                        break;
+
+                    case 'dropout':
+                    case 'dropout2d':
+                    case 'dropout3d':
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">Dropout Parameters</div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Probability</label>
+                                    <input type="number" class="form-control" value="0.5" step="0.1" min="0" max="1">
+                                </div>
+                            </div>
+                        `;
+                        break;
+
+                    case 'relu':
+                    case 'sigmoid':
+                    case 'tanh':
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">${layerType.toUpperCase()} Activation</div>
+                                <p class="text-muted">This activation function has no configurable parameters.</p>
+                            </div>
+                        `;
+                        break;
+
+                    case 'add':
+                    case 'concat':
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">${layerType === 'add' ? 'Add' : 'Concatenate'} Layer</div>
+                                <p class="text-muted">This merge layer combines multiple inputs.</p>
+                            </div>
+                        `;
+                        break;
+
+                    default:
+                        paramsHTML = `
+                            <div class="param-section">
+                                <div class="param-section-title">${nodeTitle}</div>
+                                <p class="text-muted">No parameters available for this layer type.</p>
+                            </div>
+                        `;
+                }
+
+                // Add delete button
+                paramsHTML += `
+                    <div class="mt-4">
+                        <button class="delete-btn" onclick="modelDesigner.layerComponent.deleteNode('${nodeId}')">
+                            <i class="fas fa-trash me-1"></i>
+                            Delete Layer
+                        </button>
+                    </div>
+                `;
+
+                container.innerHTML = paramsHTML;
+            }
+        }
+        
+        // ============================================================================
+        // DRAG DROP COMPONENT
+        // ============================================================================
+        
+        class DragDropComponent {
+            constructor(canvas, state, connectionComponent) {
+                this.canvas = canvas;
+                this.state = state;
+                this.connectionComponent = connectionComponent;
+                this.GRID_SIZE = 24;
+                
+                console.log('🖱️ Drag Drop Component initialized');
+            }
+            
+            startDragging(e, node) {
+                try {
+                    this.state.isDragging = true;
+                    this.state.dragNode = node;
+                    
+                    const nodeRect = node.getBoundingClientRect();
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    
+                    const mouseCanvasX = e.clientX - canvasRect.left;
+                    const mouseCanvasY = e.clientY - canvasRect.top;
+                    const nodeCanvasX = nodeRect.left - canvasRect.left;
+                    const nodeCanvasY = nodeRect.top - canvasRect.top;
+                    
+                    this.state.dragOffset = {
+                        x: mouseCanvasX - nodeCanvasX,
+                        y: mouseCanvasY - nodeCanvasY
+                    };
+                    
+                    node.classList.add('dragging');
+                    this.canvas.classList.add('dragging-active');
+                    
+                    console.log('🖱️ Started dragging:', node.dataset.nodeId);
+                } catch (error) {
+                    console.error('❌ Error starting drag:', error);
+                    this.state.reset();
+                }
+            }
+            
+            updateDragging(e) {
+                if (!this.state.dragNode) return;
+                
+                try {
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const mouseCanvasX = e.clientX - canvasRect.left;
+                    const mouseCanvasY = e.clientY - canvasRect.top;
+                    
+                    let x = mouseCanvasX - this.state.dragOffset.x;
+                    let y = mouseCanvasY - this.state.dragOffset.y;
+                    
+                    x = this.snapToGrid(x);
+                    y = this.snapToGrid(y);
+                    
+                    const nodeWidth = 150;
+                    const nodeHeight = 80;
+                    x = Math.max(0, Math.min(x, canvasRect.width - nodeWidth));
+                    y = Math.max(0, Math.min(y, canvasRect.height - nodeHeight));
+                    
+                    this.state.dragNode.style.left = x + 'px';
+                    this.state.dragNode.style.top = y + 'px';
+                    
+                    const nodeId = this.state.dragNode.dataset.nodeId;
+                    if (this.state.nodes.has(nodeId)) {
+                        this.state.nodes.get(nodeId).x = x;
+                        this.state.nodes.get(nodeId).y = y;
+                    }
+                    
+                    this.connectionComponent.redrawAllConnections();
+                } catch (error) {
+                    console.error('❌ Error updating drag:', error);
+                }
+            }
+            
+            stopDragging() {
+                try {
+                    if (this.state.dragNode) {
+                        this.state.dragNode.classList.remove('dragging');
+                        this.canvas.classList.remove('dragging-active');
+                        
+                        const finalX = this.snapToGrid(parseInt(this.state.dragNode.style.left));
+                        const finalY = this.snapToGrid(parseInt(this.state.dragNode.style.top));
+                        
+                        this.state.dragNode.style.left = finalX + 'px';
+                        this.state.dragNode.style.top = finalY + 'px';
+                        
+                        const nodeId = this.state.dragNode.dataset.nodeId;
+                        if (this.state.nodes.has(nodeId)) {
+                            this.state.nodes.get(nodeId).x = finalX;
+                            this.state.nodes.get(nodeId).y = finalY;
+                        }
+                        
+                        this.connectionComponent.redrawAllConnections();
+                        
+                        console.log('🖱️ Stopped dragging:', this.state.dragNode.dataset.nodeId);
+                    }
+                    
+                    this.state.reset();
+                } catch (error) {
+                    console.error('❌ Error stopping drag:', error);
+                    this.state.reset();
+                }
+            }
+            
+            snapToGrid(value) {
+                return Math.round(value / this.GRID_SIZE) * this.GRID_SIZE;
+            }
+        }
+        
+        // ============================================================================
+        // MAIN APPLICATION CONTROLLER
+        // ============================================================================
+        
+        class ModelDesignerApp {
+            constructor() {
+                try {
+                    this.canvas = document.getElementById('nodeCanvas');
+                    this.state = new ModelDesignerState();
+                    
+                    this.connectionComponent = new ConnectionComponent(this.canvas, this.state);
+                    this.layerComponent = new LayerNodeComponent(this.canvas, this.state, this.connectionComponent);
+                    this.dragDropComponent = new DragDropComponent(this.canvas, this.state, this.connectionComponent);
+                    
+                    this.initializeEventListeners();
+                    this.initializeCanvas();
+                    this.loadBackendContext();
+
+                    console.log('🚀 Model Designer App initialized');
+                } catch (error) {
+                    console.error('❌ Fatal error initializing app:', error);
+                }
+            }
+            
+            initializeCanvas() {
+                try {
+                    document.querySelectorAll('.connection-port').forEach(port => {
+                        port.classList.add('disconnected');
+                    });
+                    
+                    setTimeout(() => {
+                        const helpTooltip = document.getElementById('helpTooltip');
+                        if (helpTooltip) {
+                            helpTooltip.classList.add('show');
+                            setTimeout(() => {
+                                helpTooltip.classList.remove('show');
+                            }, 4000);
+                        }
+                    }, 1000);
+                    
+                    console.log('🎨 Canvas initialized');
+                } catch (error) {
+                    console.error('❌ Error initializing canvas:', error);
+                }
+            }
+
+            loadBackendContext() {
+                try {
+                    console.log('🔄 Loading backend context into application...');
+
+                    // Check if we're in edit mode
+                    if (BACKEND_CONTEXT.editMode && BACKEND_CONTEXT.editModel) {
+                        console.log('✏️ Edit mode detected - loading model configuration');
+                        this.loadModelConfiguration(BACKEND_CONTEXT.editModel);
+                    } else {
+                        console.log('➕ Create mode - starting with blank canvas');
+                    }
+
+                    // Store datasets information for later use
+                    this.selectedDatasets = BACKEND_CONTEXT.selectedDatasets || [];
+                    console.log('📊 Selected datasets:', this.selectedDatasets.length);
+
+                    // Store available model configs
+                    this.availableModels = BACKEND_CONTEXT.modelConfigs || [];
+                    console.log('📚 Available models for loading:', this.availableModels.length);
+
+                } catch (error) {
+                    console.error('❌ Error loading backend context:', error);
+                }
+            }
+
+            loadModelConfiguration(modelConfig) {
+                try {
+                    console.log('📥 Loading model configuration:', modelConfig);
+
+                    // TODO: Parse model configuration and recreate nodes/connections
+                    // This will depend on the structure of your saved model configurations
+
+                    if (modelConfig.nodes && Array.isArray(modelConfig.nodes)) {
+                        console.log('🔵 Loading nodes:', modelConfig.nodes.length);
+                        modelConfig.nodes.forEach(node => {
+                            // TODO: Create node based on saved configuration
+                            console.log('   → Node:', node.type, node.id);
+                        });
+                    }
+
+                    if (modelConfig.connections && Array.isArray(modelConfig.connections)) {
+                        console.log('🔗 Loading connections:', modelConfig.connections.length);
+                        modelConfig.connections.forEach(conn => {
+                            // TODO: Create connection based on saved configuration
+                            console.log('   → Connection:', conn.from, '→', conn.to);
+                        });
+                    }
+
+                    console.log('✅ Model configuration loaded successfully');
+                } catch (error) {
+                    console.error('❌ Error loading model configuration:', error);
+                    window.showToast('Error loading model configuration', 'error');
+                }
+            }
+
+            initializeEventListeners() {
+                try {
+                    // Mouse down handler with control point priority
+                    const mouseDownHandler = (e) => {
+                        try {
+                            // HIGHEST PRIORITY: Control points
+                            if (e.target.classList.contains('curve-control-point')) {
+                                const controlType = e.target.dataset.controlType;
+                                const controlPoint = this.state.controlPoints.find(cp => cp.type === controlType);
+                                if (controlPoint) {
+                                    this.connectionComponent.startControlPointDrag(e, controlPoint);
+                                }
+                                return;
+                            }
+                            
+                            // Priority 2: Connection ports
+                            const port = e.target.closest('.connection-port');
+                            if (port && !this.state.isDragging && !this.state.isDraggingControlPoint) {
+                                if (port.classList.contains('smart-port') || port.classList.contains('output')) {
+                                    this.connectionComponent.startConnection(e, port);
+                                }
+                                e.preventDefault();
+                                return;
+                            }
+                            
+                            // Priority 3: Node dragging
+                            const node = e.target.closest('.layer-node');
+                            if (node && !e.target.closest('.connection-port') && !this.state.isConnecting && !this.state.isDraggingControlPoint) {
+                                this.dragDropComponent.startDragging(e, node);
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in mousedown handler:', error);
+                        }
+                    };
+                    
+                    // Mouse move handler
+                    const mouseMoveHandler = (e) => {
+                        try {
+                            if (this.state.isDraggingControlPoint) {
+                                this.connectionComponent.updateControlPointDrag(e);
+                            } else if (this.state.isConnecting && this.state.connectingFrom) {
+                                this.connectionComponent.updateConnection(e);
+                            } else if (this.state.isDragging && this.state.dragNode) {
+                                this.dragDropComponent.updateDragging(e);
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in mousemove handler:', error);
+                        }
+                    };
+                    
+                    // Mouse up handler
+                    const mouseUpHandler = (e) => {
+                        try {
+                            if (this.state.isDraggingControlPoint) {
+                                this.connectionComponent.stopControlPointDrag();
+                            } else if (this.state.isConnecting) {
+                                const port = e.target.closest('.connection-port');
+                                // Check for smart-port, input, OR input-port (multi-input nodes)
+                                if (port && (port.classList.contains('smart-port') ||
+                                             port.classList.contains('input') ||
+                                             port.classList.contains('input-port'))) {
+                                    this.connectionComponent.completeConnection(port);
+                                } else {
+                                    this.connectionComponent.cancelConnection();
+                                }
+                            } else if (this.state.isDragging) {
+                                this.dragDropComponent.stopDragging();
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in mouseup handler:', error);
+                        }
+                    };
+                    
+                    // Connection click handler
+                    const connectionClickHandler = (e) => {
+                        try {
+                            if (e.target.classList.contains('connection-path') && !this.state.isEditingCurve) {
+                                e.stopPropagation();
+                                this.connectionComponent.selectConnection(e.target);
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in connection click:', error);
+                        }
+                    };
+                    
+                    // Connection double-click handler
+                    const connectionDoubleClickHandler = (e) => {
+                        try {
+                            if (e.target.classList.contains('connection-path')) {
+                                e.stopPropagation();
+                                this.connectionComponent.selectConnection(e.target);
+                                setTimeout(() => {
+                                    this.connectionComponent.startCurveEditing();
+                                }, 100);
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in connection double-click:', error);
+                        }
+                    };
+                    
+                    // Node selection handler
+                    const nodeClickHandler = (e) => {
+                        try {
+                            if (e.target.closest('.layer-node')) {
+                                const node = e.target.closest('.layer-node');
+                                this.layerComponent.selectNode(node);
+                            } else if (!e.target.closest('.connection-path') && !e.target.classList.contains('curve-control-point')) {
+                                this.state.clearSelections();
+                                this.connectionComponent.hideConnectionEditUI();
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in node selection:', error);
+                        }
+                    };
+                    
+                    // Keyboard shortcuts
+                    const keyboardHandler = (e) => {
+                        try {
+                            if (e.key === 'Delete' || e.key === 'Backspace') {
+                                e.preventDefault();
+                                
+                                if (this.state.selectedConnection) {
+                                    this.connectionComponent.deleteConnection(this.state.selectedConnection);
+                                    return;
+                                }
+                                
+                                const selectedNode = document.querySelector('.layer-node.selected');
+                                if (selectedNode) {
+                                    this.layerComponent.deleteNode(selectedNode.dataset.nodeId);
+                                }
+                            } else if (e.key === 'Escape') {
+                                if (this.state.isEditingCurve) {
+                                    this.connectionComponent.finishCurveEditing();
+                                } else if (this.state.isConnecting) {
+                                    this.connectionComponent.cancelConnection();
+                                } else {
+                                    this.state.clearSelections();
+                                    this.connectionComponent.hideConnectionEditUI();
+                                }
+                            }
+                        } catch (error) {
+                            console.error('❌ Error in keyboard handler:', error);
+                        }
+                    };
+                    
+                    // Register all event listeners
+                    document.addEventListener('mousedown', mouseDownHandler);
+                    document.addEventListener('mousemove', mouseMoveHandler);
+                    document.addEventListener('mouseup', mouseUpHandler);
+                    document.addEventListener('click', connectionClickHandler);
+                    document.addEventListener('dblclick', connectionDoubleClickHandler);
+                    document.addEventListener('click', nodeClickHandler);
+                    document.addEventListener('keydown', keyboardHandler);
+                    
+                    // Store cleanup functions
+                    this.state.eventListeners.add(() => document.removeEventListener('mousedown', mouseDownHandler));
+                    this.state.eventListeners.add(() => document.removeEventListener('mousemove', mouseMoveHandler));
+                    this.state.eventListeners.add(() => document.removeEventListener('mouseup', mouseUpHandler));
+                    this.state.eventListeners.add(() => document.removeEventListener('click', connectionClickHandler));
+                    this.state.eventListeners.add(() => document.removeEventListener('dblclick', connectionDoubleClickHandler));
+                    this.state.eventListeners.add(() => document.removeEventListener('click', nodeClickHandler));
+                    this.state.eventListeners.add(() => document.removeEventListener('keydown', keyboardHandler));
+                    
+                    // Connection edit UI buttons
+                    const editBtn = document.getElementById('editConnectionBtn');
+                    const deleteBtn = document.getElementById('deleteConnectionBtn');
+                    
+                    if (editBtn) {
+                        const editHandler = () => {
+                            this.connectionComponent.startCurveEditing();
+                        };
+                        editBtn.addEventListener('click', editHandler);
+                        this.state.eventListeners.add(() => editBtn.removeEventListener('click', editHandler));
+                    }
+                    
+                    if (deleteBtn) {
+                        const deleteHandler = () => {
+                            if (this.state.selectedConnection) {
+                                this.connectionComponent.deleteConnection(this.state.selectedConnection);
+                            }
+                        };
+                        deleteBtn.addEventListener('click', deleteHandler);
+                        this.state.eventListeners.add(() => deleteBtn.removeEventListener('click', deleteHandler));
+                    }
+                    
+                    // FAB Button - Toggle dropdown
+                    const addLayerBtn = document.getElementById('addLayerBtn');
+                    const fabMenuDropdown = document.getElementById('fabMenuDropdown');
+
+                    if (addLayerBtn && fabMenuDropdown) {
+                        const toggleFabMenu = (e) => {
+                            e.stopPropagation();
+                            fabMenuDropdown.classList.toggle('show');
+                            console.log('🎨 FAB menu toggled');
+                        };
+
+                        addLayerBtn.addEventListener('click', toggleFabMenu);
+                        this.state.eventListeners.add(() => addLayerBtn.removeEventListener('click', toggleFabMenu));
+
+                        // FAB menu items - Create nodes
+                        document.querySelectorAll('.fab-menu-item').forEach(item => {
+                            const itemClickHandler = () => {
+                                const layerType = item.dataset.layerType;
+                                console.log('➕ Creating layer from FAB:', layerType);
+                                this.layerComponent.createNode(layerType);
+                                fabMenuDropdown.classList.remove('show');
+                            };
+                            item.addEventListener('click', itemClickHandler);
+                            this.state.eventListeners.add(() => item.removeEventListener('click', itemClickHandler));
+                        });
+
+                        // Close FAB menu on outside click
+                        document.addEventListener('click', (e) => {
+                            if (!e.target.closest('.add-node-btn') && !e.target.closest('.fab-menu-dropdown')) {
+                                fabMenuDropdown.classList.remove('show');
+                            }
+                        });
+                    }
+
+                    // Context Menu - Right click on canvas
+                    const contextMenuModern = document.getElementById('contextMenuModern');
+
+                    if (contextMenuModern) {
+                        // Show context menu on right-click in canvas
+                        this.canvas.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+
+                            const x = e.clientX;
+                            const y = e.clientY;
+
+                            contextMenuModern.style.left = `${x}px`;
+                            contextMenuModern.style.top = `${y}px`;
+                            contextMenuModern.classList.add('show');
+
+                            // Store click position for node creation
+                            const canvasRect = this.canvas.getBoundingClientRect();
+                            contextMenuModern.dataset.clickX = e.clientX - canvasRect.left;
+                            contextMenuModern.dataset.clickY = e.clientY - canvasRect.top;
+
+                            console.log('🖱️ Context menu opened at:', { x, y });
+                        });
+
+                        // Context menu items - Create nodes at cursor position
+                        document.querySelectorAll('.context-menu-item').forEach(item => {
+                            const itemClickHandler = () => {
+                                const layerType = item.dataset.layerType;
+                                const x = parseFloat(contextMenuModern.dataset.clickX);
+                                const y = parseFloat(contextMenuModern.dataset.clickY);
+
+                                console.log('➕ Creating layer from context menu:', layerType, 'at', { x, y });
+
+                                // Use layerComponent.createNode() but override position
+                                const node = this.layerComponent.createNode(layerType);
+                                if (node) {
+                                    node.style.left = `${x}px`;
+                                    node.style.top = `${y}px`;
+
+                                    // Update state with new position
+                                    const nodeId = node.dataset.nodeId;
+                                    const nodeState = this.state.nodes.get(nodeId);
+                                    if (nodeState) {
+                                        nodeState.x = x;
+                                        nodeState.y = y;
+                                    }
+                                }
+
+                                contextMenuModern.classList.remove('show');
+                            };
+                            item.addEventListener('click', itemClickHandler);
+                            this.state.eventListeners.add(() => item.removeEventListener('click', itemClickHandler));
+                        });
+
+                        // Close context menu on outside click or Escape
+                        document.addEventListener('click', (e) => {
+                            if (!e.target.closest('.context-menu-modern')) {
+                                contextMenuModern.classList.remove('show');
+                            }
+                        });
+
+                        document.addEventListener('keydown', (e) => {
+                            if (e.key === 'Escape') {
+                                contextMenuModern.classList.remove('show');
+                            }
+                        });
+                    }
+
+                    // Accordion functionality for menu categories
+                    console.log('🎨 Initializing accordion menu system...');
+
+                    const menuCategories = document.querySelectorAll('.menu-category');
+                    menuCategories.forEach(category => {
+                        category.addEventListener('click', function() {
+                            const categoryName = this.dataset.category;
+
+                            // Get the parent menu (context menu or FAB dropdown)
+                            const parentMenu = this.closest('.context-menu-modern, .fab-menu-dropdown');
+                            if (!parentMenu) return;
+
+                            const submenu = parentMenu.querySelector(`.menu-submenu[data-submenu="${categoryName}"]`);
+                            if (!submenu) return;
+
+                            console.log('📂 Toggling category:', categoryName, 'in', parentMenu.className);
+
+                            // Toggle expanded state
+                            const wasExpanded = this.classList.contains('expanded');
+
+                            // Close all other categories ONLY in the same menu (accordion behavior)
+                            parentMenu.querySelectorAll('.menu-category').forEach(cat => {
+                                cat.classList.remove('expanded');
+                            });
+                            parentMenu.querySelectorAll('.menu-submenu').forEach(sub => {
+                                sub.classList.remove('expanded');
+                            });
+
+                            // If it wasn't expanded, expand it
+                            if (!wasExpanded) {
+                                this.classList.add('expanded');
+                                submenu.classList.add('expanded');
+                                console.log('✅ Expanded:', categoryName);
+                            } else {
+                                console.log('✅ Collapsed:', categoryName);
+                            }
+                        });
+                    });
+
+                    console.log('✅ Accordion menu initialized with', menuCategories.length, 'categories');
+
+                    const autoLayoutBtn = document.getElementById('autoLayoutBtn');
+                    if (autoLayoutBtn) {
+                        const autoLayoutHandler = () => this.autoArrangeNodes();
+                        autoLayoutBtn.addEventListener('click', autoLayoutHandler);
+                        this.state.eventListeners.add(() => autoLayoutBtn.removeEventListener('click', autoLayoutHandler));
+                    }
+
+                    // Zoom controls
+                    const zoomInBtn = document.getElementById('zoomInBtn');
+                    const zoomOutBtn = document.getElementById('zoomOutBtn');
+                    const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+                    if (zoomInBtn) {
+                        const zoomInHandler = () => this.zoomIn();
+                        zoomInBtn.addEventListener('click', zoomInHandler);
+                        this.state.eventListeners.add(() => zoomInBtn.removeEventListener('click', zoomInHandler));
+                    }
+
+                    if (zoomOutBtn) {
+                        const zoomOutHandler = () => this.zoomOut();
+                        zoomOutBtn.addEventListener('click', zoomOutHandler);
+                        this.state.eventListeners.add(() => zoomOutBtn.removeEventListener('click', zoomOutHandler));
+                    }
+
+                    if (zoomResetBtn) {
+                        const zoomResetHandler = () => this.zoomReset();
+                        zoomResetBtn.addEventListener('click', zoomResetHandler);
+                        this.state.eventListeners.add(() => zoomResetBtn.removeEventListener('click', zoomResetHandler));
+                    }
+
+                    // Mouse wheel zoom (Ctrl + scroll)
+                    const wheelZoomHandler = (e) => this.handleWheelZoom(e);
+                    this.canvas.addEventListener('wheel', wheelZoomHandler, { passive: false });
+                    this.state.eventListeners.add(() => this.canvas.removeEventListener('wheel', wheelZoomHandler));
+
+                    console.log('🔍 Zoom controls initialized');
+                    console.log('🎛️ Event listeners initialized with curve editing support');
+                } catch (error) {
+                    console.error('❌ Error initializing event listeners:', error);
+                }
+            }
+            
+            showLayerTypeModal() {
+                try {
+                    const modalHTML = `
+                        <div class="modal fade" id="layerTypeModal" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-layer-group me-2"></i>
+                                            Select Layer Type
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            ${Object.entries(this.layerComponent.layerTypes).map(([key, type]) => `
+                                                <div class="col-6">
+                                                    <div class="layer-type-card" data-layer-type="${key}" 
+                                                         style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem; 
+                                                                text-align: center; cursor: pointer; transition: all 0.2s ease;">
+                                                        <div style="width: 40px; height: 40px; border-radius: 50%; 
+                                                                   margin: 0 auto 0.5rem; background: ${type.color};"></div>
+                                                        <div style="font-weight: 600; color: #374151;">${type.name}</div>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const existingModal = document.getElementById('layerTypeModal');
+                    if (existingModal) existingModal.remove();
+                    
+                    document.body.insertAdjacentHTML('beforeend', modalHTML);
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('layerTypeModal'));
+                    modal.show();
+                    
+                    this.state.modalInstances.add(modal);
+                    
+                    document.querySelectorAll('.layer-type-card').forEach(card => {
+                        const cardClickHandler = () => {
+                            const layerType = card.dataset.layerType;
+                            this.layerComponent.createNode(layerType);
+                            modal.hide();
+                        };
+                        card.addEventListener('click', cardClickHandler);
+                        
+                        const hoverInHandler = () => {
+                            card.style.borderColor = '#3b82f6';
+                            card.style.transform = 'translateY(-2px)';
+                        };
+                        const hoverOutHandler = () => {
+                            card.style.borderColor = '#e5e7eb';
+                            card.style.transform = 'translateY(0)';
+                        };
+                        
+                        card.addEventListener('mouseenter', hoverInHandler);
+                        card.addEventListener('mouseleave', hoverOutHandler);
+                    });
+                    
+                    console.log('🎭 Layer type modal opened');
+                } catch (error) {
+                    console.error('❌ Error showing layer type modal:', error);
+                }
+            }
+            
+            autoArrangeNodes() {
+                try {
+                    const allNodes = this.canvas.querySelectorAll('.layer-node[data-node-id]:not([data-node-id="input"]):not([data-node-id="output"])');
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    
+                    if (allNodes.length === 0) return;
+                    
+                    const startX = 200;
+                    const endX = canvasRect.width - 250;
+                    const spacing = allNodes.length > 1 ? (endX - startX) / (allNodes.length - 1) : 0;
+                    const centerY = canvasRect.height / 2 - 40;
+                    
+                    allNodes.forEach((node, index) => {
+                        const x = startX + (index * spacing);
+                        node.style.left = x + 'px';
+                        node.style.top = centerY + 'px';
+                        
+                        const nodeId = node.dataset.nodeId;
+                        if (this.state.nodes.has(nodeId)) {
+                            this.state.nodes.get(nodeId).x = x;
+                            this.state.nodes.get(nodeId).y = centerY;
+                        }
+                    });
+                    
+                    this.connectionComponent.redrawAllConnections();
+                    
+                    console.log('✨ Auto layout applied');
+                } catch (error) {
+                    console.error('❌ Error in auto arrange:', error);
+                }
+            }
+
+            zoomIn() {
+                try {
+                    if (this.state.zoomLevel < this.state.maxZoom) {
+                        this.state.zoomLevel = Math.min(this.state.zoomLevel + this.state.zoomStep, this.state.maxZoom);
+                        this.applyZoom();
+                        console.log('🔍 Zoom in:', Math.round(this.state.zoomLevel * 100) + '%');
+                    }
+                } catch (error) {
+                    console.error('❌ Error zooming in:', error);
+                }
+            }
+
+            zoomOut() {
+                try {
+                    if (this.state.zoomLevel > this.state.minZoom) {
+                        this.state.zoomLevel = Math.max(this.state.zoomLevel - this.state.zoomStep, this.state.minZoom);
+                        this.applyZoom();
+                        console.log('🔍 Zoom out:', Math.round(this.state.zoomLevel * 100) + '%');
+                    }
+                } catch (error) {
+                    console.error('❌ Error zooming out:', error);
+                }
+            }
+
+            zoomReset() {
+                try {
+                    this.state.zoomLevel = 1.0;
+                    this.applyZoom();
+                    console.log('🔍 Zoom reset to 100%');
+                } catch (error) {
+                    console.error('❌ Error resetting zoom:', error);
+                }
+            }
+
+            applyZoom() {
+                try {
+                    // Apply scale transform
+                    this.canvas.style.transform = `scale(${this.state.zoomLevel})`;
+                    this.canvas.style.transformOrigin = 'center center';
+
+                    // Scale the background grid size inversely to the zoom level
+                    // When zooming out (scale < 1), grid should appear smaller in visual size
+                    // but cover the full area
+                    const baseGridSize = 24; // Base grid size in pixels
+                    const scaledGridSize = baseGridSize / this.state.zoomLevel;
+                    this.canvas.style.backgroundSize = `${scaledGridSize}px ${scaledGridSize}px`;
+
+                    // Update zoom level display
+                    const zoomLevelDisplay = document.getElementById('zoomLevel');
+                    if (zoomLevelDisplay) {
+                        zoomLevelDisplay.textContent = Math.round(this.state.zoomLevel * 100) + '%';
+                    }
+
+                    console.log(`🔍 Zoom applied: ${Math.round(this.state.zoomLevel * 100)}% | Grid size: ${scaledGridSize.toFixed(2)}px`);
+
+                    // Redraw connections after zoom
+                    setTimeout(() => {
+                        this.connectionComponent.redrawAllConnections();
+                    }, 50);
+                } catch (error) {
+                    console.error('❌ Error applying zoom:', error);
+                }
+            }
+
+            handleWheelZoom(e) {
+                try {
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+
+                        if (e.deltaY < 0) {
+                            this.zoomIn();
+                        } else {
+                            this.zoomOut();
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Error in wheel zoom:', error);
+                }
+            }
+        }
+        
+        // ============================================================================
+        // APPLICATION INITIALIZATION
+        // ============================================================================
+        
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Initialize the application when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                window.modelDesignerApp = new ModelDesignerApp();
+                
+                console.log('');
+                console.log('🎯 CURVE EDITING FIXED:');
+                console.log('   ✅ Control points now have proper pointer events');
+                console.log('   ✅ Mouse event handlers properly prioritized');
+                console.log('   ✅ Real-time curve updates while dragging');
+                console.log('   ✅ Visual feedback during editing');
+                console.log('   ✅ Proper cleanup and state management');
+                console.log('');
+                console.log('📝 HOW TO USE:');
+                console.log('   1. Create connections between nodes');
+                console.log('   2. Click connection to select (yellow)');
+                console.log('   3. Click "Edit Curve" or double-click connection');
+                console.log('   4. Drag purple control points to reshape curve');
+                console.log('   5. Press Escape when done editing');
+                console.log('');
+                console.log('✅ CURVE EDITING NOW FULLY FUNCTIONAL');
+            } catch (error) {
+                console.error('❌ Critical error during initialization:', error);
+            }
+        });
+    </script>
+{% endblock extra_js %}

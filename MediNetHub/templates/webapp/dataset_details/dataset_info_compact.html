@@ -1,0 +1,93 @@
+{% load humanize %}
+<!-- Compact Dataset Information Card -->
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-header bg-primary text-white">
+        <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Dataset Information
+        </h6>
+    </div>
+    <div class="card-body py-3" style="background-color: #fff;">
+        <table class="table table-sm mb-0" style="font-size: 13px;">
+            <tbody>
+                <tr>
+                    <td class="fw-bold text-muted" style="width: 40%; padding: 4px 8px; border: none;">Name</td>
+                    <td style="padding: 4px 8px; border: none;">{{ dataset.dataset_name }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Domain</td>
+                    <td style="padding: 4px 8px; border: none;">
+                        <span class="badge" style="background-color: #0ea5e9; color: white; font-size: 10px;">{{ dataset.medical_domain|default:"Cardiology" }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Data Type</td>
+                    <td style="padding: 4px 8px; border: none;">{{ dataset.data_type|default:"Tabular" }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Format</td>
+                    <td style="padding: 4px 8px; border: none;">
+                        <span class="badge bg-secondary" style="font-size: 10px;">
+                            {% if dataset.metadata.statistical_summary.file_type %}
+                                {{ dataset.metadata.statistical_summary.file_type|upper }}
+                            {% else %}
+                                CSV
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Size</td>
+                    <td style="padding: 4px 8px; border: none;">{{ dataset.file_size|filesizeformat }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Uploaded By</td>
+                    <td style="padding: 4px 8px; border: none;">{{ request.user.username|default:"admin" }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Generated At</td>
+                    <td style="padding: 4px 8px; border: none;">
+                        {% if dataset.generated_at %}
+                            {{ dataset.generated_at|date:"M d, Y H:i" }}
+                        {% elif dataset.metadata.statistical_summary.extraction_timestamp %}
+                            {{ dataset.metadata.statistical_summary.extraction_timestamp|date:"M d, Y H:i" }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if dataset.updated_at %}
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Last Updated</td>
+                    <td style="padding: 4px 8px; border: none;">
+                        {{ dataset.updated_at|date:"M d, Y H:i" }}
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Status</td>
+                    <td style="padding: 4px 8px; border: none;">
+                        <span class="badge" style="background-color: #10b981; color: white; font-size: 10px;">
+                            <i class="fas fa-check me-1"></i>Active
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Target Column</td>
+                    <td style="padding: 4px 8px; border: none;">
+                        <span class="badge" style="background-color: #f59e0b; color: white; font-size: 10px;">{{ dataset.target_column|default:"DEATH_EVENT" }}</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Description -->
+        {% if dataset.description %}
+        <div class="mt-2 pt-2 border-top">
+            <p class="text-muted mb-0" style="font-size: 12px;">
+                <i class="fas fa-file-alt me-2"></i>
+                {{ dataset.description }}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>

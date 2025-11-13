@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load webapp_filters %}
+
+{% block title %}MediNet - Models{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0"><i class="fas fa-brain me-2"></i>Model Management</h2>
+            <p class="text-muted">Manage your neural network models</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'model_designer' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create New Model
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Models List (Left Side) -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm" style="height: 700px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Your Models</h5>
+                </div>
+                <div class="card-body p-0" style="overflow-y: auto; height: calc(100% - 70px);">
+                    {% if model_configs %}
+                    <div class="list-group list-group-flush">
+                        {% for model in model_configs %}
+                                                 <div class="list-group-item list-group-item-action model-item" 
+                              data-model-id="{{ model.id }}" 
+                              style="cursor: pointer;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">
+                                        <i class="fas fa-brain me-2 text-primary"></i>
+                                        {{ model.name }}
+                                    </h6>
+                                    {% if model.description %}
+                                    <p class="mb-1 text-muted small">{{ model.description }}</p>
+                                    {% endif %}
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ model.created_at|date:"M d, Y" }}
+                                        </small>
+                                        <span class="badge bg-light text-primary">{{ model.framework|upper }}</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <span class="me-3">
+                                                <i class="fas fa-layer-group me-1"></i>
+                                                {{ model.layer_count }} layers
+                                            </span>
+                                            <span class="me-3">
+                                                <i class="fas fa-cogs me-1"></i>
+                                                {{ model.optimizer_type }}
+                                            </span>
+                                            <span>
+                                                <i class="fas fa-target me-1"></i>
+                                                {{ model.loss_type }}
+                                            </span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Action buttons -->
+                            <div class="mt-2 d-flex gap-1">
+                                <a href="{% url 'model_designer' %}?edit={{ model.id }}" 
+                                   class="btn btn-outline-primary btn-sm" 
+                                   onclick="event.stopPropagation();">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-outline-danger btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModelModal" 
+                                        data-model-id="{{ model.id }}" 
+                                        data-model-name="{{ model.name }}"
+                                        onclick="event.stopPropagation();">
+                                    <i class="fas fa-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-brain fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted mb-3">No Models Created Yet</h5>
+                        <p class="text-muted mb-4">Create your first neural network model to get started.</p>
+                        <a href="{% url 'model_designer' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Your First Model
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Preview (Right Side) -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm" style="height: 700px;">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" id="previewTitle">
+                        <i class="fas fa-eye me-2"></i>Model Preview
+                    </h5>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="expandPreviewBtn" style="display: none;" data-bs-toggle="modal" data-bs-target="#expandedPreviewModal">
+                        <i class="fas fa-expand me-1"></i>Expand
+                    </button>
+                </div>
+                <div class="card-body" style="overflow-y: auto; height: calc(100% - 70px);">
+                    <div id="modelPreviewContent">
+                        <div class="text-center py-5">
+                            <i class="fas fa-mouse-pointer fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Select a model to preview</h5>
+                            <p class="text-muted">Click on any model from the list to see its architecture and configuration.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Model Modal -->
+<div class="modal fade" id="deleteModelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>Delete Model
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_model">
+                <input type="hidden" name="model_id" id="deleteModelId">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone.
+                    </div>
+                    <p>Are you sure you want to delete the model <strong id="deleteModelName"></strong>?</p>
+                    <p class="text-muted small">This will permanently remove the model configuration and cannot be recovered.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Model
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Expanded Preview Modal -->
+<div class="modal fade" id="expandedPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-expand me-2"></i><span id="expandedModelTitle">Model Architecture</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <div id="expandedModelContent">
+                    <div class="text-center py-5">
+                        <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No model selected</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Data for JavaScript -->
+<script>
+console.log('🔍 DEBUG: Loading models data...');
+window.modelsData = {{ models_json|json_string }};
+console.log('🔍 DEBUG: Models data loaded:', window.modelsData);
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 DEBUG: DOM loaded, initializing models list');
+    
+    // Load models data from window object
+    const modelsData = window.modelsData || {};
+    console.log('🔍 DEBUG: Models data available:', Object.keys(modelsData).length, 'models');
+    
+    // Handle model selection
+    const modelItems = document.querySelectorAll('.model-item');
+    modelItems.forEach(item => {
+        item.addEventListener('click', function() {
+            console.log('🔍 DEBUG: Model item clicked');
+            
+            // Remove active class from all items
+            modelItems.forEach(i => i.classList.remove('active'));
+            // Add active class to clicked item
+            this.classList.add('active');
+            
+            const modelId = this.getAttribute('data-model-id');
+            
+            console.log('🔍 DEBUG: Selected model ID:', modelId);
+            
+            // Get model data from the global modelsData instead of attribute
+            const modelData = modelsData[modelId];
+            if (!modelData) {
+                console.error('🔍 DEBUG: Model data not found for ID:', modelId);
+                showErrorPreview('Model data not found');
+                return;
+            }
+            
+            console.log('🔍 DEBUG: Model data found:', modelData);
+            
+            try {
+                // Use the config_json directly from modelsData
+                showModelPreview(modelData.config_json || {}, modelId);
+            } catch (error) {
+                console.error('🔍 DEBUG: Error showing model preview:', error);
+                showErrorPreview('Error loading model configuration');
+            }
+        });
+    });
+    
+    // Handle delete model modal
+    const deleteModelModal = document.getElementById('deleteModelModal');
+    if (deleteModelModal) {
+        deleteModelModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const modelId = button.getAttribute('data-model-id');
+            const modelName = button.getAttribute('data-model-name');
+            
+            document.getElementById('deleteModelId').value = modelId;
+            document.getElementById('deleteModelName').textContent = modelName;
+        });
+    }
+    
+    // Handle expanded preview modal
+    const expandedPreviewModal = document.getElementById('expandedPreviewModal');
+    if (expandedPreviewModal) {
+        expandedPreviewModal.addEventListener('show.bs.modal', function (event) {
+            if (window.currentModelData) {
+                const { config, modelId, modelName } = window.currentModelData;
+                showExpandedModelPreview(config, modelId, modelName);
+            }
+        });
+    }
+    
+    function showModelPreview(config, modelId) {
+        console.log('🔍 DEBUG: Showing model preview for ID:', modelId);
+        console.log('🔍 DEBUG: Full config structure:', config);
+        
+        const previewContent = document.getElementById('modelPreviewContent');
+        const previewTitle = document.getElementById('previewTitle');
+        const expandBtn = document.getElementById('expandPreviewBtn');
+        
+        // Update title
+        const modelName = config.name || 'Unknown Model';
+        previewTitle.innerHTML = `<i class="fas fa-eye me-2"></i>${modelName}`;
+        
+        // Show expand button
+        expandBtn.style.display = 'block';
+        
+        // Store current model data for expand modal
+        window.currentModelData = { config, modelId, modelName };
+        
+        // Buscar layers en diferentes posibles ubicaciones
+        let layers = [];
+        if (config.layers) {
+            layers = config.layers;
+        } else if (config.model && config.model.layers) {
+            layers = config.model.layers;
+        } else if (config.architecture && config.architecture.layers) {
+            layers = config.architecture.layers;
+        }
+        
+        console.log('🔍 DEBUG: Config structure:', Object.keys(config));
+        console.log('🔍 DEBUG: Layers found:', layers.length, 'layers');
+        
+        console.log('🔍 DEBUG: Found layers:', layers);
+        
+        // Crear el contenedor exactamente como el model designer
+        let html = `
+            <div class="layers-list" style="max-height: none; overflow-y: visible; height: auto;">
+        `;
+        
+        if (layers && layers.length > 0) {
+            layers.forEach((layer, index) => {
+                const layerType = layer.type || layer.layer_type || 'Unknown';
+                const layerName = layer.name || layerType;
+                const features = layer.params?.features || layer.features || '—';
+                
+                // Determinar la clase CSS según el tipo de layer (exactamente como model designer)
+                let layerClass = 'layer-box';
+                const lowerType = layerType.toLowerCase();
+                
+                if (lowerType === 'input') {
+                    layerClass += ' input-layer';
+                } else if (lowerType === 'output') {
+                    layerClass += ' output-layer';
+                } else if (lowerType === 'linear') {
+                    layerClass += ' hidden-layer';
+                } else if (lowerType.includes('conv')) {
+                    layerClass += ' conv-layer';
+                } else if (lowerType.includes('norm')) {
+                    layerClass += ' norm-layer';
+                } else if (lowerType.includes('pool')) {
+                    layerClass += ' pool-layer';
+                } else if (lowerType === 'dropout') {
+                    layerClass += ' dropout-layer';
+                } else if (['relu', 'sigmoid', 'tanh', 'leakyrelu'].includes(lowerType)) {
+                    layerClass += ' activation-layer';
+                } else if (lowerType === 'flatten') {
+                    layerClass += ' flatten-layer';
+                } else if (['lstm', 'gru'].includes(lowerType)) {
+                    layerClass += ' recurrent-layer';
+                } else if (['add', 'concat'].includes(lowerType)) {
+                    layerClass += ' operation-layer';
+                } else {
+                    layerClass += ` ${lowerType}-layer`;
+                }
+                
+                html += `
+                    <div class="${layerClass}" data-layer-id="layer_${index}">
+                        <div class="layer-content">
+                            ${layerName}
+                        </div>
+                        <div class="layer-features">
+                            Features: ${features}
+                        </div>
+                    </div>
+                `;
+                
+                // Añadir conector entre layers (excepto para la última)
+                if (index < layers.length - 1) {
+                    html += `
+                        <div class="text-center">
+                            <div class="layer-connector"></div>
+                        </div>
+                    `;
+                }
+            });
+        } else {
+            html += `
+                <div class="text-center py-5">
+                    <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No layers defined</h5>
+                    <p class="text-muted">This model doesn't have any layers configured yet.</p>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        previewContent.innerHTML = html;
+    }
+    
+    function showErrorPreview(message) {
+        const previewContent = document.getElementById('modelPreviewContent');
+        previewContent.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h5 class="text-danger">Error</h5>
+                <p class="text-muted">${message}</p>
+            </div>
+        `;
+    }
+    
+    function showExpandedModelPreview(config, modelId, modelName) {
+        const expandedContent = document.getElementById('expandedModelContent');
+        const expandedTitle = document.getElementById('expandedModelTitle');
+        
+        // Update title
+        expandedTitle.textContent = modelName;
+        
+        // Buscar layers en diferentes posibles ubicaciones
+        let layers = [];
+        if (config.layers) {
+            layers = config.layers;
+        } else if (config.model && config.model.layers) {
+            layers = config.model.layers;
+        } else if (config.architecture && config.architecture.layers) {
+            layers = config.architecture.layers;
+        }
+        
+        // Crear el contenedor expandido (sin restricción de altura)
+        let html = `
+            <div class="layers-list-expanded" style="display: flex; flex-direction: column; align-items: center; gap: 0; padding: 20px;">
+        `;
+        
+        if (layers && layers.length > 0) {
+            layers.forEach((layer, index) => {
+                const layerType = layer.type || layer.layer_type || 'Unknown';
+                const layerName = layer.name || layerType;
+                const features = layer.params?.features || layer.features || '—';
+                
+                // Determinar la clase CSS según el tipo de layer
+                let layerClass = 'layer-box';
+                const lowerType = layerType.toLowerCase();
+                
+                if (lowerType === 'input') {
+                    layerClass += ' input-layer';
+                } else if (lowerType === 'output') {
+                    layerClass += ' output-layer';
+                } else if (lowerType === 'linear') {
+                    layerClass += ' hidden-layer';
+                } else if (lowerType.includes('conv')) {
+                    layerClass += ' conv-layer';
+                } else if (lowerType.includes('norm')) {
+                    layerClass += ' norm-layer';
+                } else if (lowerType.includes('pool')) {
+                    layerClass += ' pool-layer';
+                } else if (lowerType === 'dropout') {
+                    layerClass += ' dropout-layer';
+                } else if (['relu', 'sigmoid', 'tanh', 'leakyrelu'].includes(lowerType)) {
+                    layerClass += ' activation-layer';
+                } else if (lowerType === 'flatten') {
+                    layerClass += ' flatten-layer';
+                } else if (['lstm', 'gru'].includes(lowerType)) {
+                    layerClass += ' recurrent-layer';
+                } else if (['add', 'concat'].includes(lowerType)) {
+                    layerClass += ' operation-layer';
+                } else {
+                    layerClass += ` ${lowerType}-layer`;
+                }
+                
+                html += `
+                    <div class="${layerClass}" data-layer-id="layer_${index}">
+                        <div class="layer-content">
+                            ${layerName}
+                        </div>
+                        <div class="layer-features">
+                            Features: ${features}
+                        </div>
+                    </div>
+                `;
+                
+                // Añadir conector entre layers (excepto para la última)
+                if (index < layers.length - 1) {
+                    html += `
+                        <div class="text-center">
+                            <div class="layer-connector"></div>
+                        </div>
+                    `;
+                }
+            });
+        } else {
+            html += `
+                <div class="text-center py-5">
+                    <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No layers defined</h5>
+                    <p class="text-muted">This model doesn't have any layers configured yet.</p>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        expandedContent.innerHTML = html;
+    }
+});
+</script>
+
+<style>
+.model-item.active {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #2196f3 !important;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #2196f3, #21cbf3);
+}
+
+.bg-gradient-secondary {
+    background: linear-gradient(45deg, #6c757d, #adb5bd);
+}
+
+/* Model Designer Layer Styles - Copied from model_designer.html */
+.layer-box {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.layer-box:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.input-layer {
+    background-color: #e3f0ff !important;
+    border: 1px solid #c0d8f3 !important;
+}
+
+.output-layer {
+    background-color: #ffe8e8 !important;
+    border: 1px solid #f5d1d1 !important;
+}
+
+.hidden-layer {
+    background-color: #e9f7f0 !important;
+    border: 1px solid #c7e6d7 !important;
+}
+
+.conv-layer, .conv1d-layer, .conv2d-layer {
+    background-color: #e6e6fa !important;
+    border: 1px solid #d8d8f3 !important;
+}
+
+.norm-layer, .batchnorm1d-layer, .batchnorm2d-layer {
+    background-color: #fff0f5 !important;
+    border: 1px solid #f3d8e3 !important;
+}
+
+.pool-layer, .maxpool1d-layer, .maxpool2d-layer, .avgpool1d-layer, .avgpool2d-layer {
+    background-color: #f0fff0 !important;
+    border: 1px solid #d8f3d8 !important;
+}
+
+.dropout-layer {
+    background-color: #fffacd !important;
+    border: 1px solid #f3edb3 !important;
+}
+
+.activation-layer, .relu-layer, .sigmoid-layer, .tanh-layer, .leakyrelu-layer {
+    background-color: #ffdead !important;
+    border: 1px solid #f3d8b3 !important;
+}
+
+.flatten-layer {
+    background-color: #e0ffff !important;
+    border: 1px solid #b3f3f3 !important;
+}
+
+.recurrent-layer, .lstm-layer, .gru-layer {
+    background-color: #dda0dd !important;
+    border: 1px solid #d8b3f3 !important;
+}
+
+.operation-layer, .add-layer, .concat-layer {
+    background-color: #e3f2fd !important;
+    border: 1px solid #0d6efd !important;
+}
+
+.layer-connector {
+    width: 2px;
+    height: 30px;
+    background-color: #adb5bd;
+    margin: 0 auto;
+}
+
+.layer-content {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.layer-features {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+
+.layers-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 20px 10px;
+    height: 600px;
+    min-height: 600px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %} 

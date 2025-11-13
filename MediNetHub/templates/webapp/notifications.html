@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}MediNet - Notificacions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        margin-bottom: 15px;
+    }
+    
+    .notification-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .notification-card.unread {
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .notification-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .notification-time {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .notification-empty {
+        text-align: center;
+        padding: 40px 20px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .notification-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .badge-unread {
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.25em 0.5em;
+        border-radius: 10px;
+        margin-left: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-bell me-2"></i>Notifications</h2>
+            <p class="text-muted">Manage your system notifications</p>
+        </div>
+        <div>
+            <form method="POST" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="mark_all_read" value="1">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-check-double me-1"></i>Mark all as read
+                </button>
+            </form>
+            <button type="button" class="btn btn-danger btn-delete-all">
+                <i class="fas fa-trash-alt me-1"></i>Delete all
+            </button>
+        </div>
+    </div>
+    
+    {% if notifications %}
+        <div class="notification-list">
+            {% for notification in notifications %}
+                <div class="card notification-card {% if not notification.is_read %}unread{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="notification-title">
+                                    {{ notification.title }}
+                                    {% if not notification.is_read %}
+                                        <span class="badge-unread">New</span>
+                                    {% endif %}
+                                </h5>
+                                <p class="mb-1">{{ notification.message }}</p>
+                                <p class="notification-time">{{ notification.created_at|date:"j M Y, H:i" }}</p>
+                            </div>
+                            <div class="notification-actions">
+                                {% if notification.link %}
+                                    <a href="{{ notification.link }}" class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                {% if not notification.is_read %}
+                                    <form method="POST" class="d-inline me-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="notification_id" value="{{ notification.id }}">
+                                        <input type="hidden" name="mark_read" value="1">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="notification_id" value="{{ notification.id }}">
+                                    <input type="hidden" name="delete" value="1">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="notification-empty">
+            <i class="fas fa-bell-slash fa-3x mb-3 text-muted"></i>
+            <h4>You don't have any notifications</h4>
+            <p class="text-muted">Notifications will appear here when there are updates to the system</p>
+        </div>  
+    {% endif %}
+</div>
+
+<!-- Reemplaça l'alerta JavaScript estàndard amb aquest modal Bootstrap -->
+<div class="modal fade" id="deleteNotificationsModal" tabindex="-1" aria-labelledby="deleteNotificationsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="deleteNotificationsModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Confirm delete
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-trash-alt fa-3x text-danger me-3"></i>
+          </div>
+          <div class="flex-grow-1">
+            <p class="mb-1">Are you sure you want to delete all notifications?</p>
+            <p class="text-muted mb-0">This action cannot be undone.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancel
+        </button>
+        <form method="POST" id="deleteAllNotificationsForm">
+          {% csrf_token %}
+          <input type="hidden" name="delete_all" value="1">
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i>Delete all
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Botó per eliminar totes les notificacions
+    const deleteAllBtn = document.querySelector('.btn-delete-all');
+    if (deleteAllBtn) {
+      deleteAllBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const modal = new bootstrap.Modal(document.getElementById('deleteNotificationsModal'));
+        modal.show();
+      });
+    }
+  });
+</script>
+{% endblock %}
+{% endblock %} 

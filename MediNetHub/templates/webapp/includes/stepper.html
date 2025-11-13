@@ -1,0 +1,204 @@
+{% comment %}
+    Stepper component for MediNet workflow
+    Usage: {% include 'webapp/includes/stepper.html' with active_step=1 %}
+    active_step can be 1, 2, or 3 corresponding to Datasets, Model Designer, and Training
+{% endcomment %}
+
+<style>
+    .workflow-stepper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .workflow-stepper::before {
+        content: '';
+        position: absolute;
+        top: 30px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #e0e0e0;
+        z-index: 1;
+    }
+    
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .step-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #e0e0e0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: #fff;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .step-circle i {
+        font-size: 24px;
+    }
+    
+    .step-title {
+        font-weight: 600;
+        color: #666;
+        transition: all 0.3s ease;
+    }
+    
+    .step.active .step-circle {
+        background-color: #0d6efd;
+        box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+    }
+    
+    .step.active .step-title {
+        color: #0d6efd;
+    }
+    
+    .step.completed .step-circle {
+        background-color: #0d6efd;
+    }
+    
+    .step-connector {
+        position: absolute;
+        top: 30px;
+        height: 2px;
+        z-index: 1;
+    }
+    
+    .step-connector.completed {
+        background-color: #0d6efd;
+    }
+    
+    /* Hover effects */
+    .step:not(.active) a:hover .step-circle {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .step:not(.active) a:hover .step-title {
+        color: #333;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .step-title {
+            font-size: 14px;
+        }
+        
+        .step-circle {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+        
+        .step-circle i {
+            font-size: 20px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .workflow-stepper {
+            flex-direction: column;
+            align-items: flex-start;
+            margin-left: 20px;
+        }
+        
+        .workflow-stepper::before {
+            top: 0;
+            bottom: 0;
+            left: 25px;
+            width: 2px;
+            height: auto;
+        }
+        
+        .step {
+            flex-direction: row;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        .step-circle {
+            margin-right: 15px;
+            margin-bottom: 0;
+        }
+    }
+</style>
+
+<div class="workflow-stepper">
+    <!-- Step 1: Datasets -->
+    <div class="step {% if active_step >= 1 %}{% if active_step > 1 %}completed{% else %}active{% endif %}{% endif %}">
+        {% if active_step != 1 %}
+        <a href="{% url 'datasets' %}" class="text-decoration-none">
+        {% endif %}
+            <div class="step-circle">
+                <i class="fas fa-database"></i>
+            </div>
+            <div class="step-title">Datasets</div>
+        {% if active_step != 1 %}
+        </a>
+        {% endif %}
+        {% if active_step > 1 or previous_step_completed %}
+        <div class="step-connector completed" style="left: 60px; width: calc(50% - 60px);"></div>
+        {% endif %}
+    </div>
+    
+    <!-- Step 2: Model Designer -->
+    <div class="step {% if active_step >= 2 %}{% if active_step > 2 %}completed{% else %}active{% endif %}{% endif %}">
+        {% if active_step != 2 %}
+        <a href="{% url 'model_studio' %}" class="text-decoration-none">
+        {% endif %}
+            <div class="step-circle">
+                <i class="fas fa-project-diagram"></i>
+            </div>
+            <div class="step-title">Designer</div>
+        {% if active_step != 2 %}
+        </a>
+        {% endif %}
+        {% if active_step > 2 %}
+        <div class="step-connector completed" style="left: calc(50% + 60px); width: calc(50% - 60px);"></div>
+        {% endif %}
+    </div>
+    
+    <!-- Step 3: Training -->
+    <div class="step {% if active_step == 3 %}active{% endif %}" 
+        {% if not request.session.model_id and active_step != 3 %}
+        data-bs-toggle="tooltip" 
+        data-bs-placement="top" 
+        title="Primero debes guardar un modelo en el diseñador para acceder al entrenamiento"
+        {% endif %}>
+        {% if active_step != 3 and active_step >= 2 and request.session.model_id %}
+        <a href="{% url 'training' %}" class="text-decoration-none">
+        {% endif %}
+            <div class="step-circle">
+                <i class="fas fa-network-wired"></i>
+            </div>
+            <div class="step-title">Training</div>
+        {% if active_step != 3 and active_step >= 2 and request.session.model_id %}
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script> 

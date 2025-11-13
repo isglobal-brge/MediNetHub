@@ -1,0 +1,148 @@
+{
+  "model": {
+    "name": "resnet_like",
+    "framework": "pytorch",
+    "description": "ResNet-like model with skip connections and Add operations",
+    "layers": [
+      {
+        "id": "input_data",
+        "name": "Input Layer",
+        "type": "input",
+        "params": {"features": 128}
+      },
+      {
+        "id": "linear1",
+        "name": "Linear1",
+        "type": "linear",
+        "params": {"in_features": 128, "out_features": 256, "bias": true},
+        "inputs": ["input_data"]
+      },
+      {
+        "id": "relu1",
+        "name": "ReLU1",
+        "type": "relu",
+        "params": {},
+        "inputs": ["linear1"]
+      },
+      {
+        "id": "linear2",
+        "name": "Linear2",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 256, "bias": true},
+        "inputs": ["relu1"]
+      },
+      {
+        "id": "relu2",
+        "name": "ReLU2",
+        "type": "relu",
+        "params": {},
+        "inputs": ["linear2"]
+      },
+      {
+        "id": "linear3",
+        "name": "Linear3",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 256, "bias": true},
+        "inputs": ["relu2"]
+      },
+      {
+        "id": "skip_connection1",
+        "name": "Skip Connection 1",
+        "type": "Add",
+        "params": {},
+        "inputs": ["linear3", "relu1"]
+      },
+      {
+        "id": "relu3",
+        "name": "ReLU3",
+        "type": "relu",
+        "params": {},
+        "inputs": ["skip_connection1"]
+      },
+      {
+        "id": "linear4",
+        "name": "Linear4",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 256, "bias": true},
+        "inputs": ["relu3"]
+      },
+      {
+        "id": "relu4",
+        "name": "ReLU4",
+        "type": "relu",
+        "params": {},
+        "inputs": ["linear4"]
+      },
+      {
+        "id": "linear5",
+        "name": "Linear5",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 256, "bias": true},
+        "inputs": ["relu4"]
+      },
+      {
+        "id": "skip_connection2",
+        "name": "Skip Connection 2",
+        "type": "Add",
+        "params": {},
+        "inputs": ["linear5", "relu3"]
+      },
+      {
+        "id": "relu5",
+        "name": "ReLU5",
+        "type": "relu",
+        "params": {},
+        "inputs": ["skip_connection2"]
+      },
+      {
+        "id": "linear6",
+        "name": "Linear6",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 256, "bias": true},
+        "inputs": ["relu5"]
+      },
+      {
+        "id": "relu6",
+        "name": "ReLU6",
+        "type": "relu",
+        "params": {},
+        "inputs": ["linear6"]
+      },
+      {
+        "id": "linear7",
+        "name": "Linear7",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 256, "bias": true},
+        "inputs": ["relu6"]
+      },
+      {
+        "id": "skip_connection3",
+        "name": "Skip Connection 3",
+        "type": "Add",
+        "params": {},
+        "inputs": ["linear7", "relu5"]
+      },
+      {
+        "id": "relu7",
+        "name": "ReLU7",
+        "type": "relu",
+        "params": {},
+        "inputs": ["skip_connection3"]
+      },
+      {
+        "id": "output_linear",
+        "name": "Output Linear",
+        "type": "linear",
+        "params": {"in_features": 256, "out_features": 10, "bias": true},
+        "inputs": ["relu7"]
+      },
+      {
+        "id": "output_layer",
+        "name": "Output Layer",
+        "type": "output",
+        "params": {"features": 10},
+        "inputs": ["output_linear"]
+      }
+    ]
+  }
+} 

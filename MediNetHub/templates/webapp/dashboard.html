@@ -1,0 +1,2103 @@
+{% extends 'base.html' %}
+
+{% block title %}MediNet - Training Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .dashboard-card .card-header {
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+    }
+    
+    .client-card {
+        border-radius: 10px;
+        transition: all 0.2s ease;
+        margin-bottom: 15px;
+    }
+    
+    .client-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    .client-status {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+    
+    .status-waiting {
+        background-color: #ffc107;
+    }
+    
+    .status-selected {
+        background-color: #17a2b8;
+    }
+    
+    .status-training {
+        background-color: #007bff;
+    }
+    
+    .status-aggregating {
+        background-color: #6610f2;
+    }
+    
+    .status-completed {
+        background-color: #28a745;
+    }
+    
+    .status-unavailable {
+        background-color: #dc3545;
+    }
+    
+    .log-container {
+        background-color: #272822;
+        color: #f8f8f2;
+        font-family: 'Courier New', monospace;
+        padding: 15px;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .log-entry {
+        margin-bottom: 5px;
+        line-height: 1.4;
+    }
+    
+    .log-timestamp {
+        color: #a6e22e;
+    }
+    
+    .log-info {
+        color: #66d9ef;
+    }
+    
+    .log-warning {
+        color: #f92672;
+    }
+    
+    /* Chart legend styling - target Chart.js generated elements */
+    .chart-legend-custom {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid transparent;
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.025em;
+    }
+    
+    .legend-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        background: rgba(255,255,255,1);
+    }
+    
+    .legend-item:active {
+        transform: translateY(0px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .card-header.unified {
+        background-color: white;
+        color: var(--dark-color);
+        border-bottom: 1px solid #e9ecef;
+        font-weight: 600;
+    }
+    
+    .client-status-card .card-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+    
+    .client-status-footer {
+        text-align: right;
+        margin-top: 1rem;
+        border-top: 1px solid #f0f0f0;
+        padding-top: 0.75rem;
+    }
+    
+    /* Enhanced Button Styles */
+    .btn-outline-primary, .btn-outline-secondary {
+        border-radius: 8px;
+        font-weight: 600;
+        border-width: 1px;
+        transition: all 0.2s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .btn-outline-primary:hover, .btn-outline-secondary:hover {
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .btn-outline-secondary {
+        color: #64748B !important; /* Slate Blue */
+        border-color: #64748B !important;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #64748B !important;
+        border-color: #64748B !important;
+        color: #fff !important;
+    }
+    
+    .metric-value.text-slate {
+        color: #0d6efd !important;
+    }
+    
+    /* Debug Mode Styles - Will be added/removed dynamically */
+    .debug-tab-hidden {
+        display: none;
+    }
+    
+    .debug-content-hidden {
+        display: none;
+    }
+    
+    /* Legend styling for debug charts */
+    .chart-legend-custom .legend-item {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+    
+    .chart-legend-custom .legend-item:hover {
+        opacity: 0.8;
+    }
+    
+    .metric-value.text-slate {
+        color: #64748B;
+    }
+    
+    .metric-value.text-brand-blue {
+        color: #0d6efd;
+    }
+    
+    .btn-primary,
+    .btn-primary:hover,
+    .btn-primary:focus {
+        background-color: var(--primary-color) !important;
+        border-color: var(--primary-color) !important;
+        color: #fff !important;
+    }
+</style>
+
+<!-- Chart.js para los gráficos -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-chart-line me-2"></i>Training Dashboard</h2>
+            <p class="text-muted">Real-time monitoring of federated training job</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-outline-primary me-2" id="refresh-btn">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <a href="{% url 'training' %}" class="btn btn-primary" style="border-radius: 8px;">
+                <i class="fas fa-arrow-left me-2"></i>Back to Training
+            </a>
+        </div>
+    </div>
+    
+    <!-- Status de entrenamiento -->
+    <div class="row mb-4" id="training-status-row">
+        <div class="col">
+            <div class="card dashboard-card">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="d-flex flex-column justify-content-center h-100">
+                                <h5 class="mb-1">Job Status</h5>
+                                <div class="d-inline-block mt-2">
+                                    <span class="badge bg-primary p-2" id="status-badge">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="mb-1">Progress</h5>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Round <span id="current-round">0</span>/<span id="total-rounds">10</span></span>
+                                <span><span id="progress-percentage">0</span>% Complete</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" id="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            
+                            <div class="mt-3 text-center">
+                                <button type="button" class="btn btn-sm btn-success me-2" id="start-training-btn">
+                                    <i class="fas fa-play me-1"></i>Start
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning me-2" id="pause-training-btn" disabled>
+                                    <i class="fas fa-pause me-1"></i>Pause
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" id="stop-training-btn" disabled>
+                                    <i class="fas fa-stop me-1"></i>Stop
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 text-center">
+                            <div class="d-flex flex-column justify-content-center h-100">
+                                <h5 class="mb-1">Time Info</h5>
+                                <div class="small text-muted" id="time-info">
+                                    <div>Started: 
+                                        {% if job.started_at %}
+                                            <span id="start-time">{{ job.started_at|date:"j F, H:i" }}</span>
+                                        {% else %}
+                                            <span id="start-time">Pendent</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>Elapsed: <span id="elapsed-time">--</span></div>
+                                    <div>Est. Completion: <span id="completion-time">--</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Métricas principales -->
+    <div class="row mb-4" id="main-metrics-row">
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-value text-primary" id="accuracy-value">--</div>
+                    <div class="small text-muted">Last round</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Loss</div>
+                    <div class="metric-value text-danger" id="loss-value">--</div>
+                    <div class="small text-muted">Last round</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">F1 Score</div>
+                    <div class="metric-value text-success" id="f1-value">--</div>
+                    <div class="small text-muted">Last round</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Active Clients</div>
+                    <div class="metric-value text-brand-blue" id="clients-value">--</div>
+                    <div class="small text-muted">Connected nodes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráficos y estado de clientes -->
+    <div class="row">
+        <!-- Gráficos -->
+        <div class="col-md-8">
+            <div class="card dashboard-card">
+                <div class="card-header unified d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-chart-area me-2"></i>Training Metrics
+                    </div>
+                    <div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-secondary" id="debug-mode-toggle" onclick="toggleDebugMode()">
+                                <i class="fas fa-bug me-1"></i>Debug Mode: <span id="debug-status">OFF</span>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split d-none" data-bs-toggle="dropdown" aria-expanded="false" id="debug-dropdown-toggle">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" id="debug-metrics-dropdown">
+                                <li><h6 class="dropdown-header">Specialized Metrics</h6></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('segmentation'); closeDropdown();">
+                                        <i class="fas fa-puzzle-piece me-2"></i>
+                                        <span>Segmentation</span>
+                                        <i class="fas fa-check text-success ms-auto" id="segmentation-check" style="display: none;"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('medical'); closeDropdown();">
+                                        <i class="fas fa-stethoscope me-2"></i>
+                                        <span>Medical</span>
+                                        <i class="fas fa-check text-success ms-auto" id="medical-check" style="display: none;"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('detection'); closeDropdown();">
+                                        <i class="fas fa-crosshairs me-2"></i>
+                                        <span>Detection</span>
+                                        <i class="fas fa-check text-success ms-auto" id="detection-check" style="display: none;"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('regression'); closeDropdown();">
+                                        <i class="fas fa-chart-line me-2"></i>
+                                        <span>Regression</span>
+                                        <i class="fas fa-check text-success ms-auto" id="regression-check" style="display: none;"></i>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="disableAllMetrics(); closeDropdown();">
+                                        <i class="fas fa-times me-2"></i>Disable All
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" id="metrics-card-body">
+                    <ul class="nav nav-tabs mb-3" id="metricsTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="accuracy-loss-tab" data-bs-toggle="tab" data-bs-target="#accuracy-loss" type="button" role="tab" aria-selected="true">Accuracy & Loss</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="precision-recall-tab" data-bs-toggle="tab" data-bs-target="#precision-recall" type="button" role="tab" aria-selected="false">Precision & Recall</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="clients-tab" data-bs-toggle="tab" data-bs-target="#clients-metrics" type="button" role="tab" aria-selected="false">Client Participation</button>
+                        </li>
+                        <!-- Debug Mode Tabs - Hidden by default -->
+                        <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="segmentation">
+                            <button class="nav-link" id="segmentation-tab" data-bs-toggle="tab" data-bs-target="#segmentation-metrics" type="button" role="tab" aria-selected="false">
+                                <i class="fas fa-puzzle-piece me-1"></i>Segmentation
+                            </button>
+                        </li>
+                        <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="medical">
+                            <button class="nav-link" id="medical-tab" data-bs-toggle="tab" data-bs-target="#medical-metrics" type="button" role="tab" aria-selected="false">
+                                <i class="fas fa-stethoscope me-1"></i>Medical
+                            </button>
+                        </li>
+                        <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="detection">
+                            <button class="nav-link" id="detection-tab" data-bs-toggle="tab" data-bs-target="#detection-metrics" type="button" role="tab" aria-selected="false">
+                                <i class="fas fa-crosshairs me-1"></i>Detection
+                            </button>
+                        </li>
+                        <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="regression">
+                            <button class="nav-link" id="regression-tab" data-bs-toggle="tab" data-bs-target="#regression-metrics" type="button" role="tab" aria-selected="false">
+                                <i class="fas fa-chart-line me-1"></i>Regression
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="metricsTabContent">
+                        <div class="tab-pane fade show active" id="accuracy-loss" role="tabpanel">
+                            <div class="chart-legend-custom" id="accuracy-loss-legend">
+                                <div class="legend-item" data-dataset="0">
+                                    <span class="legend-color" style="background-color: rgba(52, 152, 219, 1);"></span>
+                                    <span>Accuracy</span>
+                                </div>
+                                <div class="legend-item" data-dataset="1">
+                                    <span class="legend-color" style="background-color: rgba(231, 76, 60, 1);"></span>
+                                    <span>Loss</span>
+                                </div>
+                            </div>
+                            <div style="height: 350px;">
+                                <canvas id="accuracy-loss-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="precision-recall" role="tabpanel">
+                            <div class="chart-legend-custom" id="precision-recall-legend">
+                                <div class="legend-item" data-dataset="0">
+                                    <span class="legend-color" style="background-color: rgba(46, 204, 113, 1);"></span>
+                                    <span>Precision</span>
+                                </div>
+                                <div class="legend-item" data-dataset="1">
+                                    <span class="legend-color" style="background-color: rgba(155, 89, 182, 1);"></span>
+                                    <span>Recall</span>
+                                </div>
+                                <div class="legend-item" data-dataset="2">
+                                    <span class="legend-color" style="background-color: rgba(241, 196, 15, 1);"></span>
+                                    <span>F1 Score</span>
+                                </div>
+                            </div>
+                            <div style="height: 350px;">
+                                <canvas id="precision-recall-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="clients-metrics" role="tabpanel">
+                            <div style="height: 350px;">
+                                <canvas id="clients-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Debug Mode Tab Contents -->
+                        <div class="tab-pane fade debug-content debug-content-hidden" id="segmentation-metrics" role="tabpanel" data-metric="segmentation">
+                            <div class="chart-legend-custom" id="segmentation-legend">
+                                <div class="legend-item" data-dataset="0">
+                                    <span class="legend-color" style="background-color: rgba(52, 152, 219, 1);"></span>
+                                    <span>IoU</span>
+                                </div>
+                                <div class="legend-item" data-dataset="1">
+                                    <span class="legend-color" style="background-color: rgba(46, 204, 113, 1);"></span>
+                                    <span>Dice Score</span>
+                                </div>
+                                <div class="legend-item" data-dataset="2">
+                                    <span class="legend-color" style="background-color: rgba(155, 89, 182, 1);"></span>
+                                    <span>Pixel Accuracy</span>
+                                </div>
+                            </div>
+                            <div style="height: 350px;">
+                                <canvas id="segmentation-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade debug-content debug-content-hidden" id="medical-metrics" role="tabpanel" data-metric="medical">
+                            <div class="chart-legend-custom" id="medical-legend">
+                                <div class="legend-item" data-dataset="0">
+                                    <span class="legend-color" style="background-color: rgba(231, 76, 60, 1);"></span>
+                                    <span>Sensitivity</span>
+                                </div>
+                                <div class="legend-item" data-dataset="1">
+                                    <span class="legend-color" style="background-color: rgba(52, 152, 219, 1);"></span>
+                                    <span>Specificity</span>
+                                </div>
+                                <div class="legend-item" data-dataset="2">
+                                    <span class="legend-color" style="background-color: rgba(46, 204, 113, 1);"></span>
+                                    <span>PPV</span>
+                                </div>
+                                <div class="legend-item" data-dataset="3">
+                                    <span class="legend-color" style="background-color: rgba(241, 196, 15, 1);"></span>
+                                    <span>NPV</span>
+                                </div>
+                            </div>
+                            <div style="height: 350px;">
+                                <canvas id="medical-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade debug-content debug-content-hidden" id="detection-metrics" role="tabpanel" data-metric="detection">
+                            <div class="chart-legend-custom" id="detection-legend">
+                                <div class="legend-item" data-dataset="0">
+                                    <span class="legend-color" style="background-color: rgba(155, 89, 182, 1);"></span>
+                                    <span>mAP@0.5</span>
+                                </div>
+                                <div class="legend-item" data-dataset="1">
+                                    <span class="legend-color" style="background-color: rgba(52, 152, 219, 1);"></span>
+                                    <span>mAP@0.75</span>
+                                </div>
+                                <div class="legend-item" data-dataset="2">
+                                    <span class="legend-color" style="background-color: rgba(46, 204, 113, 1);"></span>
+                                    <span>BBox Accuracy</span>
+                                </div>
+                            </div>
+                            <div style="height: 350px;">
+                                <canvas id="detection-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade debug-content debug-content-hidden" id="regression-metrics" role="tabpanel" data-metric="regression">
+                            <div class="chart-legend-custom" id="regression-legend">
+                                <div class="legend-item" data-dataset="0">
+                                    <span class="legend-color" style="background-color: rgba(231, 76, 60, 1);"></span>
+                                    <span>MAE</span>
+                                </div>
+                                <div class="legend-item" data-dataset="1">
+                                    <span class="legend-color" style="background-color: rgba(52, 152, 219, 1);"></span>
+                                    <span>RMSE</span>
+                                </div>
+                                <div class="legend-item" data-dataset="2">
+                                    <span class="legend-color" style="background-color: rgba(46, 204, 113, 1);"></span>
+                                    <span>R² Score</span>
+                                </div>
+                            </div>
+                            <div style="height: 350px;">
+                                <canvas id="regression-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estado de clientes -->
+        <div class="col-md-4">
+            <div class="card dashboard-card client-status-card">
+                <div class="card-header unified">
+                    <i class="fas fa-satellite-dish me-2"></i>Client Status
+                </div>
+                <div class="card-body">
+                    <div id="clients-container" class="overflow-auto" style="flex-grow: 1;">
+                        <!-- Client cards will be dynamically inserted here -->
+                        <p class="text-muted text-center mt-3" id="clients-loading">Waiting for clients...</p>
+                    </div>
+                    <div class="client-status-footer">
+                        <div class="d-grid">
+                            <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary">
+                                View Client Details<i class="fas fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+    const INTERVALS = {
+        ACTIVE: {
+            DETAILS: 5000,     // 5 segons (quan està entrenant)
+            METRICS: 10000,    // 10 segons (mètriques)
+            CLIENTS: 15000,    // 15 segons (clients)
+        },
+        COMPLETED: {
+            DETAILS: 30000,    // 30 segons (quan ja està completat)
+            METRICS: 60000,    // 1 minut (no canvien)
+            CLIENTS: 60000,    // 1 minut
+        },
+        PENDING: {
+            DETAILS: 10000,    // 10 segons (pendent)
+            METRICS: 30000,    // 30 segons
+            CLIENTS: 30000,    // 30 segons
+        }
+    };
+    document.addEventListener('DOMContentLoaded', function() {
+        // Constantes y variables globales
+        const jobId = {{ job_id }};
+        let intervalId = null;
+        let accuracyLossChart = null;
+        let precisionRecallChart = null;
+        let clientsChart = null;
+        let clientStatusInterval = null;
+        let jobDetailsInterval = null;
+        let currentJobStatus = null;
+        
+        // Datos para los gráficos
+        const chartData = {
+            rounds: [],
+            accuracy: [],
+            loss: [],
+            precision: [],
+            recall: [],
+            f1: [],
+            clients: []
+        };
+        
+        // Inicializar los gráficos vacíos
+        initCharts();
+        
+        // Cargar datos iniciales
+        fetchJobDetails();
+        fetchMetrics();
+        fetchClients();
+        
+        // Iniciar refresco automático amb intervals adaptatius
+        startAutoRefresh();
+        
+        // Event listeners
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+            refreshDashboard();
+        });
+        
+        document.getElementById('start-training-btn').addEventListener('click', function() {
+            startTraining();
+        });
+        
+        document.getElementById('pause-training-btn').addEventListener('click', function() {
+            updateJobStatus('pending');
+        });
+        
+        document.getElementById('stop-training-btn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to stop the training? This cannot be undone.')) {
+                updateJobStatus('cancelled');
+            }
+        });
+        
+        // ✅ Event listeners for tabs to resize charts
+        document.getElementById('precision-recall-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (precisionRecallChart) {
+                    precisionRecallChart.resize();
+                }
+            }, 100);
+        });
+        
+        document.getElementById('accuracy-loss-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (accuracyLossChart) {
+                    accuracyLossChart.resize();
+                }
+            }, 100);
+        });
+        
+        document.getElementById('clients-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (clientsChart) {
+                    clientsChart.resize();
+                }
+            }, 100);
+        });
+        
+        // Event listeners for debug tabs to resize charts
+        document.getElementById('segmentation-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (debugCharts.segmentation) {
+                    debugCharts.segmentation.resize();
+                }
+            }, 100);
+        });
+        
+        document.getElementById('medical-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (debugCharts.medical) {
+                    debugCharts.medical.resize();
+                }
+            }, 100);
+        });
+        
+        document.getElementById('detection-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (debugCharts.detection) {
+                    debugCharts.detection.resize();
+                }
+            }, 100);
+        });
+        
+        document.getElementById('regression-tab').addEventListener('shown.bs.tab', function () {
+            setTimeout(() => {
+                if (debugCharts.regression) {
+                    debugCharts.regression.resize();
+                }
+            }, 100);
+        });
+        
+        // Initialize debug mode if it was previously enabled
+        if (debugMode) {
+            const debugStatus = document.getElementById('debug-status');
+            const dropdownToggle = document.getElementById('debug-dropdown-toggle');
+            
+            debugStatus.textContent = 'ON';
+            dropdownToggle.classList.remove('d-none');
+            
+            // Show all previously enabled metrics
+            enabledMetrics.forEach(metric => {
+                showMetric(metric);
+            });
+            
+            // Update dropdown UI
+            updateDropdownUI();
+        }
+        
+
+        
+        // Inicializar gráficos
+        function initCharts() {
+            // Gráfico de Accuracy y Loss
+            const accuracyLossCtx = document.getElementById('accuracy-loss-chart').getContext('2d');
+            accuracyLossChart = new Chart(accuracyLossCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Accuracy',
+                            data: [],
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.1,
+                            yAxisID: 'y',
+                            fill: false,
+                        },
+                        {
+                            label: 'Loss',
+                            data: [],
+                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.1,
+                            yAxisID: 'y1',
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    animation: false, // Disable all animations
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Round'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Accuracy'
+                            },
+                            min: 0,
+                            max: 1
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Loss'
+                            },
+                            min: 0,
+                            max: 1,
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#666',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13,
+                                weight: 'normal'
+                            },
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        // ✅ Format differently based on metric type
+                                        if (label.includes('Loss')) {
+                                            if (context.parsed.y > 1000) {
+                                                label += context.parsed.y.toExponential(3);
+                                            } else {
+                                                label += context.parsed.y.toFixed(4);
+                                            }
+                                        } else if (label.includes('Accuracy')) {
+                                            label += (context.parsed.y * 100).toFixed(2) + '%';
+                                        } else {
+                                            label += context.parsed.y.toFixed(4);
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add click functionality to custom legend
+            document.querySelectorAll('#accuracy-loss-legend .legend-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const datasetIndex = parseInt(this.dataset.dataset);
+                    const isVisible = accuracyLossChart.isDatasetVisible(datasetIndex);
+                    
+                    if (isVisible) {
+                        accuracyLossChart.hide(datasetIndex);
+                        this.style.opacity = '0.5';
+                    } else {
+                        accuracyLossChart.show(datasetIndex);
+                        this.style.opacity = '1';
+                    }
+                });
+            });
+            
+            // Gráfico de Precision y Recall
+            const precisionRecallCtx = document.getElementById('precision-recall-chart').getContext('2d');
+            precisionRecallChart = new Chart(precisionRecallCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Precision',
+                            data: [],
+                            backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.1,
+                            fill: false,
+                        },
+                        {
+                            label: 'Recall',
+                            data: [],
+                            backgroundColor: 'rgba(155, 89, 182, 0.2)',
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.1,
+                            fill: false,
+                        },
+                        {
+                            label: 'F1 Score',
+                            data: [],
+                            backgroundColor: 'rgba(241, 196, 15, 0.2)',
+                            borderColor: 'rgba(241, 196, 15, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    animation: false, // Disable all animations
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Round'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Score'
+                            },
+                            min: 0,
+                            max: 1
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#666',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13,
+                                weight: 'normal'
+                            },
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += (context.parsed.y * 100).toFixed(2) + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add click functionality to precision-recall custom legend
+            document.querySelectorAll('#precision-recall-legend .legend-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const datasetIndex = parseInt(this.dataset.dataset);
+                    const isVisible = precisionRecallChart.isDatasetVisible(datasetIndex);
+                    
+                    if (isVisible) {
+                        precisionRecallChart.hide(datasetIndex);
+                        this.style.opacity = '0.5';
+                    } else {
+                        precisionRecallChart.show(datasetIndex);
+                        this.style.opacity = '1';
+                    }
+                });
+            });
+            
+            // Gráfico de Clientes
+            const clientsCtx = document.getElementById('clients-chart').getContext('2d');
+            clientsChart = new Chart(clientsCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Active Clients',
+                            data: [],
+                            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    animation: false, // Disable all animations
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Round'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Number of Clients'
+                            },
+                            min: 0,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: '#666',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13,
+                                weight: 'normal'
+                            },
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' clients';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                                    }
+            }
+        });
+        
+    }
+        
+        // Actualizar gráficos con nuevos datos
+        function updateCharts(metrics) {
+            // Limpiar datos actuales
+            chartData.rounds = [];
+            chartData.accuracy = [];
+            chartData.loss = [];
+            chartData.precision = [];
+            chartData.recall = [];
+            chartData.f1 = [];
+            chartData.clients = [];
+
+            // Procesar métricas
+            if (metrics && metrics.length > 0) {
+                metrics.forEach(metric => {
+                    chartData.rounds.push(metric.round);
+                    chartData.accuracy.push(metric.accuracy || 0);
+                    chartData.loss.push(metric.loss || 0);
+                    chartData.precision.push(metric.precision || 0);
+                    chartData.recall.push(metric.recall || 0);
+                    chartData.f1.push(metric.f1 || 0);
+                    chartData.clients.push(metric.clients || 0);
+                });
+            }
+            
+            // Actualizar datos en los gráficos
+            accuracyLossChart.data.labels = chartData.rounds;
+            accuracyLossChart.data.datasets[0].data = chartData.accuracy;
+            accuracyLossChart.data.datasets[1].data = chartData.loss;
+            
+            // Dynamically adjust the 'Loss' axis max to allow it to grow if needed
+            if (chartData.loss.length > 0) {
+                const maxLoss = Math.max(...chartData.loss);
+                // Add 10% padding for better visualization, ensure it's at least 1
+                accuracyLossChart.options.scales.y1.max = Math.max(1, maxLoss * 1.1);
+            }
+
+            accuracyLossChart.update();
+            
+            precisionRecallChart.data.labels = chartData.rounds;
+            precisionRecallChart.data.datasets[0].data = chartData.precision;
+            precisionRecallChart.data.datasets[1].data = chartData.recall;
+            precisionRecallChart.data.datasets[2].data = chartData.f1;
+            precisionRecallChart.update();
+            
+            clientsChart.data.labels = chartData.rounds;
+            clientsChart.data.datasets[0].data = chartData.clients;
+            clientsChart.update();
+            
+            // Actualizar valores de métricas principales (última ronda)
+            if (chartData.rounds.length > 0) {
+                const lastIdx = chartData.rounds.length - 1;
+                document.getElementById('accuracy-value').textContent = (chartData.accuracy[lastIdx] * 100).toFixed(2) + '%';
+                
+                // ✅ Formatear loss de manera inteligente
+                const lossValue = chartData.loss[lastIdx];
+                if (lossValue > 1000) {
+                    document.getElementById('loss-value').textContent = lossValue.toExponential(3);
+                } else {
+                    document.getElementById('loss-value').textContent = lossValue.toFixed(4);
+                }
+                
+                document.getElementById('f1-value').textContent = chartData.f1[lastIdx].toFixed(4);
+                document.getElementById('clients-value').textContent = chartData.clients[lastIdx];
+            }
+        }
+        
+        // Obtener detalles del trabajo
+        function fetchJobDetails() {
+                                    // Fetching job details...
+            fetch(`/api/job-details/${jobId}/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.job) {
+                        updateJobUI(data.job);
+                        
+                        // Aturem l'interval si el job està completat
+                        if (data.job.status === 'completed') {
+                            if (clientStatusInterval) {
+                                clearInterval(clientStatusInterval);
+                                clientStatusInterval = null;
+                            }
+                        }
+                    } 
+                })
+                .catch(error => {
+                    if (error.message.includes('HTTP error')) {
+                        if (clientStatusInterval) {
+                            clearInterval(clientStatusInterval);
+                            clientStatusInterval = null;
+                        }
+                    }
+                });
+        }
+        
+        // Obtener métricas
+        function fetchMetrics() {
+            fetch(`/api/get-job-metrics/${jobId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateMetricsUI(data);
+                        if (data.metrics && data.metrics.length > 0) {
+                        }
+                    } else {
+                        console.error(`Error loading metrics: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error fetching metrics: ${error}`);
+                });
+        }
+        
+        // Obtener estado de clientes
+        function fetchClients() {
+            const loadingElement = document.getElementById('clients-loading');
+            const containerElement = document.getElementById('clients-container');
+            const emptyElement = document.getElementById('clients-empty');
+
+            
+            // Comprovar si els elements existeixen abans d'utilitzar-los
+            if (loadingElement) loadingElement.style.display = 'block';
+            if (containerElement) containerElement.innerHTML = '';
+            if (emptyElement) {
+                emptyElement.style.display = 'none';
+            }
+            
+            
+            fetch(`/api/client-status/${jobId}/`)
+                .then(response => {
+                    return response.json();
+                })
+                .then(data => {
+                    if (loadingElement) loadingElement.style.display = 'none';
+                    
+                    if (data.success) {
+
+                        // Envoltant updateClientsUI amb try-catch per capturar errors
+                        try {
+                            
+                            updateClientsUI(data.clients);
+                        } catch (err) {
+                            console.error("ERROR en updateClientsUI:", err);
+                            console.error("Stack trace:", err.stack);
+                        }
+                        
+                        if (data.is_complete) {
+                            clearInterval(clientStatusInterval);
+                        }
+                    } else {
+                        if (loadingElement) loadingElement.style.display = 'none';
+                        if (emptyElement) emptyElement.style.display = 'block';
+                        console.error(`Error loading client status: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    
+                    if (loadingElement) loadingElement.style.display = 'none';
+                    if (emptyElement) emptyElement.style.display = 'block';
+                    console.error(`Error fetching client status: ${error}`);
+                });
+        }
+        
+        // Actualizar interfaz de usuario con datos del trabajo
+        function updateJobUI(job) {
+            // Comprovar si l'estat ha canviat
+            if (currentJobStatus !== job.status) {
+                currentJobStatus = job.status;
+                // Reconfigurar intervals amb el nou estat
+                startAutoRefresh(job.status);
+            }
+            
+            // Status badge
+            const statusBadge = document.getElementById('status-badge');
+            statusBadge.textContent = job.status.charAt(0).toUpperCase() + job.status.slice(1);
+            statusBadge.className = `badge p-2 bg-${getStatusColor(job.status)}`;
+            
+            // Progress
+            document.getElementById('current-round').textContent = job.current_round;
+            document.getElementById('total-rounds').textContent = job.total_rounds;
+            document.getElementById('progress-percentage').textContent = job.progress;
+            
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = `${job.progress}%`;
+            progressBar.setAttribute('aria-valuenow', job.progress);
+            updateTimeInfo(job);
+            // Botones de control
+            updateControlButtons(job.status);
+
+        }
+
+        function updateTimeInfo(job) {            
+
+            // Actualitzem elapsed time
+            const elapsedElement = document.getElementById('elapsed-time');
+            if (job && job.started_at && job.status !== 'completed') {
+                const startTime = new Date(job.started_at);
+                const currentTime = new Date();
+                const elapsedMs = currentTime - startTime;
+                
+                // Convertim a minuts i segons
+                const minutes = Math.floor(elapsedMs / 60000);
+                const seconds = Math.floor((elapsedMs % 60000) / 1000);
+                
+                elapsedElement.textContent = `${minutes}m ${seconds}s`;
+            } else if (job && job.status === 'completed' && job.completed_at) {
+                // Si està completat, mostrem el temps total
+                const startTime = new Date(job.started_at);
+                const endTime = new Date(job.completed_at);
+                const totalMs = endTime - startTime;
+                
+                const minutes = Math.floor(totalMs / 60000);
+                const seconds = Math.floor((totalMs % 60000) / 1000);
+                
+                elapsedElement.textContent = `${minutes}m ${seconds}s`;
+            }
+
+            // Actualitzem estimated completion
+            const estimatedElement = document.getElementById('completion-time');
+            if (estimatedElement && job && job.metrics_json) {
+                const metrics = JSON.parse(job.metrics_json || '[]');
+                estimatedElement.textContent = calculateEstimatedTime(job, metrics);
+            }
+        }
+        
+        // Actualizar interfaz de métricas
+        function updateMetricsUI(data) {
+        
+            
+            // Actualizar gráficos con las métricas
+            updateCharts(data.metrics);
+            
+            // Actualizar progreso si viene en los datos
+            if (data.progress !== undefined) {
+                document.getElementById('progress-percentage').textContent = data.progress;
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = `${data.progress}%`;
+                progressBar.setAttribute('aria-valuenow', data.progress);
+            }
+            
+            if (data.current_round !== undefined) {
+                document.getElementById('current-round').textContent = data.current_round;
+            }
+            
+            if (data.total_rounds !== undefined) {
+                document.getElementById('total-rounds').textContent = data.total_rounds;
+            }
+            
+            // Actualizar status si viene en los datos
+            if (data.job_status !== undefined) {
+                const statusBadge = document.getElementById('status-badge');
+                statusBadge.textContent = data.job_status.charAt(0).toUpperCase() + data.job_status.slice(1);
+                statusBadge.className = `badge p-2 bg-${getStatusColor(data.job_status)}`;
+                
+                updateControlButtons(data.job_status);
+            }
+            
+            // Afegim l'actualització del temps
+            updateTimeInfo(data.job);
+        }
+        
+        // Actualizar interfaz de clientes
+        function updateClientsUI(clients) {
+            const container = document.getElementById('clients-container');
+            const emptyElement = document.getElementById('clients-empty');
+            const clientsValueElement = document.getElementById('clients-value');
+            
+            // Comprovar si el contenidor existeix
+            if (!container) {
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            if (!clients || Object.keys(clients).length === 0) {
+                // Comprovar si l'element empty existeix abans d'utilitzar-lo
+                if (emptyElement) {
+                    emptyElement.style.display = 'block';
+                }
+                return;
+            }
+            
+            // Comprovar si l'element empty existeix abans d'utilitzar-lo
+            if (emptyElement) {
+                emptyElement.style.display = 'none';
+            }
+            
+            // Actualitzar el contador de clients si l'element existeix
+            if (clientsValueElement) {
+                clientsValueElement.textContent = Object.keys(clients).length;
+            }
+            
+            // La resta del codi es manté igual
+            Object.keys(clients).forEach(clientId => {
+                const client = clients[clientId];
+                const card = document.createElement('div');
+                card.className = 'client-card card border-light';
+                
+                // Determinar el color de borde según el estado del cliente
+                const borderColorClass = getBorderClassForStatus(client.status);
+                card.classList.add(borderColorClass);
+                // HTML del interior de la tarjeta
+                card.innerHTML = `
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">ID: ${client.client_id}</h6>
+                            <span class="${getStatusClass(client.status)}">${client.status}</span>
+                        </div>
+                        <div class="small">
+                            <div><strong>Center:</strong> ${client.connection_name}</div>
+                            <div><strong>IP:</strong> ${client.connection_ip}:${client.connection_port}</div>
+                            <div><strong>Train Samples:</strong> ${client.train_samples}</div>
+                            <div><strong>Test Samples:</strong> ${client.test_samples}</div>
+                            ${client.accuracy ? `<div><strong>Accuracy:</strong> ${(client.accuracy * 100).toFixed(2)}%</div>` : ''}
+                            ${client.loss ? `<div><strong>Loss:</strong> ${client.loss.toFixed(4)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // Actualizar botones de control según el estado
+        function updateControlButtons(status) {
+            const startBtn = document.getElementById('start-training-btn');
+            const pauseBtn = document.getElementById('pause-training-btn');
+            const stopBtn = document.getElementById('stop-training-btn');
+            
+            switch (status) {
+                case 'pending':
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    break;
+                case 'running':
+                    startBtn.disabled = true;
+                    pauseBtn.disabled = false;
+                    stopBtn.disabled = false;
+                    break;
+                case 'completed':
+                    startBtn.disabled = true;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    break;
+                case 'failed':
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    break;
+                case 'cancelled':
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    break;
+                default:
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+            }
+        }
+        
+        // Iniciar entrenamiento
+        function startTraining() {
+            fetch(`/api/simulate-training/${jobId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        refreshDashboard();
+                    } else {
+                        console.error(`Error starting training: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error starting training: ${error}`);
+                });
+        }
+        
+        // Actualizar estado del trabajo
+        function updateJobStatus(status) {
+            fetch(`/api/update-job-status/${jobId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ status: status })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        refreshDashboard();
+                    } else {
+                        console.error(`Error updating job status: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error updating job status: ${error}`);
+                });
+        }
+        
+        // Refrescar todo el dashboard
+        function refreshDashboard() {
+            fetchJobDetails();
+            fetchMetrics();
+            fetchClients();
+        }
+        
+        // Iniciar refresco automático adaptatiu
+        function startAutoRefresh(jobStatus = 'pending') {
+            // Netejar intervals existents
+            if (intervalId) clearInterval(intervalId);
+            if (jobDetailsInterval) clearInterval(jobDetailsInterval);
+            if (clientStatusInterval) clearInterval(clientStatusInterval);
+            
+            // Seleccionar intervals segons l'estat
+            let intervals;
+            switch(jobStatus) {
+                case 'running':
+                    intervals = INTERVALS.ACTIVE;
+                    break;
+                case 'completed':
+                case 'failed':
+                case 'cancelled':
+                    intervals = INTERVALS.COMPLETED;
+                    break;
+                default:
+                    intervals = INTERVALS.PENDING;
+            }
+            
+            console.log(`Setting intervals for status: ${jobStatus}`, intervals);
+            
+            intervalId = setInterval(fetchMetrics, intervals.METRICS);
+            jobDetailsInterval = setInterval(fetchJobDetails, intervals.DETAILS);
+            clientStatusInterval = setInterval(fetchClients, intervals.CLIENTS);
+        }
+        
+
+        
+        // Utilidades
+        function getStatusColor(status) {
+            switch (status) {
+                case 'pending': return 'warning';
+                case 'running': return 'primary';
+                case 'completed': return 'success';
+                case 'failed': return 'danger';
+                case 'cancelled': return 'secondary';
+                default: return 'secondary';
+            }
+        }
+        
+        function getStatusClass(status) {
+            return `badge bg-${getStatusColor(status)}`;
+        }
+        
+        function getBorderClassForStatus(status) {
+            switch (status) {
+                case 'waiting': return 'border-warning';
+                case 'selected': return 'border-info';
+                case 'training': return 'border-primary';
+                case 'aggregating': return 'border-primary';
+                case 'completed': return 'border-success';
+                case 'unavailable': return 'border-danger';
+                default: return 'border-secondary';
+            }
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function updateClientUI(client, clientId) {
+            // Buscar l'element pel ID
+            const clientElement = document.getElementById(`client-${clientId}`);
+            if (clientElement) {
+                clientElement.style.backgroundColor = getStatusColor(client.status);
+            } else {
+                return;
+            }
+        }
+
+        
+
+        function calculateEstimatedTime(job, metrics) {
+            // Si no tenim mètriques o estem completats, no cal estimar
+            if (!metrics || metrics.length < 1 || job.status === 'completed') {
+                return '--';
+            }
+
+            // Obtenim els timestamps de les rondes
+            const roundTimes = metrics.map(m => new Date(m.timestamp));
+            
+            // Si només tenim una ronda, esperem a tenir més dades
+            if (roundTimes.length < 2) {
+                return 'Calculant...';
+            }
+
+            // Calculem la mitjana de temps entre rondes
+            let totalTime = 0;
+            for (let i = 1; i < roundTimes.length; i++) {
+                totalTime += roundTimes[i] - roundTimes[i-1];
+            }
+            const averageTimePerRound = totalTime / (roundTimes.length - 1);
+
+            // Calculem quantes rondes falten
+            const remainingRounds = job.total_rounds - job.current_round;
+            
+            // Estimem el temps restant
+            const estimatedRemainingMs = averageTimePerRound * remainingRounds;
+            const estimatedMinutes = Math.floor(estimatedRemainingMs / 60000);
+            const estimatedSeconds = Math.floor((estimatedRemainingMs % 60000) / 1000);
+
+            return `${estimatedMinutes}m ${estimatedSeconds}s`;
+        }
+
+    });
+
+    // ===== DEBUG MODE FUNCTIONALITY =====
+    
+    // Debug mode state
+    let debugMode = localStorage.getItem('debug_specialized_metrics') === 'true';
+    let debugCharts = {};
+    let enabledMetrics = JSON.parse(localStorage.getItem('enabled_debug_metrics') || '[]');
+    
+    // Debug mode dummy data
+    const debugMetrics = {
+        segmentation: {
+            rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            iou: [0.65, 0.72, 0.78, 0.81, 0.85, 0.87, 0.88, 0.89, 0.90, 0.91],
+            dice: [0.70, 0.75, 0.80, 0.83, 0.88, 0.90, 0.91, 0.92, 0.93, 0.94],
+            pixel_accuracy: [0.85, 0.87, 0.89, 0.91, 0.92, 0.93, 0.94, 0.95, 0.95, 0.96]
+        },
+        medical: {
+            rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            sensitivity: [0.88, 0.89, 0.90, 0.91, 0.92, 0.93, 0.93, 0.94, 0.94, 0.95],
+            specificity: [0.85, 0.86, 0.87, 0.88, 0.89, 0.90, 0.90, 0.91, 0.91, 0.92],
+            ppv: [0.82, 0.84, 0.85, 0.86, 0.87, 0.88, 0.89, 0.89, 0.90, 0.90],
+            npv: [0.90, 0.91, 0.92, 0.93, 0.94, 0.94, 0.95, 0.95, 0.96, 0.96]
+        },
+        detection: {
+            rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            map_50: [0.65, 0.68, 0.71, 0.74, 0.76, 0.78, 0.79, 0.80, 0.81, 0.82],
+            map_75: [0.55, 0.58, 0.61, 0.64, 0.68, 0.70, 0.71, 0.72, 0.73, 0.74],
+            bbox_accuracy: [0.75, 0.77, 0.79, 0.81, 0.82, 0.84, 0.85, 0.86, 0.87, 0.88]
+        },
+        regression: {
+            rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            mae: [0.25, 0.22, 0.19, 0.17, 0.15, 0.14, 0.13, 0.12, 0.11, 0.10],
+            rmse: [0.35, 0.32, 0.29, 0.26, 0.23, 0.21, 0.20, 0.19, 0.18, 0.17],
+            r2_score: [0.75, 0.78, 0.81, 0.84, 0.88, 0.90, 0.91, 0.92, 0.93, 0.94]
+        }
+    };
+    
+    // Toggle debug mode
+    function toggleDebugMode() {
+        debugMode = !debugMode;
+        localStorage.setItem('debug_specialized_metrics', debugMode.toString());
+        
+        // Update UI
+        const debugStatus = document.getElementById('debug-status');
+        const dropdownToggle = document.getElementById('debug-dropdown-toggle');
+        
+        if (debugMode) {
+            debugStatus.textContent = 'ON';
+            dropdownToggle.classList.remove('d-none');
+            
+            // Show all previously enabled metrics
+            enabledMetrics.forEach(metric => {
+                showMetric(metric);
+            });
+        } else {
+            debugStatus.textContent = 'OFF';
+            dropdownToggle.classList.add('d-none');
+            
+            // Hide all metrics and destroy charts
+            disableAllMetrics();
+        }
+    }
+    
+    // Toggle specific metric
+    function toggleSpecificMetric(metricType) {
+        const isEnabled = enabledMetrics.includes(metricType);
+        
+        if (isEnabled) {
+            // Disable metric
+            enabledMetrics = enabledMetrics.filter(m => m !== metricType);
+            hideMetric(metricType);
+        } else {
+            // Enable metric
+            enabledMetrics.push(metricType);
+            showMetric(metricType);
+        }
+        
+        // Update localStorage
+        localStorage.setItem('enabled_debug_metrics', JSON.stringify(enabledMetrics));
+        
+        // Update UI
+        updateDropdownUI();
+    }
+    
+    // Show specific metric
+    function showMetric(metricType) {
+        const tab = document.querySelector(`[data-metric="${metricType}"].debug-tab`);
+        const content = document.querySelector(`[data-metric="${metricType}"].debug-content`);
+        
+        if (tab && content) {
+            tab.classList.remove('debug-tab-hidden');
+            content.classList.remove('debug-content-hidden');
+            
+            // Initialize chart if not exists
+            if (!debugCharts[metricType]) {
+                setTimeout(() => {
+                    initializeSpecificChart(metricType);
+                    // Setup legend handlers after chart is fully initialized
+                    setTimeout(() => {
+                        setupLegendHandlers(metricType);
+                    }, 50);
+                }, 100);
+            } else {
+                // Re-setup legend handlers if chart already exists
+                setupLegendHandlers(metricType);
+            }
+        }
+    }
+    
+    // Hide specific metric
+    function hideMetric(metricType) {
+        const tab = document.querySelector(`[data-metric="${metricType}"].debug-tab`);
+        const content = document.querySelector(`[data-metric="${metricType}"].debug-content`);
+        
+        if (tab && content) {
+            tab.classList.add('debug-tab-hidden');
+            content.classList.add('debug-content-hidden');
+            
+            // If currently active tab, switch to first tab
+            if (content.classList.contains('active')) {
+                const firstTab = document.getElementById('accuracy-loss-tab');
+                const firstTabContent = document.getElementById('accuracy-loss');
+                
+                // Remove active from all tabs
+                document.querySelectorAll('.nav-link').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+                
+                // Activate first tab
+                firstTab.classList.add('active');
+                firstTabContent.classList.add('show', 'active');
+            }
+            
+            // Destroy chart
+            if (debugCharts[metricType]) {
+                debugCharts[metricType].destroy();
+                delete debugCharts[metricType];
+            }
+        }
+    }
+    
+    // Disable all metrics
+    function disableAllMetrics() {
+        enabledMetrics.forEach(metric => {
+            hideMetric(metric);
+        });
+        enabledMetrics = [];
+        localStorage.setItem('enabled_debug_metrics', JSON.stringify(enabledMetrics));
+        updateDropdownUI();
+    }
+    
+    // Update dropdown UI
+    function updateDropdownUI() {
+        const metrics = ['segmentation', 'medical', 'detection', 'regression'];
+        metrics.forEach(metric => {
+            const check = document.getElementById(`${metric}-check`);
+            if (enabledMetrics.includes(metric)) {
+                check.style.display = 'inline';
+            } else {
+                check.style.display = 'none';
+            }
+        });
+    }
+    
+    // Close dropdown menu
+    function closeDropdown() {
+        // Click outside to close the dropdown
+        document.body.click();
+    }
+    
+    // Initialize specific chart
+    function initializeSpecificChart(metricType) {
+        switch(metricType) {
+            case 'segmentation':
+                initializeSegmentationChart();
+                break;
+            case 'medical':
+                initializeMedicalChart();
+                break;
+            case 'detection':
+                initializeDetectionChart();
+                break;
+            case 'regression':
+                initializeRegressionChart();
+                break;
+        }
+    }
+    
+    // Initialize segmentation chart
+    function initializeSegmentationChart() {
+        // Segmentation Chart
+        const segmentationCtx = document.getElementById('segmentation-chart').getContext('2d');
+        debugCharts.segmentation = new Chart(segmentationCtx, {
+            type: 'line',
+            data: {
+                labels: debugMetrics.segmentation.rounds,
+                datasets: [
+                    {
+                        label: 'IoU',
+                        data: debugMetrics.segmentation.iou,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Dice Score',
+                        data: debugMetrics.segmentation.dice,
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Pixel Accuracy',
+                        data: debugMetrics.segmentation.pixel_accuracy,
+                        borderColor: 'rgba(155, 89, 182, 1)',
+                        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+    }
+    
+    // Initialize medical chart
+    function initializeMedicalChart() {
+        // Medical Chart
+        const medicalCtx = document.getElementById('medical-chart').getContext('2d');
+        debugCharts.medical = new Chart(medicalCtx, {
+            type: 'line',
+            data: {
+                labels: debugMetrics.medical.rounds,
+                datasets: [
+                    {
+                        label: 'Sensitivity',
+                        data: debugMetrics.medical.sensitivity,
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Specificity',
+                        data: debugMetrics.medical.specificity,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'PPV',
+                        data: debugMetrics.medical.ppv,
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'NPV',
+                        data: debugMetrics.medical.npv,
+                        borderColor: 'rgba(241, 196, 15, 1)',
+                        backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+    }
+    
+    // Initialize detection chart
+    function initializeDetectionChart() {
+        // Detection Chart
+        const detectionCtx = document.getElementById('detection-chart').getContext('2d');
+        debugCharts.detection = new Chart(detectionCtx, {
+            type: 'line',
+            data: {
+                labels: debugMetrics.detection.rounds,
+                datasets: [
+                    {
+                        label: 'mAP@0.5',
+                        data: debugMetrics.detection.map_50,
+                        borderColor: 'rgba(155, 89, 182, 1)',
+                        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'mAP@0.75',
+                        data: debugMetrics.detection.map_75,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'BBox Accuracy',
+                        data: debugMetrics.detection.bbox_accuracy,
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+    }
+    
+    // Initialize regression chart
+    function initializeRegressionChart() {
+        // Regression Chart
+        const regressionCtx = document.getElementById('regression-chart').getContext('2d');
+        debugCharts.regression = new Chart(regressionCtx, {
+            type: 'line',
+            data: {
+                labels: debugMetrics.regression.rounds,
+                datasets: [
+                    {
+                        label: 'MAE',
+                        data: debugMetrics.regression.mae,
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'RMSE',
+                        data: debugMetrics.regression.rmse,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'R² Score',
+                        data: debugMetrics.regression.r2_score,
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        max: 1
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 0.5,
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+    }
+    
+    // Setup legend click handlers for specific chart
+    function setupLegendHandlers(chartType) {
+        const legendItems = document.querySelectorAll(`#${chartType}-legend .legend-item`);
+        legendItems.forEach(item => {
+            // Remove any existing event listeners to avoid duplicates
+            item.replaceWith(item.cloneNode(true));
+        });
+        
+        // Re-select items after cloning
+        const newLegendItems = document.querySelectorAll(`#${chartType}-legend .legend-item`);
+        newLegendItems.forEach(item => {
+            item.style.cursor = 'pointer'; // Add cursor pointer
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const datasetIndex = parseInt(this.dataset.dataset);
+                const chart = debugCharts[chartType];
+                
+                if (chart) {
+                    const isVisible = chart.isDatasetVisible(datasetIndex);
+                    
+                    if (isVisible) {
+                        chart.hide(datasetIndex);
+                        this.style.opacity = '0.5';
+                        this.style.textDecoration = 'line-through';
+                    } else {
+                        chart.show(datasetIndex);
+                        this.style.opacity = '1';
+                        this.style.textDecoration = 'none';
+                    }
+                    
+                    chart.update();
+                }
+            });
+        });
+    }
+    
+    // Destroy debug charts
+    function destroyDebugCharts() {
+        Object.values(debugCharts).forEach(chart => {
+            if (chart) {
+                chart.destroy();
+            }
+        });
+        debugCharts = {};
+        
+        // Also switch back to first tab if currently on a debug tab
+        const activeTab = document.querySelector('.nav-link.active');
+        if (activeTab && activeTab.closest('.debug-tab')) {
+            // Switch to first tab (Accuracy & Loss)
+            const firstTab = document.getElementById('accuracy-loss-tab');
+            const firstTabContent = document.getElementById('accuracy-loss');
+            
+            // Remove active from all tabs
+            document.querySelectorAll('.nav-link').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+            
+            // Activate first tab
+            firstTab.classList.add('active');
+            firstTabContent.classList.add('show', 'active');
+        }
+    }
+    
+    // Initialize debug mode on page load (moved to main DOMContentLoaded)
+</script>
+{% endblock %} 

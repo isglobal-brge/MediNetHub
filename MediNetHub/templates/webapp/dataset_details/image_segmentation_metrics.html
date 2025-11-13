@@ -1,0 +1,304 @@
+{% load humanize %}
+<!-- Image Segmentation Dataset Metrics - Dummy Data -->
+<div class="row g-4">
+    <!-- Basic Information -->
+    <div class="col-lg-8">
+        <div class="card h-100 metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-images me-2"></i>Basic Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-image metric-icon text-success"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Images</div>
+                                <div class="h4 mb-0">{{ metrics.basic_info.num_samples|intcomma }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-expand metric-icon text-info"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Resolution</div>
+                                <div class="small mb-0">{{ metrics.image_stats.dimensions.0 }}×{{ metrics.image_stats.dimensions.1 }}×{{ metrics.image_stats.dimensions.2 }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-hdd metric-icon text-warning"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Size</div>
+                                <div class="h4 mb-0">{{ metrics.basic_info.size_bytes|filesizeformat }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-brain metric-icon text-primary"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Task</div>
+                                <div class="small mb-0">Tumor Segmentation</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3">MRI Modalities</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for modality in metrics.image_stats.modalities %}
+                            <span class="badge bg-primary">{{ modality }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mask Classes -->
+    <div class="col-lg-4">
+        <div class="card h-100 metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-palette me-2"></i>Segmentation Classes
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for class_name, class_data in metrics.mask_classes.items %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded me-2" style="width: 12px; height: 12px; background-color: {{ class_data.color }};"></div>
+                            <span class="small">{{ class_name }}</span>
+                        </div>
+                        <span class="badge bg-secondary">{{ class_data.percentage }}%</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 6px;">
+                        <div class="progress-bar" style="width: {{ class_data.percentage }}%; background-color: {{ class_data.color }};"></div>
+                    </div>
+                {% endfor %}
+                
+                <div class="mt-3 p-2 bg-light rounded">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Typical medical segmentation distribution
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Analysis & Quality -->
+<div class="row g-4 mt-2">
+    <div class="col-lg-8">
+        <div class="card metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Image Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Format Distribution</h6>
+                        {% for format, percentage in metrics.image_stats.format_distribution.items %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>{{ format }}</span>
+                                <span class="badge bg-primary">{{ percentage }}%</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 6px;">
+                                <div class="progress-bar bg-primary" style="width: {{ percentage }}%"></div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Technical Specs</h6>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <div class="bg-light p-2 rounded small">
+                                    <strong>Voxel Spacing:</strong> {{ metrics.image_stats.voxel_spacing.0 }} × {{ metrics.image_stats.voxel_spacing.1 }} × {{ metrics.image_stats.voxel_spacing.2 }} mm
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="bg-light p-2 rounded small">
+                                    <strong>Dimensions:</strong> {{ metrics.image_stats.dimensions.0 }} × {{ metrics.image_stats.dimensions.1 }} × {{ metrics.image_stats.dimensions.2 }}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="bg-light p-2 rounded small">
+                                    <strong>Modalities:</strong> {{ metrics.image_stats.modalities|length }} channels
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Segmentation Quality -->
+    <div class="col-lg-4">
+        <div class="card h-100 metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-star me-2"></i>Segmentation Quality
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Mask Coverage</span>
+                        <span class="badge bg-primary">{{ metrics.segmentation_quality.mask_coverage }}%</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: {{ metrics.segmentation_quality.mask_coverage }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Annotation Quality</span>
+                        <span class="badge bg-success">{{ metrics.segmentation_quality.annotation_quality }}%</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ metrics.segmentation_quality.annotation_quality }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Consistency Score</span>
+                        <span class="badge bg-info">{{ metrics.segmentation_quality.consistency_score }}%</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar bg-info" style="width: {{ metrics.segmentation_quality.consistency_score }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <div class="small text-muted">Inter-Annotator Agreement</div>
+                    <div class="h5 mb-0 text-primary">{{ metrics.segmentation_quality.inter_annotator_agreement }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ML Suitability and Recommendations -->
+<div class="row g-4 mt-2">
+    <div class="col-lg-6">
+        <div class="card metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>ML Training Suitability
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="quality-score text-dark">{{ metrics.ml_suitability.suitability_score }}/10</div>
+                    <div class="small text-muted">Suitability Score</div>
+                    <span class="badge bg-{% if metrics.ml_suitability.overall_assessment == 'excellent' %}success{% elif metrics.ml_suitability.overall_assessment == 'good' %}primary{% else %}warning{% endif %}">
+                        {{ metrics.ml_suitability.overall_assessment|title }}
+                    </span>
+                </div>
+                
+                {% if metrics.ml_suitability.strengths %}
+                    <h6 class="text-success mb-2">
+                        <i class="fas fa-check-circle me-1"></i>Strengths
+                    </h6>
+                    <ul class="list-unstyled mb-3">
+                        {% for strength in metrics.ml_suitability.strengths %}
+                            <li class="mb-1">
+                                <small><i class="fas fa-check text-success me-2"></i>{{ strength }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+                {% if metrics.ml_suitability.issues %}
+                    <h6 class="text-warning mb-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Considerations
+                    </h6>
+                    <ul class="list-unstyled">
+                        {% for issue in metrics.ml_suitability.issues %}
+                            <li class="mb-1">
+                                <small><i class="fas fa-exclamation-triangle text-warning me-2"></i>{{ issue }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommendations -->
+    <div class="col-lg-6">
+        <div class="card metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Recommended Strategies
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if metrics.recommendations.model_types %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-brain me-1"></i>Model Architectures
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for model in metrics.recommendations.model_types %}
+                                <span class="badge bg-primary">{{ model }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if metrics.recommendations.loss_functions %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-calculator me-1"></i>Loss Functions
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for loss in metrics.recommendations.loss_functions %}
+                                <span class="badge bg-warning">{{ loss }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if metrics.recommendations.augmentation %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-sync-alt me-1"></i>Data Augmentation
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for aug in metrics.recommendations.augmentation %}
+                                <span class="badge bg-info">{{ aug }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if metrics.recommendations.metrics %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-chart-line me-1"></i>Evaluation Metrics
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for metric in metrics.recommendations.metrics %}
+                                <span class="badge bg-success">{{ metric }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

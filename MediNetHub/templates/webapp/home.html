@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}MediNet - Federated Learning Platform{% endblock %}
+
+{% block content %}
+<div class="px-4 py-5 my-5 text-center">
+    <h1 class="display-5 fw-bold text-body-emphasis">MediNet</h1>
+    <div class="col-lg-6 mx-auto">
+        <p class="lead mb-4">
+            A advanced platform for federated learning in medical sciences. 
+            MediNet allows secure collaboration between medical institutions while 
+            preserving the privacy of patient data.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            {% if user.is_authenticated %}
+                <a href="{% url 'user_dashboard' %}" class="btn btn-success btn-lg px-4 gap-3">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+                <a href="{% url 'model_designer' %}" class="btn btn-primary btn-lg px-4 gap-3">
+                    <i class="fas fa-project-diagram me-2"></i>Model Design
+                </a>
+                <a href="{% url 'datasets' %}" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="fas fa-database me-2"></i>Explore Datasets
+                </a>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 gap-3">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </a>
+                <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg px-4">
+                    <i class="fas fa-user-plus me-2"></i>Register
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="dashboard-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h5 class="card-title">Model Design</h5>
+                    <p class="card-text">
+                        Design neural network architectures with an intuitive interface. 
+                        Add layers, configure parameters and visualize your model in real time.
+                    </p>
+                    <a href="{% url 'model_designer' %}" class="btn btn-sm btn-outline-primary">Create Model</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="dashboard-icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h5 class="card-title">Federated Training</h5>
+                    <p class="card-text">
+                        Train your models using multiple data sources 
+                        without sharing sensitive information. Configure federated strategies 
+                        and monitor the progress.
+                    </p>
+                    <a href="{% url 'training' %}" class="btn btn-sm btn-outline-primary">Start Training</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="dashboard-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h5 class="card-title">Data Management</h5>
+                    <p class="card-text">
+                        Explore and manage available datasets 
+                        for training. Visualize statistics and 
+                        configure connections to new sources.
+                    </p>
+                    <a href="{% url 'datasets' %}" class="btn btn-sm btn-outline-primary">View Datasets</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-light p-5 rounded-3 my-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h2>Federated Learning for Medicine</h2>
+                <p class="lead">
+                    Federated learning allows collaborating in medical research projects
+                    without compromising the privacy of patient data.
+                </p>
+                <p>
+                    MediNet facilitates the creation, training and deployment of federated learning models
+                    specifically designed for medical applications.
+                </p>
+            </div>
+            <div class="col-lg-4 text-center">
+                <i class="fas fa-shield-alt fa-6x text-primary opacity-75"></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load webapp_filters %}
+
+{% block title %}MediNet - Job Details{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-color: #2c3e50;
+    --primary-light: #e3f2fd;
+    --success-color: #2e7d32;
+    --danger-color: #d32f2f;
+    --warning-color: #f57c00;
+    --white-color: #ffffff;
+    --gray-100: #f5f5f5;
+    --gray-200: #eeeeee;
+    --body-bg: #f7f9fc;
+}
+
+body {
+    background-color: var(--body-bg);
+}
+
+.dashboard-card {
+    background-color: var(--white-color);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+    /* height: 100%; REMOVED for natural flow */
+}
+
+/* KPI Metrics */
+.kpi-card {
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+}
+.kpi-card .kpi-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+.kpi-card .kpi-label {
+    font-size: 1rem;
+    font-weight: 500;
+}
+.kpi-card.accuracy { background-color: #e3f2fd; color: #1565c0; }
+.kpi-card.loss { background-color: #fff3e0; color: #e65100; }
+.kpi-card.f1 { background-color: #e8f5e9; color: #2e7d32; }
+
+
+/* Detailed Metrics */
+.metric-card {
+    padding: 1rem;
+    border-radius: 12px;
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    text-align: center;
+    color: #424242; /* Default text color */
+}
+.metric-card .metric-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+.metric-card .metric-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+/* Custom colors for specific metrics */
+.metric-card.precision { background-color: #ede7f6; color: #5e35b1; }
+.metric-card.recall { background-color: #e0f7fa; color: #00838f; }
+.metric-card.clients { background-color: #fff8e1; color: #ff8f00; }
+.metric-card.round_elapsed { background-color: #e0f2f1; color: #00695c; }
+
+
+.metric-card.precision .metric-value,
+.metric-card.recall .metric-value,
+.metric-card.clients .metric-value,
+.metric-card.round_elapsed .metric-value {
+    color: inherit; /* Use the parent's color */
+}
+
+
+.nav-tabs-custom .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs-custom .nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Consistent typography for param tables */
+.param-table dt {
+    font-weight: 500;
+    color: #343a40;
+}
+.param-table dd {
+    color: #6c757d;
+}
+
+.layer-box {
+    position: relative;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.layer-box.input-layer { background-color: #e3f2fd; border-color: #c0d8f3; }
+.layer-box.output-layer { background-color: #ffe8e8; border-color: #f5d1d1; }
+.layer-box.hidden-layer { background-color: #e9f7f0; border-color: #c7e6d7; }
+.layer-box.conv-layer { background-color: #e6e6fa; border-color: #d8d8f3; }
+.layer-box.norm-layer { background-color: #fff0f5; border-color: #f3d8e3; }
+.layer-box.pool-layer { background-color: #f0fff0; border-color: #d8f3d8; }
+.layer-box.dropout-layer { background-color: #fffacd; border-color: #f3edb3; }
+.layer-box.activation-layer { background-color: #ffdead; border-color: #f3d8b3; }
+.layer-box.flatten-layer { background-color: #e0ffff; border-color: #b3f3f3; }
+.layer-box.recurrent-layer { background-color: #dda0dd; border-color: #d8b3f3; }
+.layer-box.operation-layer { background-color: #e3f2fd; border-color: #0d6efd; }
+.layer-connector { width: 2px; height: 30px; background-color: #adb5bd; margin: 0 auto; }
+.layer-content { font-weight: 600; margin-bottom: 5px; }
+.layer-features { font-size: 0.85em; color: #6c757d; }
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" id="tabbed-view-container">
+
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0"><i class="fas fa-briefcase me-2 text-primary"></i>Job Details</h2>
+            <p class="text-muted mb-0">Detailed information about the training job: <strong>{{ job.name }}</strong></p>
+        </div>
+        <div class="col-auto">
+            {% if job.project %}
+            <a href="{% url 'dashboard' project_id=job.project.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+            {% else %}
+            <a href="{% url 'training' %}" class="btn btn-primary" style="border-radius: 8px;">
+                <i class="fas fa-arrow-left me-2"></i>Back to Training
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs nav-tabs-custom mb-4" id="jobDetailTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-panel" type="button" role="tab">
+                <i class="fas fa-chart-pie me-2"></i>Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config-panel" type="button" role="tab">
+                <i class="fas fa-cogs me-2"></i>Configuration
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="jobDetailTabContent">
+        <!-- Overview Panel -->
+        <div class="tab-pane fade show active" id="overview-panel" role="tabpanel">
+            <div class="row g-4">
+                <!-- Left Column: Metrics -->
+                <div class="col-lg-8">
+                    <div class="d-flex flex-column h-100">
+                        {% if final_metrics_data %}
+                            <!-- KPI Card -->
+                            <div class="dashboard-card card mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="fas fa-star me-2"></i>Key Performance Indicators</h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-3">
+                                        {% if 'accuracy' in final_metrics_data %}
+                                        <div class="col-md-4"><div class="kpi-card accuracy">
+                                            <div class="kpi-value">{{ final_metrics_data.accuracy|floatformat:4 }}</div>
+                                            <div class="kpi-label">Accuracy</div>
+                                        </div></div>
+                                        {% endif %}
+                                        {% if 'loss' in final_metrics_data %}
+                                        <div class="col-md-4"><div class="kpi-card loss">
+                                            <div class="kpi-value">{{ final_metrics_data.loss|floatformat:4 }}</div>
+                                            <div class="kpi-label">Loss</div>
+                                        </div></div>
+                                        {% endif %}
+                                        {% if 'f1' in final_metrics_data %}
+                                        <div class="col-md-4"><div class="kpi-card f1">
+                                            <div class="kpi-value">{{ final_metrics_data.f1|floatformat:4 }}</div>
+                                            <div class="kpi-label">F1 Score</div>
+                                        </div></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Metrics Card -->
+                            <div class="dashboard-card card flex-grow-1">
+                                 <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="fas fa-poll me-2"></i>Performance Breakdown</h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-3">
+                                        {% for key, value in final_metrics_data.items %}
+                                            {% if key not in 'accuracy,loss,f1,round_start,round_end,timestamp' and value is not None %}
+                                            <div class="col-md-3 col-sm-6">
+                                                <div class="metric-card 
+                                                    {% if key == 'precision' %}precision{% endif %}
+                                                    {% if key == 'recall' %}recall{% endif %}
+                                                    {% if key == 'clients' %}clients{% endif %}
+                                                    {% if key == 'round_elapsed' %}round_elapsed{% endif %}
+                                                ">
+                                                    <div class="metric-value">
+                                                        {% if key == 'clients' or key == 'round' %}
+                                                            {{ value|floatformat:0 }}
+                                                        {% else %}
+                                                            {{ value|floatformat:4 }}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="metric-label text-capitalize">
+                                                        {% if key == 'round' %}Rounds Completed{% else %}{{ key|replace_underscore }}{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="dashboard-card card">
+                                <div class="card-body text-center p-5">
+                                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Metrics Available</h5>
+                                    <p class="text-muted">This training job has not reported any metrics yet.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Right Column: Info & Actions -->
+                <div class="col-lg-4">
+                    <div class="d-flex flex-column h-100">
+                        <!-- Job Info -->
+                        <div class="dashboard-card card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Job Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-0 param-table">
+                                    <dt class="col-sm-4">Name</dt><dd class="col-sm-8">{{ job.name }}</dd>
+                                    <dt class="col-sm-4">Status</dt><dd class="col-sm-8">
+                                        <span class="badge 
+                                            {% if job.status == 'completed' or job.status == 'Completed' %}bg-success
+                                            {% elif job.status == 'running' or job.status == 'Running' %}bg-info
+                                            {% elif job.status == 'failed' or job.status == 'Failed' %}bg-danger
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ job.status|capfirst }}
+                                        </span>
+                                    </dd>
+                                    <dt class="col-sm-4">Model</dt><dd class="col-sm-8">{{ job.model_config.name }}</dd>
+                                    <dt class="col-sm-4">Created</dt><dd class="col-sm-8">{{ job.created_at|naturaltime }}</dd>
+                                    <dt class="col-sm-4">Duration</dt><dd class="col-sm-8">{{ job.training_duration|default:"N/A" }}</dd>
+                                </dl>
+                                <hr class="my-3">
+                                <div class="d-grid">
+                                    <a href="{% url 'manage_job_artifacts' job.id %}" class="btn btn-outline-primary btn-lg">
+                                        <i class="fas fa-tasks me-2"></i>Manage & Download Models
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Danger Zone -->
+                        <div class="card border-danger mt-auto">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+                            </div>
+                            <div class="card-body">
+                                 <p class="text-muted small">This action is destructive and cannot be undone. Please be certain.</p>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteJobModal">
+                                        <i class="fas fa-trash-alt me-2"></i>Delete Job
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Panel -->
+        <div class="tab-pane fade" id="config-panel" role="tabpanel">
+             <div class="row g-4">
+                <!-- Left Column -->
+                <div class="col-lg-6 d-flex">
+                    <div class="dashboard-card card w-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-cube me-2"></i>Model & Datasets</h5>
+                        </div>
+                        <div class="card-body p-4 d-flex flex-column">
+                            <!-- Model Architecture -->
+                            <h5 class="mt-2">Model Architecture</h5>
+                            <dl class="param-table"><div class="row">
+                                <dt class="col-sm-4">Model Name</dt><dd class="col-sm-8">{{ job.model_config.name }}</dd>
+                                <dt class="col-sm-4">Architecture</dt><dd class="col-sm-8">
+                                    {% if job.config_json.model.architecture.layers %}
+                                        {{ job.config_json.model.architecture.layers|length }} Layers
+                                    {% elif job.config_json.architecture.layers %}
+                                        {{ job.config_json.architecture.layers|length }} Layers
+                                    {% elif job.config_json.model.layers %}
+                                        {{ job.config_json.model.layers|length }} Layers
+                                    {% elif job.config_json.layers %}
+                                        {{ job.config_json.layers|length }} Layers
+                                    {% else %}
+                                        0 Layers
+                                    {% endif %}
+                                </dd>
+                            </div></dl>
+                            <button class="btn btn-secondary btn-sm mb-3 mt-2" id="preview-architecture-btn" style="max-width: 200px;">
+                                <i class="fas fa-eye me-2"></i>Preview Architecture
+                            </button>
+                            <hr>
+                            <!-- Datasets -->
+                            <h5 class="mt-3">Datasets Used</h5>
+                            {% if datasets %}
+                                <ul class="list-group list-group-flush">
+                                {% for dataset in datasets %}
+                                    <li class="list-group-item px-0">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1"><i class="fas fa-table me-2 text-primary"></i>{{ dataset.dataset_name|default:'Unnamed Dataset' }}</h6>
+                                            <small class="text-muted">from {{ dataset.connection.name|default:'Unknown' }}</small>
+                                        </div>
+                                        <small class="text-muted ms-4">{{ dataset.num_rows|default:'N/A' }} rows, {{ dataset.num_columns|default:'N/A' }} features</small>
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                            {% elif job.config_json.model.dataset %}
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item px-0">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1"><i class="fas fa-table me-2 text-primary"></i>{{ job.config_json.model.dataset.name|default:'Unnamed Dataset' }}</h6>
+                                            <small class="text-muted">from {{ job.config_json.model.dataset.connection|default:'test' }}</small>
+                                        </div>
+                                        <small class="text-muted ms-4">
+                                            {% if job.config_json.model.dataset.selected_datasets %}
+                                                {% for selected_dataset in job.config_json.model.dataset.selected_datasets %}
+                                                    {{ selected_dataset.num_rows|default:'N/A' }} rows, {{ selected_dataset.num_columns|default:'N/A' }} features
+                                                    {% if not forloop.last %} | {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                Dataset information available
+                                            {% endif %}
+                                        </small>
+                                    </li>
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No dataset information available.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Column -->
+                <div class="col-lg-6 d-flex">
+                    <div class="dashboard-card card w-100">
+                         <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Training Configuration</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Training Params -->
+                            <h5 class="mt-2">General Parameters</h5>
+                            <dl class="param-table"><div class="row">
+                                <dt class="col-sm-4">Rounds</dt><dd class="col-sm-8">{{ job.config_json.train.rounds }}</dd>
+                                <dt class="col-sm-4">Epochs</dt><dd class="col-sm-8">{{ job.config_json.train.epochs }}</dd>
+                                <dt class="col-sm-4">Batch Size</dt><dd class="col-sm-8">{{ job.config_json.train.batch_size }}</dd>
+                            </div></dl>
+                            <hr>
+                            <!-- Federated Params -->
+                            <h5 class="mt-3">Federated Strategy</h5>
+                            <dl class="param-table"><div class="row">
+                                <dt class="col-sm-5">Strategy</dt><dd class="col-sm-7">{{ job.config_json.federated.name }}</dd>
+                                <dt class="col-sm-5">Fraction Fit</dt><dd class="col-sm-7">{{ job.config_json.federated.parameters.fraction_fit }}</dd>
+                                <dt class="col-sm-5">Min Fit Clients</dt><dd class="col-sm-7">{{ job.config_json.federated.parameters.min_fit_clients }}</dd>
+                                <dt class="col-sm-5">Min Available</dt><dd class="col-sm-7">{{ job.config_json.federated.parameters.min_available_clients }}</dd>
+                            </div></dl>
+                            <hr>
+                             <!-- Optimizer Params -->
+                            <h5 class="mt-3">Optimizer</h5>
+                            <dl class="param-table"><div class="row">
+                                <dt class="col-sm-5">Type</dt><dd class="col-sm-7">
+                                    {{ job.config_json.model.training.optimizer.type|default:'N/A' }}
+                                </dd>
+                                <dt class="col-sm-5">Learning Rate</dt><dd class="col-sm-7">
+                                    {{ job.config_json.model.training.optimizer.learning_rate|default:'N/A' }}
+                                </dd>
+                            </div></dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Preview Modal -->
+<div class="modal fade" id="architecturePreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-project-diagram me-2"></i>Model Architecture</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div id="architecture-modal-content" class="layers-list">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Job Confirmation Modal -->
+<div class="modal fade" id="deleteJobModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete the job <strong>"{{ job.name }}"</strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <form action="{% url 'delete_job' job.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-2"></i>Yes, Delete Job</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ job.config_json|json_script:"job-config-data" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const previewBtn = document.getElementById('preview-architecture-btn');
+    const modalElement = document.getElementById('architecturePreviewModal');
+    const modalContent = document.getElementById('architecture-modal-content');
+    const architectureModal = new bootstrap.Modal(modalElement);
+    let configData;
+    
+    try {
+        configData = JSON.parse(document.getElementById('job-config-data').textContent);
+    } catch (e) {
+        console.error("Could not parse job config JSON:", e);
+        if (previewBtn) {
+            previewBtn.disabled = true;
+        }
+        return;
+    }
+
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function() {            
+            // Look for layers in multiple possible locations (same as model studio)
+            let layers = [];
+            
+            if (configData.model && configData.model.architecture && configData.model.architecture.layers) {
+                layers = configData.model.architecture.layers;
+            } else if (configData.architecture && configData.architecture.layers) {
+                layers = configData.architecture.layers;
+            } else if (configData.model && configData.model.layers) {
+                layers = configData.model.layers;
+            } else if (configData.layers) {
+                layers = configData.layers;
+            } else {
+                // Try to find layers anywhere in the config
+                function findLayers(obj, path = '') {
+                    if (Array.isArray(obj)) {
+                        if (obj.length > 0 && obj[0].type) {
+                            console.log(`Potential layers array at ${path}:`, obj);
+                        }
+                    } else if (typeof obj === 'object' && obj !== null) {
+                        Object.keys(obj).forEach(key => {
+                            findLayers(obj[key], path ? `${path}.${key}` : key);
+                        });
+                    }
+                }
+                
+                findLayers(configData);
+            }
+            
+            if (layers.length > 0) {
+                let html = '';
+                layers.forEach((layer, index) => {
+                    const layerType = layer.type || layer.layer_type || 'Unknown';
+                    const layerName = layer.name || layerType;
+                    let features = '—';
+                    
+                    // More robust feature detection
+                    if (layer.params && layer.params.features) {
+                        features = layer.params.features;
+                    } else if (layer.features) {
+                        features = layer.features;
+                    } else if (layer.in_features && layer.out_features) {
+                        features = `${layer.in_features} → ${layer.out_features}`;
+                    } else if (layer.out_features) {
+                        features = layer.out_features;
+                    }
+
+                    // Determine layer class (same logic as model studio)
+                    let layerClass = 'layer-box';
+                    const lowerType = layerType.toLowerCase();
+                    
+                    if (lowerType === 'input') {
+                        layerClass += ' input-layer';
+                    } else if (lowerType === 'output') {
+                        layerClass += ' output-layer';
+                    } else if (lowerType === 'linear') {
+                        layerClass += ' hidden-layer';
+                    } else if (lowerType.includes('conv')) {
+                        layerClass += ' conv-layer';
+                    } else if (lowerType.includes('norm')) {
+                        layerClass += ' norm-layer';
+                    } else if (lowerType.includes('pool')) {
+                        layerClass += ' pool-layer';
+                    } else if (lowerType === 'dropout') {
+                        layerClass += ' dropout-layer';
+                    } else if (['relu', 'sigmoid', 'tanh', 'leakyrelu'].includes(lowerType)) {
+                        layerClass += ' activation-layer';
+                    } else if (lowerType === 'flatten') {
+                        layerClass += ' flatten-layer';
+                    } else if (['lstm', 'gru'].includes(lowerType)) {
+                        layerClass += ' recurrent-layer';
+                    } else if (['add', 'concat'].includes(lowerType)) {
+                        layerClass += ' operation-layer';
+                    } else {
+                        layerClass += ` ${lowerType}-layer`;
+                    }
+                    
+                    html += `
+                        <div class="${layerClass}">
+                            <div class="layer-content">${layerName}</div>
+                            <div class="layer-features">Features: ${features}</div>
+                        </div>
+                    `;
+                    if (index < layers.length - 1) {
+                        html += `<div class="text-center"><div class="layer-connector"></div></div>`;
+                    }
+                });
+                modalContent.innerHTML = html;
+            } else {
+                modalContent.innerHTML = '<div class="text-center p-4 text-muted">No layer information found in the configuration.</div>';
+            }
+            
+            architectureModal.show();
+        });
+    }
+
+
+
+});
+</script>
+{% endblock %} 

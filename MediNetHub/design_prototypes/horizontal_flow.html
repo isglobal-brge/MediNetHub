@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horizontal Flow Design</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .layer-flow {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            overflow-x: auto;
+            min-height: 120px;
+        }
+        
+        .layer-node {
+            min-width: 100px;
+            max-width: 120px;
+            height: 80px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .layer-node:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .layer-node.selected {
+            border: 2px solid #0d6efd;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+        }
+        
+        .layer-input { background: #e3f0ff; border-color: #b3d9ff; }
+        .layer-linear { background: #e8f5e8; border-color: #c3e6c3; }
+        .layer-activation { background: #fef3e2; border-color: #f7d794; }
+        .layer-output { background: #ffe8e8; border-color: #ffb3b3; }
+        .layer-operation { background: #f0e6ff; border-color: #d4b3ff; }
+        
+        .connection-arrow {
+            color: #6c757d;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .layer-features {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .add-layer-btn {
+            min-width: 60px;
+            height: 60px;
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            cursor: pointer;
+            background: white;
+        }
+        
+        .add-layer-btn:hover {
+            border-color: #0d6efd;
+            color: #0d6efd;
+        }
+        
+        /* Conexiones para operaciones */
+        .branch-connection {
+            position: relative;
+        }
+        
+        .branch-line {
+            position: absolute;
+            width: 2px;
+            background: #6c757d;
+            left: 50%;
+            top: -20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h3>🔄 Horizontal Flow Design</h3>
+        
+        <!-- Modelo Simple -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Modelo Secuencial Simple</h6>
+            </div>
+            <div class="card-body">
+                <div class="layer-flow">
+                    <div class="layer-node layer-input selected">
+                        <div>Input</div>
+                        <div class="layer-features">12 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-linear">
+                        <div>Linear</div>
+                        <div class="layer-features">64 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-activation">
+                        <div>ReLU</div>
+                        <div class="layer-features">64 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-linear">
+                        <div>Linear</div>
+                        <div class="layer-features">32 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-output">
+                        <div>Output</div>
+                        <div class="layer-features">1 feature</div>
+                    </div>
+                    
+                    <div class="connection-arrow ms-3">+</div>
+                    
+                    <div class="add-layer-btn">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modelo con Add Operation -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Modelo con Operación Add</h6>
+            </div>
+            <div class="card-body">
+                <div class="layer-flow">
+                    <div class="layer-node layer-input">
+                        <div>Input</div>
+                        <div class="layer-features">12 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-linear">
+                        <div>Linear 1</div>
+                        <div class="layer-features">64 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <!-- Bifurcación visual -->
+                    <div style="position: relative; display: flex; flex-direction: column; gap: 20px; align-items: center;">
+                        <div class="layer-node layer-linear">
+                            <div>Linear 2</div>
+                            <div class="layer-features">32 features</div>
+                        </div>
+                        <div class="layer-node layer-linear">
+                            <div>Linear 3</div>
+                            <div class="layer-features">32 features</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-operation">
+                        <div>Add</div>
+                        <div class="layer-features">32 features</div>
+                    </div>
+                    
+                    <div class="connection-arrow">→</div>
+                    
+                    <div class="layer-node layer-output">
+                        <div>Output</div>
+                        <div class="layer-features">1 feature</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python cache y compilados
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Testing y coverage
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+.hypothesis/
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+MediNetClient/venv/
+
+# Django específico
+*.log
+*.pot
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+MediNetClient/db.sqlite3
+
+# IDE y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Documentation (excepto README principal)
+Documentation/
+*.md
+!README.md
+
+# Docker (evitar recursión)
+docker-compose*.yml
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Archivos de benchmark y tests
+benchmark_results*.png
+*_benchmark.py
+
+# Archivos de seguridad y auditoría
+auditoria_*.md
+
+# Archivos de configuración local
+.env
+.env.local
+.env.*.local
+
+# Scripts obsoletos
+start-medinet.bat 

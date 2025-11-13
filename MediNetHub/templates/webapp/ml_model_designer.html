@@ -1,0 +1,989 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load webapp_filters %}
+
+{% block title %}ML Model Designer - MediNet{% endblock %}
+
+{% block extra_css %}
+<style>
+    .param-card {
+        transition: all 0.3s ease;
+    }
+    .param-card.d-none {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-cogs me-2"></i>Machine Learning Model Designer</h2>
+            <p class="text-muted">Configure classic Scikit-learn models for training</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-outline-info me-2" id="load-model-btn">
+                <i class="fas fa-folder-open me-1"></i>Load Model
+            </button>
+            <button type="button" class="btn btn-outline-secondary me-2" id="preview-json-btn">
+                <i class="fas fa-code me-1"></i>Preview JSON
+            </button>
+            <button type="button" class="btn btn-primary me-2" id="save-ml-model-btn">
+                <i class="fas fa-save me-1"></i>Save Model
+            </button>
+            <button type="button" class="btn btn-success" id="go-to-training-btn" disabled>
+                <i class="fas fa-play me-1"></i>Go to Training
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Configuration Panel -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Algorithm Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="ml-model-form">
+                        <!-- Model Info -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <label for="ml-model-name" class="form-label">Model Name</label>
+                                <input type="text" class="form-control" id="ml-model-name" placeholder="My Random Forest Model">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="ml-model-algorithm" class="form-label">Algorithm</label>
+                                <select class="form-select" id="ml-model-algorithm">
+                                    <option value="RandomForestClassifier" selected>Random Forest Classifier</option>
+                                    <option value="DecisionTreeClassifier">Decision Tree Classifier</option>
+                                    <option value="KNeighborsClassifier">K-Nearest Neighbors</option>
+                                    <option value="KMeans">K-Means Clustering</option>
+                                </select>
+                            </div>
+                        </div>
+                         <div class="mb-3">
+                            <label for="ml-model-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="ml-model-description" rows="2" placeholder="A brief description of the model's purpose."></textarea>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Dynamic Hyperparameters Section -->
+                        <h5 class="mb-3">Hyperparameters</h5>
+                        <div id="hyperparameters-container">
+                            <!-- RandomForestClassifier Parameters -->
+                            <div class="param-card" id="params-RandomForestClassifier">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="rfc-n-estimators" class="form-label">
+                                            Number of Estimators
+                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="rfc-n-estimators-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="rfc-n-estimators" value="3" min="1">
+                                        <div class="form-text">The number of trees in the forest.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="rfc-criterion" class="form-label">Criterion</label>
+                                        <select class="form-select" id="rfc-criterion">
+                                            <option value="gini" selected>Gini</option>
+                                            <option value="entropy">Entropy</option>
+                                        </select>
+                                        <div class="form-text">The function to measure the quality of a split.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="rfc-max-depth" class="form-label">Max Depth</label>
+                                        <input type="number" class="form-control" id="rfc-max-depth" placeholder="None" min="1">
+                                        <div class="form-text">The maximum depth of the tree. If not specified, nodes are expanded until all leaves are pure.</div>
+                                    </div>
+                                     <div class="col-md-6">
+                                        <label for="rfc-min-samples-split" class="form-label">Min Samples Split</label>
+                                        <input type="number" class="form-control" id="rfc-min-samples-split" value="2" min="2">
+                                        <div class="form-text">The minimum number of samples required to split an internal node.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DecisionTreeClassifier Parameters -->
+                            <div class="param-card d-none" id="params-DecisionTreeClassifier">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="dt-criterion" class="form-label">Criterion</label>
+                                        <select class="form-select" id="dt-criterion">
+                                            <option value="gini" selected>Gini</option>
+                                            <option value="entropy">Entropy</option>
+                                        </select>
+                                        <div class="form-text">The function to measure the quality of a split.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dt-max-depth" class="form-label">Max Depth</label>
+                                        <input type="number" class="form-control" id="dt-max-depth" value="3" placeholder="None" min="1">
+                                        <div class="form-text">The maximum depth of the tree.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dt-min-samples-split" class="form-label">Min Samples Split</label>
+                                        <input type="number" class="form-control" id="dt-min-samples-split" value="2" min="2">
+                                        <div class="form-text">The minimum number of samples required to split an internal node.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dt-min-samples-leaf" class="form-label">Min Samples Leaf</label>
+                                        <input type="number" class="form-control" id="dt-min-samples-leaf" value="1" min="1">
+                                        <div class="form-text">The minimum number of samples required to be at a leaf node.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- KNeighborsClassifier Parameters -->
+                            <div class="param-card d-none" id="params-KNeighborsClassifier">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="knn-n-neighbors" class="form-label">
+                                            Number of Neighbors (k)
+                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="knn-k-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting. Odd numbers are recommended."></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="knn-n-neighbors" value="5" min="1">
+                                        <div class="form-text">Number of neighbors to use.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="knn-weights" class="form-label">Weights</label>
+                                        <select class="form-select" id="knn-weights">
+                                            <option value="uniform" selected>Uniform</option>
+                                            <option value="distance">Distance</option>
+                                        </select>
+                                        <div class="form-text">Weight function used in prediction.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="knn-metric" class="form-label">Metric</label>
+                                        <select class="form-select" id="knn-metric">
+                                            <option value="minkowski" selected>Minkowski</option>
+                                            <option value="euclidean">Euclidean</option>
+                                            <option value="manhattan">Manhattan</option>
+                                            <option value="chebyshev">Chebyshev</option>
+                                        </select>
+                                        <div class="form-text">The distance metric to use for the tree.</div>
+                                    </div>
+                                    <div class="col-md-6" id="knn-p-container">
+                                        <label for="knn-p" class="form-label">P (for Minkowski metric)</label>
+                                        <input type="number" class="form-control" id="knn-p" value="2" min="1">
+                                        <div class="form-text">Power parameter. (1=Manhattan, 2=Euclidean).</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- KMeans Parameters -->
+                            <div class="param-card d-none" id="params-KMeans">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="kmeans-n-clusters" class="form-label">Number of Clusters (k)</label>
+                                        <input type="number" class="form-control" id="kmeans-n-clusters" value="3" min="1">
+                                        <div class="form-text">The number of clusters to form.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-init" class="form-label">Initialization Method</label>
+                                        <select class="form-select" id="kmeans-init">
+                                            <option value="k-means++" selected>k-means++</option>
+                                            <option value="random">Random</option>
+                                        </select>
+                                        <div class="form-text">Method for initialization.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-n-init" class="form-label">Number of Initializations</label>
+                                        <input type="number" class="form-control" id="kmeans-n-init" value="10" min="1">
+                                        <div class="form-text">Number of times the algorithm will run. Default is 10.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-max-iter" class="form-label">Max Iterations</label>
+                                        <input type="number" class="form-control" id="kmeans-max-iter" value="300" min="1">
+                                        <div class="form-text">Maximum number of iterations for a single run.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-tol" class="form-label">Tolerance</label>
+                                        <input type="number" class="form-control" id="kmeans-tol" value="0.0001" step="0.0001" min="0">
+                                        <div class="form-text">Relative tolerance for convergence.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-random-state" class="form-label">Random State</label>
+                                        <input type="number" class="form-control" id="kmeans-random-state" placeholder="None for random">
+                                        <div class="form-text">Seed for reproducible random initialization.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Hyperparameter Visualization</h5>
+                </div>
+                <div class="card-body text-center" style="min-height: 400px;" id="visualization-panel">
+                    <div class="d-flex flex-column justify-content-center align-items-center h-100">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Interactive visualizations will appear here.</h6>
+                        <p class="text-muted small">Select a hyperparameter to see its effect.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Model Modal -->
+<div class="modal fade" id="loadMlModelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Load Machine Learning Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if model_configs %}
+                    <div class="list-group">
+                        {% for model in model_configs %}
+                            <a href="#" class="list-group-item list-group-item-action load-model-from-modal-btn" 
+                               data-model-id="{{ model.id }}" data-bs-dismiss="modal">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ model.name }}</h6>
+                                    <small class="text-muted">{{ model.updated_at|timesince }} ago</small>
+                                </div>
+                                <p class="mb-1 text-muted">{{ model.config_json.algorithm|default:'N/A' }}</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted mt-3">No saved Machine Learning models found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview JSON Modal -->
+<div class="modal fade" id="previewJsonModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-code me-2"></i>Model Configuration JSON</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre><code class="language-json" id="json-preview-content"></code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const algorithmSelect = document.getElementById('ml-model-algorithm');
+    const paramsContainer = document.getElementById('hyperparameters-container');
+    const allParamCards = paramsContainer.querySelectorAll('.param-card');
+    const visualizationPanel = document.getElementById('visualization-panel');
+    const knnPContainer = document.getElementById('knn-p-container');
+    const saveBtn = document.getElementById('save-ml-model-btn');
+    const previewBtn = document.getElementById('preview-json-btn');
+    const jsonPreviewContent = document.getElementById('json-preview-content');
+    const previewModal = new bootstrap.Modal(document.getElementById('previewJsonModal'));
+    const goToTrainingBtn = document.getElementById('go-to-training-btn');
+    const loadBtn = document.getElementById('load-model-btn');
+    const loadModal = new bootstrap.Modal(document.getElementById('loadMlModelModal'));
+    let currentModelId = null;
+
+    // Store all models data in a JS variable for easy access
+    let allMlModels = JSON.parse('{{ models_json|default:"[]"|escapejs }}');
+    
+    // Use global toast notification system
+    function showMessage(message, type = 'success') {
+        // Map error type to danger for consistency
+        const toastType = type === 'error' ? 'danger' : type;
+        if (typeof showToast === 'function') {
+            showToast(message, toastType);
+        } else {
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+
+    function showParamsFor(algorithm) {
+        // Hide all parameter cards first
+        allParamCards.forEach(card => {
+            card.classList.add('d-none');
+        });
+
+        // Show the specific card for the selected algorithm
+        const selectedCard = document.getElementById('params-' + algorithm);
+        if (selectedCard) {
+            selectedCard.classList.remove('d-none');
+        }
+        updateVisualization(algorithm);
+    }
+
+    // Handle algorithm change
+    algorithmSelect.addEventListener('change', function() {
+        showParamsFor(this.value);
+    });
+
+    // Specific event listeners for live visualization updates
+    const nNeighborsInput = document.getElementById('knn-n-neighbors');
+    if (nNeighborsInput) {
+        nNeighborsInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'KNeighborsClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    const nClustersInput = document.getElementById('kmeans-n-clusters');
+    if (nClustersInput) {
+        nClustersInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'KMeans') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for Decision Tree parameters
+    const dtMaxDepthInput = document.getElementById('dt-max-depth');
+    if (dtMaxDepthInput) {
+        dtMaxDepthInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'DecisionTreeClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for Random Forest parameters
+    const rfcNEstimatorsInput = document.getElementById('rfc-n-estimators');
+    if (rfcNEstimatorsInput) {
+        rfcNEstimatorsInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'RandomForestClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // --- Warning handlers for even numbers ---
+    function setupEvenNumberWarning(inputId, warningId) {
+        const input = document.getElementById(inputId);
+        const warning = document.getElementById(warningId);
+
+        if (input && warning) {
+            // Initialize tooltip
+            const tooltip = new bootstrap.Tooltip(warning);
+
+            const checkValue = () => {
+                const num = parseInt(input.value, 10);
+                if (!isNaN(num) && num > 0 && num % 2 === 0) {
+                    warning.classList.remove('d-none');
+                } else {
+                    warning.classList.add('d-none');
+                }
+            };
+            
+            input.addEventListener('input', checkValue);
+            checkValue(); // Initial check on load
+        }
+    }
+
+    setupEvenNumberWarning('knn-n-neighbors', 'knn-k-warning');
+    setupEvenNumberWarning('rfc-n-estimators', 'rfc-n-estimators-warning');
+
+    function updateVisualization(algorithm) {
+        visualizationPanel.innerHTML = ''; // Clear previous visualizations
+        let vizContent = null;
+
+        switch(algorithm) {
+            case 'RandomForestClassifier': {
+                const nEstimators = parseInt(document.getElementById('rfc-n-estimators').value, 10) || 3;
+                vizContent = document.createElement('div');
+                
+                const treesToDraw = Math.min(nEstimators, 5);
+                const moreTrees = nEstimators > treesToDraw ? `(showing ${treesToDraw} of ${nEstimators})` : `(${nEstimators} trees)`;
+
+                let forestSvgContent = `
+                    <h6 class="text-start mb-2">Random Forest Ensemble <span class="text-muted small">${moreTrees}</span></h6>
+                    <p class="text-muted small text-start mt-0 mb-2" style="font-size: 0.75rem;">Each tree makes a prediction. The final output is the result of a majority vote.</p>
+                    <svg viewBox="0 0 400 250" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .tree-bg { fill: #f9f9f9; stroke: #ccc; }
+                            .tree-node { fill: #1976d2; stroke: #fff; stroke-width: 1.5; }
+                            .tree-leaf { fill: #e8f5e9; stroke: #388e3c; }
+                            .tree-node-text { fill: #fff; font-size: 10px; font-weight: bold; }
+                            .pred-text { font-size: 10px; font-weight: bold; }
+                            .arrow { stroke: #999; stroke-width: 1.5; marker-end: url(#arrowhead-rf); }
+                            .vote-box { fill: #fff3e0; stroke: #f57c00; stroke-width: 1.5; }
+                        </style>
+                        <defs><marker id="arrowhead-rf" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#999" /></marker></defs>
+                `;
+
+                const treeSpacing = 400 / (treesToDraw + 1);
+                let trees = [];
+                let seed = nEstimators;
+                const pseudoRandom = () => {
+                    var x = Math.sin(seed++) * 10000;
+                    return x - Math.floor(x);
+                };
+
+                for (let i = 0; i < treesToDraw; i++) {
+                    const prediction = pseudoRandom() > 0.5 ? 'A' : 'B';
+                    trees.push({
+                        index: i,
+                        x: (i + 1) * treeSpacing,
+                        y: 30,
+                        prediction: prediction,
+                        color: prediction === 'A' ? '#0d6efd' : '#dc3545'
+                    });
+                }
+                
+                let allPredictions = trees.map(t => t.prediction);
+                if (nEstimators > treesToDraw) {
+                    for (let i = treesToDraw; i < nEstimators; i++) {
+                        allPredictions.push(pseudoRandom() > 0.5 ? 'A' : 'B');
+                    }
+                }
+
+                const votes = {};
+                allPredictions.forEach(p => { votes[p] = (votes[p] || 0) + 1; });
+                const finalPrediction = Object.keys(votes).length > 0 ? Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b) : '?';
+
+                trees.forEach((tree) => {
+                    forestSvgContent += `
+                        <g transform="translate(${tree.x}, ${tree.y})">
+                            <rect class="tree-bg" x="-40" y="-20" width="80" height="90" rx="5"/>
+                            <circle class="tree-node" cx="0" cy="15" r="15"/>
+                            <text class="tree-node-text" x="0" y="18" text-anchor="middle" fill="#fff" font-size="10px" font-weight="bold">T${tree.index + 1}</text>
+                            <text class="pred-text" x="0" y="55" text-anchor="middle" fill="${tree.color}">Class ${tree.prediction}</text>
+                        </g>
+                    `;
+                    forestSvgContent += `<path class="arrow" d="M ${tree.x} 105 Q ${tree.x} 130 200 150" fill="none"/>`;
+                });
+
+                forestSvgContent += `
+                    <g transform="translate(200, 160)">
+                         <rect class="vote-box" x="-60" y="-15" width="120" height="30" rx="5"/>
+                         <text text-anchor="middle" y="4" font-size="10px" font-weight="bold">Majority Vote</text>
+                    </g>
+                `;
+
+                forestSvgContent += `<path class="arrow" d="M 200 190 L 200 210" fill="none"/>`;
+                forestSvgContent += `
+                     <g transform="translate(200, 225)">
+                         <rect x="-75" y="-12" width="150" height="24" fill="#e8f5e9" stroke="#388e3c" rx="5"/>
+                         <text text-anchor="middle" y="4" font-size="12px" font-weight="bold" fill="#388e3c">Final Prediction: Class ${finalPrediction}</text>
+                     </g>
+                `;
+
+                forestSvgContent += `</svg>`;
+                vizContent.innerHTML = forestSvgContent;
+                break;
+            }
+
+            case 'DecisionTreeClassifier': {
+                const maxDepth = parseInt(document.getElementById('dt-max-depth').value, 10) || 3;
+                vizContent = document.createElement('div');
+                
+                let treeSvgContent = `
+                    <h6 class="text-start mb-2">Decision Tree (Max Depth: ${maxDepth || 'None'})</h6>
+                    <svg viewBox="0 0 400 300" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .node-box { stroke-width: 1; rx: 4; }
+                            .node-text { font-size: 8px; }
+                            .edge { stroke: #999; stroke-width: 1; }
+                            .edge-label { font-size: 8px; fill: #555; }
+                        </style>
+                `;
+
+                const actualDepth = Math.min(maxDepth, 4); // Limit visual depth
+                const nodeWidth = 80, nodeHeight = 45;
+                const levelHeight = 80;
+                
+                // --- Helper function to draw a node ---
+                const drawNode = (x, y, level, isLeaf, samples, gini, value) => {
+                    const totalSamples = value.reduce((a, b) => a + b, 0);
+                    const classRatio = value[0] / totalSamples;
+                    const color = `rgba(3, 169, 244, ${0.1 + (1 - gini) * 0.9})`; // More blue as Gini decreases
+                    
+                    let nodeContent = `<g transform="translate(${x},${y})">
+                        <rect class="node-box" x="-${nodeWidth/2}" y="0" width="${nodeWidth}" height="${nodeHeight}" fill="${isLeaf ? '#e8f5e9' : '#e3f2fd'}" stroke="${isLeaf ? '#388e3c' : '#1976d2'}"/>
+                        <text class="node-text" x="0" y="12" text-anchor="middle">
+                            ${isLeaf ? '' : `Feature_${level} <= ${Math.random().toFixed(2)}`}
+                        </text>
+                        <text class="node-text" x="0" y="22" text-anchor="middle">gini = ${gini.toFixed(3)}</text>
+                        <text class="node-text" x="0" y="32" text-anchor="middle">samples = ${samples}</text>
+                        <text class="node-text" x="0" y="42" text-anchor="middle">value = [${value.join(', ')}]</text>
+                    </g>`;
+                    return nodeContent;
+                };
+
+                const drawEdge = (x1, y1, x2, y2, isTrue) => {
+                    const midX = (x1 + x2) / 2;
+                    const midY = (y1 + y2) / 2;
+                    return `
+                        <line class="edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>
+                        <text class="edge-label" x="${midX - (isTrue ? 10 : -10)}" y="${midY}">${isTrue ? 'True' : 'False'}</text>
+                    `;
+                };
+
+                let nodesToDraw = [{ x: 200, y: 10, level: 1, samples: 150, value: [75, 75], parentX: null, parentY: null }];
+                
+                for (let level = 1; level <= actualDepth; level++) {
+                    const newNodes = [];
+                    nodesToDraw.forEach(node => {
+                        const isLeaf = (level === actualDepth);
+                        const gini = 1 - Math.pow(node.value[0]/node.samples, 2) - Math.pow(node.value[1]/node.samples, 2);
+                        
+                        treeSvgContent += drawNode(node.x, node.y, level, isLeaf, node.samples, gini, node.value);
+                        
+                        if (node.parentX !== null) {
+                            treeSvgContent += drawEdge(node.parentX, node.parentY + nodeHeight, node.x, node.y, node.isLeft);
+                        }
+
+                        if (!isLeaf) {
+                            const levelWidth = 350 / Math.pow(2, level);
+                            
+                            // Left child (True)
+                            const leftSamples = Math.floor(node.samples * (0.3 + Math.random() * 0.4));
+                            const leftValue = [Math.floor(node.value[0] * (0.8 + Math.random() * 0.1)), Math.floor(node.value[1] * (0.1 + Math.random() * 0.1))];
+                            newNodes.push({
+                                x: node.x - levelWidth/2, y: node.y + levelHeight, level: level + 1,
+                                samples: leftSamples, value: leftValue, parentX: node.x, parentY: node.y, isLeft: true
+                            });
+
+                            // Right child (False)
+                            const rightSamples = node.samples - leftSamples;
+                            const rightValue = [node.value[0] - leftValue[0], node.value[1] - leftValue[1]];
+                            newNodes.push({
+                                x: node.x + levelWidth/2, y: node.y + levelHeight, level: level + 1,
+                                samples: rightSamples, value: rightValue, parentX: node.x, parentY: node.y, isLeft: false
+                            });
+                        }
+                    });
+                    nodesToDraw = newNodes;
+                }
+                
+                treeSvgContent += `</svg>`;
+                vizContent.innerHTML = treeSvgContent;
+                break;
+            }
+            
+            case 'KMeans': {
+                const kClusters = parseInt(document.getElementById('kmeans-n-clusters').value, 10) || 3;
+                vizContent = document.createElement('div');
+                
+                const kmeansPoints = [
+                    { x: 50, y: 50 }, { x: 60, y: 70 }, { x: 80, y: 40 }, { x: 40, y: 90 }, { x: 90, y: 60 },
+                    { x: 180, y: 150 }, { x: 200, y: 170 }, { x: 220, y: 140 }, { x: 250, y: 160 }, { x: 170, y: 180 },
+                    { x: 40, y: 200 }, { x: 70, y: 220 }, { x: 90, y: 190 }, { x: 55, y: 240 },
+                    { x: 250, y: 50 }, { x: 230, y: 70 }, { x: 270, y: 90 }
+                ];
+
+                let centroids = [];
+                let seed = kClusters; 
+                const pseudoRandom = () => {
+                    var x = Math.sin(seed++) * 10000;
+                    return x - Math.floor(x);
+                };
+                for(let i = 0; i < kClusters; i++) {
+                    centroids.push({ x: pseudoRandom() * 280 + 10, y: pseudoRandom() * 230 + 10 });
+                }
+                
+                const colors = ['#0d6efd', '#fd7e14', '#198754', '#dc3545', '#6f42c1', '#20c997', '#ffc107', '#6610f2'];
+
+                kmeansPoints.forEach(p => {
+                    let minDist = Infinity;
+                    let bestCentroid = 0;
+                    centroids.forEach((c, i) => {
+                        const dist = Math.sqrt(Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2));
+                        if (dist < minDist) {
+                            minDist = dist;
+                            bestCentroid = i;
+                        }
+                    });
+                    p.cluster = bestCentroid;
+                });
+                
+                let kmeansSvgContent = `
+                    <h6 class="text-start mb-2">Illustrative Example: k = ${kClusters}</h6>
+                    <svg viewBox="0 0 300 250" style="width: 100%; height: auto; border: 1px solid #eee;">`;
+
+                kmeansPoints.forEach(p => {
+                    const color = colors[p.cluster % colors.length];
+                    kmeansSvgContent += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${color}" opacity="0.7"/>`;
+                });
+
+                centroids.forEach((c, i) => {
+                    const color = colors[i % colors.length];
+                    kmeansSvgContent += `<path d="M ${c.x-7},${c.y-7} L ${c.x+7},${c.y+7} M ${c.x+7},${c.y-7} L ${c.x-7},${c.y+7}" stroke="${color}" stroke-width="3"/>`;
+                });
+
+                kmeansSvgContent += `</svg>`;
+                vizContent.innerHTML = kmeansSvgContent;
+                break;
+            }
+            
+            case 'KNeighborsClassifier': {
+                const k = parseInt(document.getElementById('knn-n-neighbors').value, 10) || 5;
+                vizContent = document.createElement('div');
+                const points = [
+                    { x: 50, y: 50, class: 0 }, { x: 60, y: 70, class: 0 }, { x: 80, y: 40, class: 0 },
+                    { x: 180, y: 150, class: 1 }, { x: 200, y: 170, class: 1 }, { x: 220, y: 140, class: 1 }, { x: 250, y: 160, class: 1 },
+                    { x: 40, y: 200, class: 0 }, { x: 70, y: 220, class: 0 },
+                    { x: 150, y: 80, class: 1 }
+                ];
+                const targetPoint = { x: 120, y: 130 };
+                points.forEach(p => {
+                    p.dist = Math.sqrt(Math.pow(p.x - targetPoint.x, 2) + Math.pow(p.y - targetPoint.y, 2));
+                });
+                points.sort((a, b) => a.dist - b.dist);
+
+                const neighbors = points.slice(0, k);
+                const class0Count = neighbors.filter(p => p.class === 0).length;
+                const class1Count = neighbors.filter(p => p.class === 1).length;
+                const prediction = class0Count > class1Count ? 'Class A (Blue)' : 'Class B (Orange)';
+
+                let svgContent = `<h6 class="text-start mb-1">Illustrative Example: k = ${k}</h6>
+                    <p class="text-muted small text-start mt-0 mb-2">Prediction: <strong class="${prediction.includes('Blue') ? 'text-primary' : 'text-warning'}">${prediction}</strong></p>
+                    <svg viewBox="0 0 300 250" style="width: 100%; height: auto; border: 1px solid #eee;">`;
+
+                neighbors.forEach(p => {
+                    svgContent += `<line x1="${targetPoint.x}" y1="${targetPoint.y}" x2="${p.x}" y2="${p.y}" stroke="#ced4da" stroke-width="1"/>`;
+                });
+                points.forEach((p, i) => {
+                    const isNeighbor = neighbors.includes(p);
+                    const color = p.class === 0 ? '#0d6efd' : '#fd7e14';
+                    const shape = p.class === 0 
+                        ? `<circle cx="${p.x}" cy="${p.y}" r="6" fill="${color}" stroke-width="2" stroke="${isNeighbor ? '#343a40' : 'none'}" opacity="${isNeighbor ? 1 : 0.5}"/>`
+                        : `<rect x="${p.x-5}" y="${p.y-5}" width="10" height="10" fill="${color}" stroke-width="2" stroke="${isNeighbor ? '#343a40' : 'none'}" opacity="${isNeighbor ? 1 : 0.5}"/>`;
+                    svgContent += shape;
+                });
+                svgContent += `<polygon points="${targetPoint.x},${targetPoint.y-8} ${targetPoint.x-8},${targetPoint.y+8} ${targetPoint.x+8},${targetPoint.y+8}" fill="#198754" stroke="#fff" stroke-width="1"/>`;
+                svgContent += `</svg>`;
+                vizContent.innerHTML = svgContent;
+                break;
+            }
+
+            default: {
+                vizContent = document.createElement('div');
+                vizContent.className = 'd-flex flex-column justify-content-center align-items-center h-100';
+                vizContent.innerHTML = `<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                           <h6 class="text-muted">Interactive visualizations will appear here.</h6>
+                           <p class="text-muted small">Select an algorithm to see its effect.</p>`;
+                break;
+            }
+        }
+        
+        if (vizContent) {
+            visualizationPanel.appendChild(vizContent);
+        }
+    }
+
+    // Handle special case for SVC degree parameter (skip if elements don't exist)
+    const svcKernelSelect = document.getElementById('svc-kernel');
+    const svcDegreeContainer = document.getElementById('svc-degree-container');
+
+    if (svcKernelSelect && svcDegreeContainer) {
+        svcKernelSelect.addEventListener('change', function() {
+            if (this.value === 'poly') {
+                svcDegreeContainer.style.display = 'block';
+            } else {
+                svcDegreeContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // Handle special case for KNN 'p' parameter
+    const knnMetricSelect = document.getElementById('knn-metric');
+    if (knnMetricSelect && knnPContainer) {
+        knnMetricSelect.addEventListener('change', function() {
+            if (this.value === 'minkowski') {
+                knnPContainer.style.display = 'block';
+            } else {
+                knnPContainer.style.display = 'none';
+            }
+        });
+        // Initial check
+        knnMetricSelect.dispatchEvent(new Event('change'));
+    }
+
+    function getModelDataFromForm() {
+        const algorithm = algorithmSelect.value;
+        const hyperparameters = {};
+
+        const paramCard = document.getElementById('params-' + algorithm);
+        if (paramCard) {
+            const inputs = paramCard.querySelectorAll('input[id], select[id]');
+            inputs.forEach(input => {
+                // Skip if the parent container is hidden (e.g., 'p' for non-minkowski)
+                if (input.closest('.col-md-6')?.style.display === 'none') {
+                    return; 
+                }
+
+                const key = input.id.split('-').slice(1).join('_');
+                let value = input.value;
+
+                if (input.type === 'number') {
+                    if (value.trim() === '' || value === null) {
+                        value = null; // Use null for empty optional numbers
+                    } else {
+                        value = Number(value);
+                    }
+                }
+                
+                if (value !== null) {
+                    hyperparameters[key] = value;
+                }
+            });
+        }
+        
+        return {
+            metadata: {
+                version: "1.0",
+                created_at: new Date().toISOString(),
+                model_type: "ml",
+                framework: "sklearn"
+            },
+            basic_info: {
+                name: document.getElementById('ml-model-name').value,
+                description: document.getElementById('ml-model-description').value
+            },
+            architecture: {
+                ml_algorithm: {
+                    type: algorithm,
+                    hyperparameters: hyperparameters
+                }
+            },
+            training: {
+                metrics: ["accuracy", "f1_score"],
+                epochs: 100,
+                batch_size: 32,
+                rounds: 10
+            },
+            dataset: {
+                selected_datasets: {{ selected_datasets|json_string }}
+            }
+        };
+    }
+
+    previewBtn.addEventListener('click', function() {
+        try {
+            const modelData = getModelDataFromForm();
+            jsonPreviewContent.textContent = JSON.stringify(modelData, null, 2);
+            previewModal.show();
+        } catch (e) {
+            console.error("Error generating model data for preview:", e);
+            showMessage('Could not generate model preview.', 'error');
+        }
+    });
+
+    saveBtn.addEventListener('click', function() {
+        try {
+            const modelData = getModelDataFromForm();
+            
+            // Basic validation
+            if (!modelData.basic_info.name) {
+                showMessage('Model Name is a required field.', 'warning');
+                return;
+            }
+            
+            // Validate datasets
+            const selectedDatasets = {{ selected_datasets|json_string }};
+            if (!selectedDatasets || selectedDatasets.length === 0) {
+                showMessage('No datasets selected. Please go to Datasets section and select at least one dataset before saving the model.', 'warning');
+                return;
+            }
+
+            if (currentModelId) {
+                modelData.id = currentModelId;
+            }
+
+            // Show loading message
+            showMessage('Saving the model...', 'info');
+
+            fetch('/api/save-model-config/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    name: modelData.basic_info.name,
+                    description: modelData.basic_info.description,
+                    model_type: modelData.metadata.model_type,
+                    framework: modelData.metadata.framework,
+                    config: modelData
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error in the server response');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showMessage('Model saved successfully!', 'success');
+                    currentModelId = data.model_id;
+                    
+                    console.log('Model saved, currentModelId:', currentModelId);
+                    console.log('Full API response:', data);
+                    
+                    // Enable and setup 'Go to Training' button
+                    goToTrainingBtn.disabled = false;
+                    goToTrainingBtn.onclick = () => { 
+                        if (currentModelId) {
+                            window.location.href = `/go-to-training/${currentModelId}/`;
+                        } else {
+                            console.error('currentModelId is null/undefined:', currentModelId);
+                            showMessage('Error: Model ID not available. Please save the model again.', 'error');
+                        }
+                    };
+                    
+                    // After populating, trigger a change to sync the whole UI.
+                    algorithmSelect.dispatchEvent(new Event('change'));
+                } else {
+                    showMessage('Error saving the model: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving the model:', error);
+                showMessage('Error saving the model: ' + error.message, 'error');
+            });
+        } catch(e) {
+            console.error("Error preparing model data for save:", e);
+            showMessage('Could not save model due to an error.', 'error');
+        }
+    });
+
+    loadBtn.addEventListener('click', function() {
+        loadModal.show();
+    });
+
+    document.querySelector('#loadMlModelModal .list-group').addEventListener('click', function(e) {
+        if (e.target.closest('.load-model-from-modal-btn')) {
+            e.preventDefault();
+            const modelId = parseInt(e.target.closest('.load-model-from-modal-btn').dataset.modelId, 10);
+            const modelToLoad = allMlModels.find(m => m.id === modelId);
+            if (modelToLoad) {
+                populateFormWithModelData(modelToLoad);
+                showMessage(`Model "${modelToLoad.name}" loaded successfully`, 'success');
+            } else {
+                showMessage('Model not found', 'error');
+            }
+        }
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function populateFormWithModelData(modelData) {
+        if (!modelData) return;
+
+        currentModelId = modelData.id;
+
+        // Usa config_json si existe, si no, usa modelData directamente
+        const config = modelData.config_json || modelData;
+
+        // Carregar informació bàsica
+        document.getElementById('ml-model-name').value = config.basic_info?.name || '';
+        document.getElementById('ml-model-description').value = config.basic_info?.description || '';
+        
+        // Carregar algoritme ML
+        const algorithm = config.architecture?.ml_algorithm?.type;
+        
+        if (algorithm) {
+            algorithmSelect.value = algorithm;
+            showParamsFor(algorithm);
+
+            const hyperparams = config.architecture?.ml_algorithm?.hyperparameters || {};
+            for (const key in hyperparams) {
+                // Determina el prefijo según el algoritmo
+                let prefix = '';
+                if (algorithm === 'RandomForestClassifier') prefix = 'rfc-';
+                else if (algorithm === 'DecisionTreeClassifier') prefix = 'dt-';
+                else if (algorithm === 'KNeighborsClassifier') prefix = 'knn-';
+                else if (algorithm === 'KMeans') prefix = 'kmeans-';
+
+                const inputId = prefix + key.replace(/_/g, '-');
+                const inputElement = document.getElementById(inputId);
+                if (inputElement) {
+                    inputElement.value = hyperparams[key];
+                    // Si es un input tipo number y el valor es null/undefined, lo deja vacío
+                    if (inputElement.type === 'number' && (hyperparams[key] === null || hyperparams[key] === undefined)) {
+                        inputElement.value = '';
+                    }
+                }
+            }
+        }
+        
+        // Enable Go to Training button
+        goToTrainingBtn.disabled = false;
+        goToTrainingBtn.onclick = () => { 
+            if (currentModelId) {
+                window.location.href = `/go-to-training/${currentModelId}/`;
+            } else {
+                showMessage('Error: Model ID not available. Please save the model again.', 'error');
+            }
+        };
+
+        // After populating, trigger a change to sync the whole UI.
+        // This is the simplest way to ensure that showParamsFor() and all sub-listeners are called correctly.
+        algorithmSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Populate form if in edit mode
+    const editModelJsonStr = '{{ edit_model_json|escapejs }}';
+    
+    if (editModelJsonStr && editModelJsonStr !== 'null' && editModelJsonStr !== '') {
+        try {
+            const editModelData = JSON.parse(editModelJsonStr);
+            
+            // We need to get the full model object, not just the config
+            const fullEditModel = {
+                id: {{ edit_model.id|default:'null' }},
+                name: '{{ edit_model.name|escapejs }}',
+                description: '{{ edit_model.description|escapejs }}',
+                config_json: editModelData
+            };
+            populateFormWithModelData(fullEditModel);
+        } catch (e) {
+            console.error('Error parsing edit model JSON:', e);
+        }
+    }
+
+    // Initial state setup
+    showParamsFor(algorithmSelect.value);
+    
+    // Trigger dependency checks on load for default algorithm
+    const svcKernelElement = document.getElementById('svc-kernel');
+    if (svcKernelElement) {
+        svcKernelElement.dispatchEvent(new Event('change'));
+    }
+    const knnMetricElement = document.getElementById('knn-metric');
+    if (knnMetricElement) {
+        knnMetricElement.dispatchEvent(new Event('change'));
+    }
+
+    // Also trigger the initial visualization render on page load
+    updateVisualization(algorithmSelect.value);
+});
+</script>
+
+{% endblock %} 

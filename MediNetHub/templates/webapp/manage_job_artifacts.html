@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load webapp_filters %}
+
+{% block title %}MediNet - Manage Job Artifacts{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-color: #1976d2;
+    --success-color: #2e7d32;
+    --danger-color: #d32f2f;
+    --white-color: #ffffff;
+    --gray-100: #f5f5f5;
+    --body-bg: #f7f9fc;
+}
+
+body {
+    background-color: var(--body-bg);
+}
+
+.dashboard-card {
+    background-color: var(--white-color);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+    height: 100%;
+}
+
+.artifact-icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+    width: 25px;
+    text-align: center;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--gray-100);
+}
+
+.param-table dt {
+    font-weight: 500;
+}
+.param-table dd {
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0"><i class="fas fa-tasks me-2 text-primary"></i>Manage Job: <strong>{{ job.name }}</strong></h2>
+            <p class="text-muted mb-0">Inspect, download, or delete model artifacts.</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Job Details
+            </a>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Left Column: Artifacts Table -->
+        <div class="col-lg-8">
+            <div class="dashboard-card card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-archive me-2"></i>Job Artifacts</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="ps-4">Artifact</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Round</th>
+                                    <th scope="col">Size</th>
+                                    <th scope="col">Created</th>
+                                    <th scope="col" class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for artifact in artifacts %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong>{{ artifact.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if artifact.type == 'Architecture' %}bg-info
+                                            {% elif artifact.type == 'Final Model' %}bg-success
+                                            {% else %}bg-warning text-dark{% endif %}">
+                                            {{ artifact.type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ artifact.round|default:"N/A" }}</td>
+                                    <td>{{ artifact.size|filesizeformat }}</td>
+                                    <td>{{ artifact.created_at|naturaltime }}</td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group" role="group">
+                                            <a href="#" class="btn btn-sm btn-primary"><i class="fas fa-download me-1"></i>Download</a>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" {% if artifact.type == 'Architecture' %}disabled{% endif %}>
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash-alt me-2"></i>Delete</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-end">
+                    <button class="btn btn-danger"><i class="fas fa-dumpster-fire me-2"></i>Delete All Checkpoints</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Summary & Actions -->
+        <div class="col-lg-4">
+            <div class="vstack gap-4">
+                <!-- Job Summary Card -->
+                <div class="dashboard-card card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Job Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0 param-table">
+                            <dt class="col-sm-4">Model</dt><dd class="col-sm-8">{{ job.model_config.name }}</dd>
+                            <dt class="col-sm-4">Status</dt><dd class="col-sm-8"><span class="badge bg-success">{{ job.status|capfirst }}</span></dd>
+                            <dt class="col-sm-4">Rounds</dt><dd class="col-sm-8">{{ job.total_rounds }}</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Storage Card -->
+                <div class="dashboard-card card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-hdd me-2"></i>Storage Overview</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="display-5 fw-bold">{{ total_size|filesizeformat }}</div>
+                        <div class="text-muted">Total space used by this job</div>
+                        <div class="progress mt-3" style="height: 10px;">
+                            <div class="progress-bar" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                         <small class="text-muted mt-2 d-block">This job uses 75% of your allowed space per job.</small>
+                        
+                        <hr class="my-3">
+
+                        <div class="display-6 fw-bold">{{ artifacts|length }}</div>
+                        <div class="text-muted">Total artifacts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,53 @@
+{
+  "name": "Model sense nom",
+  "framework": "pytorch",
+  "description": "",
+  "optimizer": {
+    "type": "adam",
+    "learning_rate": 0.001,
+    "weight_decay": 0
+  },
+  "loss_function": "bce_with_logits",
+  "layers": [
+    {
+      "name": "Conv1d",
+      "type": "conv",
+      "params": {
+        "in_channels": 12,
+        "out_channels": 16,
+        "kernel_size": 3,
+        "stride": 1,
+        "padding": 1
+      },
+      "id": "layer_0",
+      "inputs": [
+        "input_data"
+      ]
+    }
+  ],
+  "selected_datasets": [
+    {
+      "dataset_name": "heart_failure_clinical_records_dataset",
+      "features_info": {
+        "input_features": 12,
+        "feature_types": {
+          "numeric": 12,
+          "categorical": 0
+        }
+      },
+      "target_info": {
+        "name": "DEATH_EVENT",
+        "type": "binary_classification",
+        "num_classes": 2
+      },
+      "num_columns": 13,
+      "num_rows": 299,
+      "size": 12239,
+      "connection": {
+        "name": "test",
+        "ip": "127.0.0.1",
+        "port": "5000"
+      }
+    }
+  ]
+}

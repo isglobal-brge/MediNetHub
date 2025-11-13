@@ -1,0 +1,80 @@
+{
+    "metadata": {
+        "version": "1.0",
+        "created_at": "2025-10-17T18:40:49.697Z",
+        "model_type": "dl",
+        "framework": "pytorch"
+    },
+    "basic_info": {
+        "name": "Model sense nom",
+        "description": ""
+    },
+    "architecture": {
+        "layers": [
+            {
+                "name": "Input Layer",
+                "type": "input",
+                "params": {
+                    "features": 12
+                },
+                "readonly": true
+            },
+            {
+                "name": "Linear",
+                "type": "linear",
+                "params": {
+                    "in_features": 12,
+                    "out_features": 64,
+                    "bias": true,
+                    "features": 64
+                }
+            },
+            {
+                "name": "Linear",
+                "type": "linear",
+                "params": {
+                    "in_features": 64,
+                    "out_features": 64,
+                    "bias": true,
+                    "features": 64
+                }
+            },
+            {
+                "name": "Add",
+                "type": "operation",
+                "params": {
+                    "features": 64,
+                    "inputs": [
+                        "layer_1760725985835",
+                        "layer_1760725984417"
+                    ],
+                    "type": "Add"
+                }
+            },
+            {
+                "name": "Output Layer",
+                "type": "output",
+                "params": {
+                    "features": 1
+                },
+                "readonly": true
+            }
+        ]
+    },
+    "training": {
+        "optimizer": {
+            "type": "adam",
+            "learning_rate": 0.001,
+            "weight_decay": 0,
+            "differential_privacy": {
+                "noise_multiplier": 1,
+                "max_grad_norm": 1,
+                "random_seed": 42
+            }
+        },
+        "loss_function": "bce_with_logits"
+    },
+    "dataset": {
+        "selected_datasets": []
+    }
+}

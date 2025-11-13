@@ -1,0 +1,32 @@
+# ==============================================================================
+# Git Attributes Configuration for MediNet
+# ==============================================================================
+# This file ensures consistent line endings across different operating systems
+# ==============================================================================
+
+# Shell scripts must always use LF (Unix) line endings for Docker compatibility
+*.sh text eol=lf
+
+# Python files should use LF
+*.py text eol=lf
+
+# General text files
+*.md text
+*.txt text
+*.json text
+*.yml text
+*.yaml text
+
+# Docker files
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+
+# Binary files (should not be modified)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.db binary
+*.sqlite3 binary
+*.pyc binary

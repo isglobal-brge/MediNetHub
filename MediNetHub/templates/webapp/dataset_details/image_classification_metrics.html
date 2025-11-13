@@ -1,0 +1,165 @@
+{% load humanize %}
+<!-- Image Classification Dataset Metrics - Dummy Data -->
+<div class="row g-4">
+    <!-- Basic Information & Class Balance -->
+    <div class="col-lg-8">
+        <div class="card h-100 metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-images me-2"></i>Basic Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-image metric-icon text-success"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Images</div>
+                                <div class="h4 mb-0">{{ metrics.basic_info.num_samples|intcomma }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-expand metric-icon text-info"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Resolution</div>
+                                <div class="small mb-0">{{ metrics.image_stats.avg_resolution }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-hdd metric-icon text-warning"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Avg Size</div>
+                                <div class="small mb-0">{{ metrics.image_stats.avg_file_size }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="text-center p-3 rounded bg-light">
+                            <i class="fas fa-layer-group metric-icon text-primary"></i>
+                            <div class="mt-2">
+                                <div class="small text-muted">Channels</div>
+                                <div class="h4 mb-0">{{ metrics.image_stats.color_channels }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Balance -->
+    <div class="col-lg-4">
+        <div class="card h-100 metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-balance-scale me-2"></i>Class Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for class_name, class_data in metrics.class_balance.classes.items %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">{{ class_name }}</span>
+                        <span class="badge bg-primary">{{ class_data.count }} ({{ class_data.percentage }}%)</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: {{ class_data.percentage }}%"></div>
+                    </div>
+                {% endfor %}
+                
+                <div class="text-center mt-3">
+                    <span class="badge bg-{% if metrics.class_balance.balance_quality == 'good' %}success{% else %}warning{% endif %}">
+                        {{ metrics.class_balance.balance_quality|title }} Balance
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Stats & Recommendations -->
+<div class="row g-4 mt-2">
+    <div class="col-lg-6">
+        <div class="card metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Image Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Format Distribution</h6>
+                {% for format, percentage in metrics.image_stats.format_distribution.items %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ format }}</span>
+                        <span class="badge bg-info">{{ percentage }}%</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-info" style="width: {{ percentage }}%"></div>
+                    </div>
+                {% endfor %}
+                
+                <div class="mt-4">
+                    <div class="text-center">
+                        <div class="quality-score text-info">{{ metrics.data_quality.overall_score }}/100</div>
+                        <div class="small text-muted">Image Quality Score</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommendations -->
+    <div class="col-lg-6">
+        <div class="card metrics-card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Recommendations
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if metrics.recommendations.model_types %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-brain me-1"></i>Model Types
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for model in metrics.recommendations.model_types %}
+                                <span class="badge bg-primary">{{ model }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if metrics.recommendations.balancing_techniques %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-balance-scale me-1"></i>Balancing
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for technique in metrics.recommendations.balancing_techniques %}
+                                <span class="badge bg-warning">{{ technique }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                {% if metrics.recommendations.metrics %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-chart-line me-1"></i>Metrics
+                        </h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for metric in metrics.recommendations.metrics %}
+                                <span class="badge bg-success">{{ metric }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

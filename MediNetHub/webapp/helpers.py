@@ -1,0 +1,36 @@
+parameter_helpers = {
+        'ACTIVATION_HELPER': "Activation function to use. If None, no activation is applied.",
+        'IN_FEATURES_HELPER': "The size of each input sample.",
+        'OUT_FEATURES_HELPER': "The size of each output sample.",
+        'KERNEL_SIZE_HELPER': "The size of the kernel (filter) used in the convolution.",
+        'STRIDE_HELPER': "The step for moving the kernel over the input during the convolution.",
+        'PADDING_HELPER': "Specifies the padding added to the input before applying the kernel.",
+        'BIAS_HELPER': "If a bias term is included in the layer.",
+        'DROPOUT_HELPER': "The probability of an element being set to zero.",
+        'HIDDEN_SIZE_HELPER': "The number of features in the hidden state.",
+        'NUM_LAYERS_HELPER': "The number of recurrent layers.",
+        
+        'LR_HELP': "The step size in each iteration when moving towards a minimum of the loss function.",
+        'WEIGHT_DECAY_HELP': "A regularization term that penalizes large weights.",
+        'BETA_1_HELP': "A factor (0 to 1) that controls the exponential decay rate for the first moment estimates.",
+        'BETA_2_HELP': "A factor (0 to 1) that controls the exponential decay rate for the second moment estimates.",
+        'MOMENTUM_HELP': "A factor (0 to 1) that controls how much previous gradients influence the current update.",
+        'EPS_HELP': "A small value to prevent division by zero.",
+        'AMSGRAD_HELP': "Whether to use the AMSGrad variant of this algorithm.",
+        
+        'REDUCTION_HELPER': "Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.",
+        'WEIGHT_HELPER': "A manual rescaling weight for each class. Useful for handling unbalanced datasets.",
+        'IGNORE_INDEX_HELPER': "Specifies a target value that is ignored and does not contribute to the input gradient.",
+        'LABEL_SMOOTHING_HELPER': "Specifies the amount of smoothing when calculating the loss (range: 0.0 to 1.0).",
+        'POS_WEIGHT_HELPER': "A weight for positive examples in BCEWithLogitsLoss, useful for unbalanced datasets.",
+        
+        'NUM_ROUNDS_HELPER': "The number of federated learning rounds to perform.",
+        'FRACTION_FIT_HELPER': "Fraction of clients used during training. Default 1.0",
+        'FRACTION_EVALUATE_HELPER': "Fraction of clients used during validation. Default 1.0.",
+        'MIN_FIT_CLIENTS_HELPER': "Minimum number of clients used during training. Default 2",
+        'MIN_EVALUATE_CLIENTS_HELPER': "Minimum number of clients that must be available for evaluation in each round.",
+        'MIN_AVAILABLE_CLIENTS_HELPER': "Minimum number of clients that must be connected to the server before a round can begin.",
+        'BIDIRECTIONAL_HELPER': "A boolean value that when set to True, the RNN is bidirectional.",
+        'NEGATIVE_SLOPE_HELPER': "The slope of the function for values less than zero",
+        'P_HELPER': "The probability of an element being eliminated during training (0.0 to 1.0)."
+    }

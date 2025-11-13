@@ -1,0 +1,48 @@
+{
+    "name": "VGG11-like",
+    "layers": [
+        {"id": "input_layer", "type": "input", "params": {}},
+        
+        {"id": "conv1", "type": "conv2d", "params": {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "padding": 1}, "inputs": ["input_layer"]},
+        {"id": "relu1", "type": "relu", "params": {"inplace": true}, "inputs": ["conv1"]},
+        {"id": "pool1", "type": "maxpool2d", "params": {"kernel_size": 2, "stride": 2}, "inputs": ["relu1"]},
+        
+        {"id": "conv2", "type": "conv2d", "params": {"in_channels": 64, "out_channels": 128, "kernel_size": 3, "padding": 1}, "inputs": ["pool1"]},
+        {"id": "relu2", "type": "relu", "params": {"inplace": true}, "inputs": ["conv2"]},
+        {"id": "pool2", "type": "maxpool2d", "params": {"kernel_size": 2, "stride": 2}, "inputs": ["relu2"]},
+
+        {"id": "conv3", "type": "conv2d", "params": {"in_channels": 128, "out_channels": 256, "kernel_size": 3, "padding": 1}, "inputs": ["pool2"]},
+        {"id": "relu3", "type": "relu", "params": {"inplace": true}, "inputs": ["conv3"]},
+        {"id": "conv4", "type": "conv2d", "params": {"in_channels": 256, "out_channels": 256, "kernel_size": 3, "padding": 1}, "inputs": ["relu3"]},
+        {"id": "relu4", "type": "relu", "params": {"inplace": true}, "inputs": ["conv4"]},
+        {"id": "pool3", "type": "maxpool2d", "params": {"kernel_size": 2, "stride": 2}, "inputs": ["relu4"]},
+
+        {"id": "conv5", "type": "conv2d", "params": {"in_channels": 256, "out_channels": 512, "kernel_size": 3, "padding": 1}, "inputs": ["pool3"]},
+        {"id": "relu5", "type": "relu", "params": {"inplace": true}, "inputs": ["conv5"]},
+        {"id": "conv6", "type": "conv2d", "params": {"in_channels": 512, "out_channels": 512, "kernel_size": 3, "padding": 1}, "inputs": ["relu5"]},
+        {"id": "relu6", "type": "relu", "params": {"inplace": true}, "inputs": ["conv6"]},
+        {"id": "pool4", "type": "maxpool2d", "params": {"kernel_size": 2, "stride": 2}, "inputs": ["relu6"]},
+
+        {"id": "conv7", "type": "conv2d", "params": {"in_channels": 512, "out_channels": 512, "kernel_size": 3, "padding": 1}, "inputs": ["pool4"]},
+        {"id": "relu7", "type": "relu", "params": {"inplace": true}, "inputs": ["conv7"]},
+        {"id": "conv8", "type": "conv2d", "params": {"in_channels": 512, "out_channels": 512, "kernel_size": 3, "padding": 1}, "inputs": ["relu7"]},
+        {"id": "relu8", "type": "relu", "params": {"inplace": true}, "inputs": ["conv8"]},
+        {"id": "pool5", "type": "maxpool2d", "params": {"kernel_size": 2, "stride": 2}, "inputs": ["relu8"]},
+
+        {"id": "avgpool", "type": "adaptiveavgpool2d", "params": {"output_size": [7, 7]}, "inputs": ["pool5"]},
+        {"id": "flatten", "type": "flatten", "params": {}, "inputs": ["avgpool"]},
+        
+        {"id": "fc1", "type": "linear", "params": {"in_features": 25088, "out_features": 4096}, "inputs": ["flatten"]},
+        {"id": "relu9", "type": "relu", "params": {"inplace": true}, "inputs": ["fc1"]},
+        {"id": "dropout1", "type": "dropout", "params": {}, "inputs": ["relu9"]},
+        
+        {"id": "fc2", "type": "linear", "params": {"in_features": 4096, "out_features": 4096}, "inputs": ["dropout1"]},
+        {"id": "relu10", "type": "relu", "params": {"inplace": true}, "inputs": ["fc2"]},
+        {"id": "dropout2", "type": "dropout", "params": {}, "inputs": ["relu10"]},
+
+        {"id": "fc3", "type": "linear", "params": {"in_features": 4096, "out_features": 1000}, "inputs": ["dropout2"]},
+        
+        {"id": "output_layer", "type": "output", "inputs": ["fc3"]}
+    ],
+    "output_layers": ["output_layer"]
+} 

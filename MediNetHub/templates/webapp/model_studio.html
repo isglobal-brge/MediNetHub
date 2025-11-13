@@ -1,0 +1,2894 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load webapp_filters %}
+
+{% block extra_css %}
+<!-- Google Material Icons -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+{% block title %}Model Studio - MediNet{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-cube me-2"></i>Model Studio
+                    </h1>
+                    <p class="text-muted mb-0">Browse existing models or create new neural network architectures</p>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" id="import-model-btn">
+                        <i class="fas fa-upload me-1"></i>Import Model
+                    </button>
+                    <button type="button" class="btn btn-primary" id="new-model-btn">
+                        <i class="fas fa-plus me-1"></i>New Model
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs nav-tabs-custom mb-4" id="studioTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="browse-tab" data-bs-toggle="tab" data-bs-target="#browse-panel" type="button" role="tab">
+                        <i class="fas fa-th-large me-2"></i>Browse Models
+                        <span class="badge bg-secondary ms-2">{{ models|length }}</span>
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates-panel" type="button" role="tab">
+                        <i class="fas fa-layer-group me-2"></i>Model Templates
+                        <span class="badge bg-secondary ms-2">12</span>
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="compare-tab" data-bs-toggle="tab" data-bs-target="#compare-panel" type="button" role="tab">
+                        <i class="fas fa-balance-scale me-2"></i>Compare Models
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="studioTabContent">
+        <!-- Browse Models Panel -->
+        <div class="tab-pane fade show active" id="browse-panel" role="tabpanel">
+            <div class="row">
+                <!-- Sidebar for model type filtering -->
+                <div class="col-md-3">
+                     <div class="card shadow-sm">
+                         <div class="card-header bg-primary text-white">
+                             <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Model Categories</h6>
+                         </div>
+                         <div class="card-body p-0">
+                             <div class="list-group list-group-flush" id="model-type-filter">
+                                <a class="list-group-item list-group-item-action active" data-model-type="all" href="#">
+                                    <i class="fas fa-th-large me-2"></i>All Models
+                                </a>
+                                <a class="list-group-item list-group-item-action" data-model-type="dl" href="#">
+                                    <i class="fas fa-brain me-2"></i>Deep Learning
+                                </a>
+                                <a class="list-group-item list-group-item-action" data-model-type="ml" href="#">
+                                    <i class="fas fa-cogs me-2"></i>Machine Learning
+                                </a>
+                             </div>
+                         </div>
+                     </div>
+                      <!-- Search Box Placeholder -->
+                     <div class="card shadow-sm mt-3">
+                         <div class="card-body">
+                             <div class="input-group">
+                                 <input type="text" class="form-control" id="model-search" placeholder="Search models...">
+                                 <button class="btn btn-outline-secondary" type="button">
+                                     <i class="fas fa-search"></i>
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
+                </div>
+
+                <!-- Original content with model cards -->
+                <div class="col-md-9">
+                    <div id="browse-content">
+                        {% if models %}
+                            <div class="row">
+                                {% for model in models %}
+                                <div class="col-md-6 col-lg-4 mb-4 model-card" data-model-type="{{ model.model_type|default:'dl' }}">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-cube me-2"></i>{{ model.name }}
+                                                </h6>
+                                                <button class="btn btn-sm btn-outline-light" onclick="deleteModel({{ model.id }})" title="Delete Model">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="text-muted small mb-2">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                Created: {{ model.created_at|date:"M d, Y" }}
+                                            </p>
+                                            <p class="text-muted small mb-2">
+                                                <i class="fas fa-cog me-1"></i>
+                                                Framework: <span id="framework-{{ model.id }}">{{ model.framework|default:"PyTorch" }}</span>
+                                            </p>
+                                            
+                                            <!-- Model Configuration Info -->
+                                            {% if model.model_type == 'ml' %}
+                                                <!-- ML Model Info -->
+                                                <div class="model-params-grid" id="config-{{ model.id }}">
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-robot"></i>
+                                                        <span id="algorithm-{{ model.id }}">Loading... algorithm</span>
+                                                    </div>
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-sliders-h"></i>
+                                                        <span id="hyperparams-{{ model.id }}">Loading... params</span>
+                                                    </div>
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-flask"></i>
+                                                        <span>Scikit-learn</span>
+                                                    </div>
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-magic"></i>
+                                                        <span>Classic ML</span>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                    (function() {
+                                                        const configStr = '{{ model.config_json|json_string|escapejs }}';
+                                                        try {
+                                                            const config = JSON.parse(configStr);
+                                                            const algorithm = config.algorithm || 'N/A';
+                                                            document.getElementById(`algorithm-{{ model.id }}`).textContent = `${algorithm}`;
+
+                                                            const hyperparams = config.hyperparameters ? Object.keys(config.hyperparameters).length : 0;
+                                                            document.getElementById(`hyperparams-{{ model.id }}`).textContent = `${hyperparams} params`;
+                                                        } catch (e) {
+                                                            console.error(`Error parsing ML config for model {{ model.id }}:`, e);
+                                                            document.getElementById(`algorithm-{{ model.id }}`).textContent = 'Config Error';
+                                                        }
+                                                    })();
+                                                </script>
+                                            {% else %}
+                                                <!-- DL Model Info -->
+                                                <div class="model-params-grid" id="config-{{ model.id }}">
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-layer-group"></i>
+                                                        <span id="layers-{{ model.id }}">Loading... layers</span>
+                                                    </div>
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-cogs"></i>
+                                                        <span id="opt-{{ model.id }}">Loading...</span>
+                                                    </div>
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-chart-line"></i>
+                                                        <span id="loss-{{ model.id }}">Loading...</span>
+                                                    </div>
+                                                    <div class="param-badge">
+                                                        <i class="fas fa-tachometer-alt"></i>
+                                                        <span id="lr-{{ model.id }}">LR: N/A</span>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                    (function() {
+                                                        const configStr = '{{ model.config_json|json_string|escapejs }}';
+                                                        try {
+                                                            const config = JSON.parse(configStr);
+                                                            const layers = config.model?.architecture?.layers || [];
+                                                            const numLayers = layers.filter(l => l.type !== 'input' && l.type !== 'output').length;
+                                                            document.getElementById(`layers-{{ model.id }}`).textContent = `${numLayers} layers`;
+
+                                                            const optimizer = config.model?.training?.optimizer || {};
+                                                            const optType = optimizer.type || 'N/A';
+                                                            document.getElementById(`opt-{{ model.id }}`).textContent = `Opt: ${optType}`;
+
+                                                            const loss = config.model?.training?.loss_function || 'N/A';
+                                                            document.getElementById(`loss-{{ model.id }}`).textContent = `Loss: ${loss}`;
+
+                                                            const lr = optimizer.learning_rate || 'N/A';
+                                                            document.getElementById(`lr-{{ model.id }}`).textContent = `LR: ${lr}`;
+                                                        } catch (e) {
+                                                            console.error(`Error parsing DL config for model {{ model.id }}:`, e, configStr);
+                                                            document.getElementById(`layers-{{ model.id }}`).textContent = 'Config Error';
+                                                        }
+                                                    })();
+                                                </script>
+                                            {% endif %}
+                                            
+                                            {% if model.description %}
+                                            <p class="card-text mt-2">{{ model.description|truncatechars:80 }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-footer bg-light">
+                                            {% if model.model_type == 'ml' %}
+                                                <!-- ML Model Buttons (no View button) -->
+                                                <div class="btn-group w-100" role="group">
+                                                    <a href="{% url 'ml_model_designer' %}?edit={{ model.id }}" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </a>
+                                                    <a href="{% url 'go_to_training' model.id %}" class="btn btn-outline-success btn-sm">
+                                                        <i class="fas fa-play"></i> Train
+                                                    </a>
+                                                </div>
+                                            {% else %}
+                                                <!-- DL Model Buttons (with View button) -->
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="openModelPreview({{ model.id }}, '{{ model.name|escapejs }}')">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </button>
+                                                    <a href="{% url 'model_designer' %}?edit={{ model.id }}" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </a>
+                                                    <a href="{% url 'go_to_training' model.id %}" class="btn btn-outline-success btn-sm">
+                                                        <i class="fas fa-play"></i> Train
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-cube fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No models found</h5>
+                                <p class="text-muted">Create your first model to get started</p>
+                                <button class="btn btn-primary" id="create-first-model">
+                                    <i class="fas fa-plus me-2"></i>Create Model
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Templates Panel -->
+        <div class="tab-pane fade" id="templates-panel" role="tabpanel">
+            <div id="templates-content">
+                <div class="row">
+                    <!-- Categories Sidebar -->
+                    <div class="col-md-3">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Categories</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="list-group list-group-flush">
+                                    <button class="list-group-item list-group-item-action active" data-category="all">
+                                        <i class="fas fa-th-large me-2"></i>All Templates
+                                        <span class="badge bg-secondary float-end">12</span>
+                                    </button>
+                                    <button class="list-group-item list-group-item-action" data-category="medical-images">
+                                        <i class="fas fa-x-ray me-2"></i>Medical Images
+                                        <span class="badge bg-secondary float-end">4</span>
+                                    </button>
+                                    <button class="list-group-item list-group-item-action" data-category="time-series">
+                                        <i class="fas fa-chart-line me-2"></i>Time Series
+                                        <span class="badge bg-secondary float-end">3</span>
+                                    </button>
+                                    <button class="list-group-item list-group-item-action" data-category="clinical-text">
+                                        <i class="fas fa-file-medical-alt me-2"></i>Clinical Text
+                                        <span class="badge bg-secondary float-end">2</span>
+                                    </button>
+                                    <button class="list-group-item list-group-item-action" data-category="general-purpose">
+                                        <i class="fas fa-cogs me-2"></i>General Purpose
+                                        <span class="badge bg-secondary float-end">3</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search Box -->
+                        <div class="card shadow-sm mt-3">
+                            <div class="card-body">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="template-search" placeholder="Search templates...">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Templates Gallery -->
+                    <div class="col-md-9">
+                        <div id="templates-gallery">
+                            <!-- Medical Images Templates -->
+                            <div class="template-category" data-category="medical-images">
+                                <h5 class="mb-3"><i class="fas fa-x-ray me-2"></i>Medical Images</h5>
+                                <div class="row align-items-stretch">
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-primary text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">CNN for Medical Images</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-warning text-dark">
+                                                             <i class="material-icons" style="font-size: 14px; vertical-align: middle;">trending_up</i>
+                                                             Popular
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Convolutional Neural Network optimized for medical image classification
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">2.3M params</span>
+                                                    <span class="badge bg-success me-1">Medium complexity</span>
+                                                    <span class="badge bg-warning">1000+ images</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> X-ray classification, CT scan analysis, MRI diagnosis
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Typical accuracy: 85-90%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('cnn-medical-images')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('cnn-medical-images')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-primary text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">U-Net for Segmentation</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-success">
+                                                             <i class="material-icons" style="font-size: 14px; vertical-align: middle;">gps_fixed</i>
+                                                             High Accuracy
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    U-Net architecture for medical image segmentation tasks
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">7.8M params</span>
+                                                    <span class="badge bg-danger me-1">High complexity</span>
+                                                    <span class="badge bg-warning">500+ images</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Organ segmentation, Tumor detection, Anatomical structure mapping
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Typical IoU: 0.75-0.85
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('unet-segmentation')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('unet-segmentation')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Series Templates -->
+                            <div class="template-category" data-category="time-series">
+                                <h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Time Series Analysis</h5>
+                                <div class="row align-items-stretch">
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-success text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">LSTM for ECG Analysis</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-info">
+                                                             <i class="material-icons" style="font-size: 14px; vertical-align: middle;">school</i>
+                                                             Beginner
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Multi-layer LSTM for heart rhythm analysis and arrhythmia detection
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">1.2M params</span>
+                                                    <span class="badge bg-success me-1">Medium complexity</span>
+                                                    <span class="badge bg-warning">5000+ sequences</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Arrhythmia detection, Heart rate analysis, ECG classification
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Typical accuracy: 92-96%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('lstm-ecg')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('lstm-ecg')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-success text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">CNN-LSTM for EEG</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-danger">
+                                                             <i class="material-icons" style="font-size: 14px; vertical-align: middle;">psychology</i>
+                                                             Advanced
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Hybrid CNN-LSTM architecture for EEG signal analysis and seizure detection
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">3.1M params</span>
+                                                    <span class="badge bg-danger me-1">High complexity</span>
+                                                    <span class="badge bg-warning">2000+ recordings</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Seizure detection, Sleep stage classification, Brain state analysis
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Typical accuracy: 88-94%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('cnn-lstm-eeg')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('cnn-lstm-eeg')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Clinical Text Templates -->
+                            <div class="template-category" data-category="clinical-text">
+                                <h5 class="mb-3"><i class="fas fa-file-medical-alt me-2"></i>Clinical Text Analysis</h5>
+                                <div class="row align-items-stretch">
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-warning text-dark">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">BERT for Clinical NLP</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-success">
+                                                             <i class="material-icons" style="font-size: 14px; vertical-align: middle;">gps_fixed</i>
+                                                             High Accuracy
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Fine-tuned BERT model for clinical text classification and NER tasks
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">110M params</span>
+                                                    <span class="badge bg-danger me-1">Very High complexity</span>
+                                                    <span class="badge bg-warning">10K+ documents</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Clinical note classification, Medical NER, Diagnosis prediction
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Typical F1: 0.85-0.92
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('bert-clinical')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('bert-clinical')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- General Purpose Templates -->
+                            <div class="template-category" data-category="general-purpose">
+                                <h5 class="mb-3"><i class="fas fa-cogs me-2"></i>General Purpose</h5>
+                                <div class="row align-items-stretch">
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-purple text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">Basic Neural Network</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-info">
+                                                             <i class="material-icons" style="font-size: 14px; vertical-align: middle;">school</i>
+                                                             Beginner
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Simple feedforward neural network for general classification tasks
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">50K params</span>
+                                                    <span class="badge bg-success me-1">Low complexity</span>
+                                                    <span class="badge bg-warning">Any dataset</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Basic classification, Feature learning, Proof of concept
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Fast training, versatile
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('basic-nn')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('basic-nn')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-purple text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">Deep Autoencoder</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">trending_up</i>
+                                                            Popular
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Deep autoencoder for dimensionality reduction and feature extraction
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">800K params</span>
+                                                    <span class="badge bg-success me-1">Medium complexity</span>
+                                                    <span class="badge bg-warning">Unlabeled data</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Dimensionality reduction, Anomaly detection, Data compression
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        Reconstruction loss: 0.01-0.05
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('autoencoder')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('autoencoder')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-xl-6 col-lg-12 mb-4">
+                                        <div class="card template-card h-100">
+                                            <div class="card-header bg-purple text-white">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">ResNet-18</h6>
+                                                    <div class="template-badges">
+                                                        <span class="badge badge-model-type badge-dl me-2">DL</span>
+                                                        <span class="badge bg-success">
+                                                            <i class="material-icons" style="font-size: 14px; vertical-align: middle;">gps_fixed</i>
+                                                            High Accuracy
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text text-muted mb-3">
+                                                    Residual Network with 18 layers for robust image classification
+                                                </p>
+                                                <div class="template-stats mb-3">
+                                                    <span class="badge bg-info me-1">11.7M params</span>
+                                                    <span class="badge bg-danger me-1">High complexity</span>
+                                                    <span class="badge bg-warning">Large datasets</span>
+                                                </div>
+                                                <div class="template-use-cases mb-3">
+                                                    <span class="text-muted">
+                                                        <strong>Use cases:</strong> Image classification, Transfer learning, Feature extraction
+                                                    </span>
+                                                </div>
+                                                <div class="template-performance">
+                                                    <span class="text-success">
+                                                        <i class="fas fa-chart-line me-1"></i>
+                                                        ImageNet accuracy: 69.8%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="card-footer bg-light">
+                                                <div class="btn-group w-100" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="previewTemplate('resnet18')">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" onclick="useTemplate('resnet18')">
+                                                        <i class="fas fa-rocket"></i> Use Template
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compare Models Panel -->
+        <div class="tab-pane fade" id="compare-panel" role="tabpanel">
+            <div id="compare-content">
+                <!-- Selector de models -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Select Two Models to Compare</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="comparison-form" method="GET" action="{% url 'model_studio' %}">
+                            <input type="hidden" name="tab" value="compare">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <label for="model1" class="form-label">Model 1</label>
+                                    <select class="form-select" name="job_ids" id="model1" required>
+                                        <option value="" selected disabled>Select first model</option>
+                                        {% for job in available_jobs %}
+                                            <option value="{{ job.id }}" {% if job.id == selected_job_ids.0 %}selected{% endif %}>
+                                                {{ job.name }} - {{ job.created_at|date:"d/m/Y" }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-center justify-content-center">
+                                    <div class="text-center pt-4">
+                                        <i class="fas fa-arrows-left-right fa-2x text-muted"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="model2" class="form-label">Model 2</label>
+                                    <select class="form-select" name="job_ids" id="model2" required>
+                                        <option value="" selected disabled>Select second model</option>
+                                        {% for job in available_jobs %}
+                                            <option value="{{ job.id }}" {% if job.id == selected_job_ids.1 %}selected{% endif %}>
+                                                {{ job.name }} - {{ job.created_at|date:"d/m/Y" }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 text-center">
+                                    <button type="submit" class="btn btn-primary px-5">Compare Models</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Results de la comparacion -->
+                {% if selected_models and selected_models|length == 2 %}
+                
+                <!-- Sistema de pestañas -->
+                <ul class="nav nav-tabs mb-4" id="modelComparisonTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="metrics-tab-inner" data-bs-toggle="tab" data-bs-target="#metrics-content" type="button" role="tab" aria-controls="metrics-content" aria-selected="true">
+                            <i class="fas fa-chart-line me-2"></i>Performance Metrics
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="architecture-tab-inner" data-bs-toggle="tab" data-bs-target="#architecture-content" type="button" role="tab" aria-controls="architecture-content" aria-selected="false">
+                            <i class="fas fa-network-wired me-2"></i>Model Architecture
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="parameters-tab-inner" data-bs-toggle="tab" data-bs-target="#parameters-content" type="button" role="tab" aria-controls="parameters-content" aria-selected="false">
+                            <i class="fas fa-sliders-h me-2"></i>Training Parameters
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="modelComparisonTabContent">
+                    <!-- Tab 1: Performance Metrics -->
+                    <div class="tab-pane fade show active" id="metrics-content" role="tabpanel" aria-labelledby="metrics-tab-inner">
+                        <!-- Tabla comparativa -->
+                        <div class="row">
+                            <div class="col-lg-12 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-table me-2"></i>Head-to-Head Comparison</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-comparison">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="border-end" style="width: 20%">Metric</th>
+                                                        <th class="text-center" style="width: 40%">{{ selected_models.0.name }}</th>
+                                                        <th class="text-center" style="width: 40%">{{ selected_models.1.name }}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="metric-name border-end">Accuracy</td>
+                                                        <td class="text-center {% if selected_models.0.metrics.accuracy > selected_models.1.metrics.accuracy %}winner{% endif %}">
+                                                            {{ selected_models.0.metrics.accuracy|floatformat:4 }}
+                                                            {% if selected_models.0.metrics.accuracy > selected_models.1.metrics.accuracy %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center {% if selected_models.1.metrics.accuracy > selected_models.0.metrics.accuracy %}winner{% endif %}">
+                                                            {{ selected_models.1.metrics.accuracy|floatformat:4 }}
+                                                            {% if selected_models.1.metrics.accuracy > selected_models.0.metrics.accuracy %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="metric-name border-end">Loss</td>
+                                                        <td class="text-center {% if selected_models.0.metrics.loss < selected_models.1.metrics.loss %}winner{% endif %}">
+                                                            {{ selected_models.0.metrics.loss|floatformat:4 }}
+                                                            {% if selected_models.0.metrics.loss < selected_models.1.metrics.loss %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center {% if selected_models.1.metrics.loss < selected_models.0.metrics.loss %}winner{% endif %}">
+                                                            {{ selected_models.1.metrics.loss|floatformat:4 }}
+                                                            {% if selected_models.1.metrics.loss < selected_models.0.metrics.loss %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="metric-name border-end">F1 Score</td>
+                                                        <td class="text-center {% if selected_models.0.metrics.f1 > selected_models.1.metrics.f1 %}winner{% endif %}">
+                                                            {{ selected_models.0.metrics.f1|floatformat:4 }}
+                                                            {% if selected_models.0.metrics.f1 > selected_models.1.metrics.f1 %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center {% if selected_models.1.metrics.f1 > selected_models.0.metrics.f1 %}winner{% endif %}">
+                                                            {{ selected_models.1.metrics.f1|floatformat:4 }}
+                                                            {% if selected_models.1.metrics.f1 > selected_models.0.metrics.f1 %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="metric-name border-end">Precision</td>
+                                                        <td class="text-center {% if selected_models.0.metrics.precision > selected_models.1.metrics.precision %}winner{% endif %}">
+                                                            {{ selected_models.0.metrics.precision|floatformat:4 }}
+                                                            {% if selected_models.0.metrics.precision > selected_models.1.metrics.precision %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center {% if selected_models.1.metrics.precision > selected_models.0.metrics.precision %}winner{% endif %}">
+                                                            {{ selected_models.1.metrics.precision|floatformat:4 }}
+                                                            {% if selected_models.1.metrics.precision > selected_models.0.metrics.precision %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="metric-name border-end">Recall</td>
+                                                        <td class="text-center {% if selected_models.0.metrics.recall > selected_models.1.metrics.recall %}winner{% endif %}">
+                                                            {{ selected_models.0.metrics.recall|floatformat:4 }}
+                                                            {% if selected_models.0.metrics.recall > selected_models.1.metrics.recall %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="text-center {% if selected_models.1.metrics.recall > selected_models.0.metrics.recall %}winner{% endif %}">
+                                                            {{ selected_models.1.metrics.recall|floatformat:4 }}
+                                                            {% if selected_models.1.metrics.recall > selected_models.0.metrics.recall %}
+                                                                <i class="fas fa-trophy text-warning ms-2"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="metric-name border-end">Training Time</td>
+                                                        <td class="text-center">{{ selected_models.0.training_time }}</td>
+                                                        <td class="text-center">{{ selected_models.1.training_time }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+
+
+                        <!-- Graficos -->
+                        <div class="row">
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-radar me-2"></i>Performance Radar</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-legend-custom" id="radar-legend">
+                                            {% for model in selected_models %}
+                                                <div class="legend-item" data-dataset="{{ forloop.counter0 }}">
+                                                    <span class="legend-color" style="background-color: {% if forloop.counter0 == 0 %}#0d6efd{% else %}#ffc107{% endif %};"></span>
+                                                    <span>{{ model.name }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <canvas id="radar-chart" height="300"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Metrics Comparison</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-legend-custom" id="bar-legend">
+                                            {% for model in selected_models %}
+                                                <div class="legend-item" data-dataset="{{ forloop.counter0 }}">
+                                                    <span class="legend-color" style="background-color: {% if forloop.counter0 == 0 %}#0d6efd{% else %}#ffc107{% endif %};"></span>
+                                                    <span>{{ model.name }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <canvas id="bar-chart" height="300"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 2: Model Architecture -->
+                    <div class="tab-pane fade" id="architecture-content" role="tabpanel" aria-labelledby="architecture-tab-inner">
+                        <div class="row">
+                            <!-- Arquitectura Model 1 -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow-sm h-100">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">{{ selected_models.0.name }} Architecture</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="model-architecture-container" id="architecture-model-0">
+                                            <!-- La arquitectura se dibujara con JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Arquitectura Model 2 -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow-sm h-100">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">{{ selected_models.1.name }} Architecture</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="model-architecture-container" id="architecture-model-1">
+                                            <!-- La arquitectura se dibujara con JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab 3: Training Parameters -->
+                    <div class="tab-pane fade" id="parameters-content" role="tabpanel" aria-labelledby="parameters-tab-inner">
+                        <div class="row">
+                            <div class="col-12 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Training Configuration Comparison</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Pestañas para parametros especificos -->
+                                        <ul class="nav nav-pills mb-3" id="parameterTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="optimizer-tab" data-bs-toggle="pill" 
+                                                        data-bs-target="#optimizer-params" type="button" role="tab">Optimizer</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="loss-tab" data-bs-toggle="pill" 
+                                                        data-bs-target="#loss-params" type="button" role="tab">Loss Function</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="fed-tab" data-bs-toggle="pill" 
+                                                        data-bs-target="#fed-params" type="button" role="tab">Federated Settings</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="train-tab" data-bs-toggle="pill" 
+                                                        data-bs-target="#train-params" type="button" role="tab">Training Settings</button>
+                                            </li>
+                                        </ul>
+                                        
+                                        <div class="tab-content" id="parameterTabContent">
+                                            <!-- Optimizer Parameters -->
+                                            <div class="tab-pane fade show active" id="optimizer-params" role="tabpanel">
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Parameter</th>
+                                                                <th class="text-center">{{ selected_models.0.name }}</th>
+                                                                <th class="text-center">{{ selected_models.1.name }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>Type</td>
+                                                                <td class="text-center">{{ selected_models.0.config.model.training.optimizer.type|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.model.training.optimizer.type|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Learning Rate</td>
+                                                                <td class="text-center">{{ selected_models.0.config.model.training.optimizer.learning_rate|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.model.training.optimizer.learning_rate|default:"N/A" }}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Loss Function Parameters -->
+                                            <div class="tab-pane fade" id="loss-params" role="tabpanel">
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Parameter</th>
+                                                                <th class="text-center">{{ selected_models.0.name }}</th>
+                                                                <th class="text-center">{{ selected_models.1.name }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>Type</td>
+                                                                <td class="text-center">{{ selected_models.0.config.model.training.loss_function|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.model.training.loss_function|default:"N/A" }}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Federated Settings -->
+                                            <div class="tab-pane fade" id="fed-params" role="tabpanel">
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Parameter</th>
+                                                                <th class="text-center">{{ selected_models.0.name }}</th>
+                                                                <th class="text-center">{{ selected_models.1.name }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>Strategy</td>
+                                                                <td class="text-center">{{ selected_models.0.config.federated.name|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.federated.name|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Fraction Fit</td>
+                                                                <td class="text-center">{{ selected_models.0.config.federated.parameters.fraction_fit|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.federated.parameters.fraction_fit|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Fraction Evaluate</td>
+                                                                <td class="text-center">{{ selected_models.0.config.federated.parameters.fraction_eval|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.federated.parameters.fraction_eval|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Min Fit Clients</td>
+                                                                <td class="text-center">{{ selected_models.0.config.federated.parameters.min_fit_clients|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.federated.parameters.min_fit_clients|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Min Evaluate Clients</td>
+                                                                <td class="text-center">{{ selected_models.0.config.federated.parameters.min_eval_clients|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.federated.parameters.min_eval_clients|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Min Available Clients</td>
+                                                                <td class="text-center">{{ selected_models.0.config.federated.parameters.min_available_clients|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.federated.parameters.min_available_clients|default:"N/A" }}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Training Settings -->
+                                            <div class="tab-pane fade" id="train-params" role="tabpanel">
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-striped">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Parameter</th>
+                                                                <th class="text-center">{{ selected_models.0.name }}</th>
+                                                                <th class="text-center">{{ selected_models.1.name }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>Total Rounds</td>
+                                                                <td class="text-center">{{ selected_models.0.config.train.rounds|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.train.rounds|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Batch Size</td>
+                                                                <td class="text-center">{{ selected_models.0.config.train.batch_size|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.train.batch_size|default:"N/A" }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Epochs</td>
+                                                                <td class="text-center">{{ selected_models.0.config.train.epochs|default:"N/A" }}</td>
+                                                                <td class="text-center">{{ selected_models.1.config.train.epochs|default:"N/A" }}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Preview Modal -->
+<div class="modal fade" id="modelPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i><span id="previewModelTitle">Model Architecture</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <!-- Architecture Section Only -->
+                <div id="previewModelContent">
+                    <div class="text-center py-5">
+                        <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Loading model architecture...</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>Delete Model
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the model <strong id="deleteModelName"></strong>?</p>
+                <p class="text-muted mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteModel">
+                    <i class="fas fa-trash me-1"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Model Data for JavaScript -->
+{% if selected_models and selected_models|length == 2 %}
+{{ selected_models|json_script:"selected-models-data" }}
+{% endif %}
+
+<script>
+window.modelsData = {};
+{% for model in models %}
+try {
+    window.modelsData["{{ model.id }}"] = {
+        "id": "{{ model.id }}",
+        "name": "{{ model.name|escapejs }}",
+        "model_type": "{{ model.model_type|default:'dl' }}",
+        "config_json": {{ model.config_json|default:'{}'|json_string }}
+    };
+} catch (e) {
+    console.error('Error loading model {{ model.id }}:', e);
+}
+{% endfor %}
+
+</script>
+
+<style>
+.nav-tabs-custom {
+    border-bottom: 2px solid #e9ecef;
+}
+
+.nav-tabs-custom .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs-custom .nav-link:hover {
+    border-bottom-color: #007bff;
+    color: #007bff;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.nav-tabs-custom .nav-link.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.nav-tabs-custom .nav-link i {
+    font-size: 1.1em;
+}
+
+.tab-content {
+    min-height: 600px;
+}
+
+#browse-content, #compare-content {
+    min-height: 500px;
+}
+
+/* Layer Styles for Preview Modal */
+.layer-box {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.layer-box:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.input-layer {
+    background-color: #e3f0ff !important;
+    border: 1px solid #c0d8f3 !important;
+}
+
+.output-layer {
+    background-color: #ffe8e8 !important;
+    border: 1px solid #f5d1d1 !important;
+}
+
+.hidden-layer {
+    background-color: #e9f7f0 !important;
+    border: 1px solid #c7e6d7 !important;
+}
+
+.conv-layer, .conv1d-layer, .conv2d-layer {
+    background-color: #e6e6fa !important;
+    border: 1px solid #d8d8f3 !important;
+}
+
+.norm-layer, .batchnorm1d-layer, .batchnorm2d-layer {
+    background-color: #fff0f5 !important;
+    border: 1px solid #f3d8e3 !important;
+}
+
+.pool-layer, .maxpool1d-layer, .maxpool2d-layer, .avgpool1d-layer, .avgpool2d-layer {
+    background-color: #f0fff0 !important;
+    border: 1px solid #d8f3d8 !important;
+}
+
+.dropout-layer {
+    background-color: #fffacd !important;
+    border: 1px solid #f3edb3 !important;
+}
+
+.activation-layer, .relu-layer, .sigmoid-layer, .tanh-layer, .leakyrelu-layer {
+    background-color: #ffdead !important;
+    border: 1px solid #f3d8b3 !important;
+}
+
+.flatten-layer {
+    background-color: #e0ffff !important;
+    border: 1px solid #b3f3f3 !important;
+}
+
+.recurrent-layer, .lstm-layer, .gru-layer {
+    background-color: #dda0dd !important;
+    border: 1px solid #d8b3f3 !important;
+}
+
+.operation-layer, .add-layer, .concat-layer {
+    background-color: #e3f2fd !important;
+    border: 1px solid #0d6efd !important;
+}
+
+.layer-connector {
+    width: 2px;
+    height: 30px;
+    background-color: #adb5bd;
+    margin: 0 auto;
+}
+
+.layer-content {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.layer-features {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+
+.layers-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 20px 10px;
+}
+
+/* Model Params Grid Styles */
+.model-params-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 0.5rem 0;
+}
+
+.param-badge {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: #343a40;
+    border: 1px solid #e9ecef;
+}
+
+.param-badge i {
+    margin-right: 4px;
+    width: 12px;
+    font-size: 0.7rem;
+}
+
+.param-badge span {
+    font-weight: 600;
+    color: #212529;
+}
+
+/* Model Comparison Styles */
+.winner {
+    background-color: rgba(25, 135, 84, 0.1);
+    font-weight: bold;
+}
+
+.metric-name {
+    font-weight: 600;
+}
+
+.table-comparison thead th {
+    background-color: #f8f9fa;
+}
+
+/* Training Parameters - More compact for 2 model comparison */
+#parameters-content .card {
+    max-height: 500px;
+}
+
+#parameters-content .card-body {
+    padding: 1rem;
+}
+
+#parameters-content .table {
+    margin-bottom: 0;
+}
+
+#parameters-content .table td,
+#parameters-content .table th {
+    padding: 0.5rem;
+    vertical-align: middle;
+}
+
+#parameterTabs {
+    margin-bottom: 1rem;
+}
+
+#parameterTabContent {
+    min-height: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Estils per a l'arquitectura del model */
+.model-architecture-container {
+    min-height: 300px;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.layer-node {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 0 auto;
+}
+
+.layer-node:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.layer-node.active {
+    border: 2px solid #0d6efd;
+    background: #e7f1ff;
+}
+
+.layer-connector {
+    width: 2px;
+    height: 30px;
+    background-color: #adb5bd;
+    margin: 0 auto;
+}
+
+.layer-node[data-layer-type="input"] {
+    background-color: #d1e7dd;
+    border-color: #a3cfbb;
+}
+
+.layer-node[data-layer-type="output"] {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+.layer-node .badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+}
+
+.layer-parameters form {
+    padding: 10px 0;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #0062E6, #33AEFF);
+}
+
+@media (max-width: 992px) {
+    .network-container {
+        padding: 10px 5px;
+    }
+    
+    .layer-node {
+        max-width: 160px;
+        padding: 10px;
+    }
+}
+
+.layer-features {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Fix for modal button text contrast on hover */
+.model-type-selection .btn:hover *,
+.model-type-selection .btn:focus * {
+    color: #fff !important;
+}
+
+.model-type-selection .btn:hover .text-muted,
+.model-type-selection .btn:focus .text-muted {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Custom badge for model type */
+.badge-model-type {
+    font-weight: 600;
+    font-size: 0.7em;
+    padding: 0.3em 0.6em;
+}
+.badge-dl {
+    background-color: #0d6efd; /* Solid Primary Blue */
+    color: #fff;
+}
+.badge-ml {
+    background-color: #198754; /* Solid Success Green */
+    color: #fff;
+}
+
+/* Chart Toggle Controls */
+.chart-controls-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.chart-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    min-width: 140px;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.chart-toggle-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15), 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.chart-toggle-btn.active {
+    background: linear-gradient(135deg, #0d6efd 0%, #0056d2 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3), 0 2px 8px rgba(13, 110, 253, 0.2);
+}
+
+.chart-toggle-btn.active:hover {
+    background: linear-gradient(135deg, #0056d2 0%, #004bb5 100%);
+    box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4), 0 4px 15px rgba(13, 110, 253, 0.3);
+}
+
+.chart-toggle-btn.inactive {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #6c757d;
+    opacity: 0.6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.chart-toggle-btn.inactive:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.chart-toggle-btn.inactive .toggle-label {
+    text-decoration: line-through;
+}
+
+.toggle-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.chart-toggle-btn.active .toggle-indicator {
+    background-color: #fff !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+}
+
+.chart-toggle-btn.inactive .toggle-indicator {
+    border-color: rgba(108,117,125,0.5);
+    opacity: 0.7;
+}
+
+.toggle-label {
+    font-size: 0.85rem;
+    letter-spacing: 0.025em;
+}
+
+.toggle-icon {
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.chart-toggle-btn.inactive .toggle-icon:before {
+    content: "\f070"; /* fa-eye-slash */
+}
+
+.chart-toggle-btn.active .toggle-icon {
+    color: rgba(255,255,255,0.9);
+}
+
+    .chart-toggle-btn.inactive .toggle-icon {
+        color: #dc3545;
+    }
+    
+    /* Chart legend styling - same as dashboard */
+    .chart-legend-custom {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid transparent;
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.025em;
+    }
+    
+    .legend-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        background: rgba(255,255,255,1);
+    }
+    
+    .legend-item:active {
+        transform: translateY(0px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+@media (max-width: 768px) {
+    .chart-controls {
+        gap: 12px;
+    }
+    
+    .chart-toggle-btn {
+        min-width: 130px;
+        padding: 8px 16px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .chart-toggle-btn {
+        min-width: 180px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we should activate the compare tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    const jobIds = urlParams.getAll('job_ids');
+    
+    if (tab === 'compare' || jobIds.length > 0) {
+        // Activate the compare tab
+        const compareTab = new bootstrap.Tab(document.getElementById('compare-tab'));
+        compareTab.show();
+    }
+
+    // New Model button - SHOW MODAL instead of redirecting
+    document.getElementById('new-model-btn').addEventListener('click', function() {
+        const newModelTypeModal = new bootstrap.Modal(document.getElementById('newModelTypeModal'));
+        newModelTypeModal.show();
+    });
+    
+    // Create first model button
+    const createFirstModelBtn = document.getElementById('create-first-model');
+    if (createFirstModelBtn) {
+        createFirstModelBtn.addEventListener('click', function() {
+            const newModelTypeModal = new bootstrap.Modal(document.getElementById('newModelTypeModal'));
+            newModelTypeModal.show();
+        });
+    }
+    
+    // Import Model button
+    document.getElementById('import-model-btn').addEventListener('click', function() {
+        showToast('Import functionality coming soon!', 'info');
+    });
+    
+    // Handle sidebar filtering and search
+    const sidebar = document.getElementById('model-type-filter');
+    if (sidebar) {
+        const filterLinks = sidebar.querySelectorAll('.list-group-item-action');
+        const modelCards = document.querySelectorAll('.model-card');
+        const modelSearchInput = document.getElementById('model-search');
+
+        function filterAndSearch() {
+            const selectedType = sidebar.querySelector('.active').getAttribute('data-model-type');
+            const searchTerm = modelSearchInput.value.toLowerCase();
+
+            modelCards.forEach(card => {
+                const cardType = card.getAttribute('data-model-type');
+                const modelName = card.querySelector('.card-header h6').textContent.toLowerCase();
+                const modelDesc = card.querySelector('.card-text')?.textContent.toLowerCase() || '';
+
+                const typeMatch = (selectedType === 'all' || cardType === selectedType);
+                const searchMatch = (modelName.includes(searchTerm) || modelDesc.includes(searchTerm));
+
+                if (typeMatch && searchMatch) {
+                    card.closest('.col-md-6').style.display = '';
+                } else {
+                    card.closest('.col-md-6').style.display = 'none';
+                }
+            });
+        }
+
+        filterLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                filterLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                filterAndSearch();
+            });
+        });
+
+        modelSearchInput.addEventListener('input', filterAndSearch);
+    }
+    
+    // Load model config info for cards
+    loadModelConfigInfo();
+});
+
+// Load model configuration info for cards
+function loadModelConfigInfo() {
+    const modelsData = window.modelsData || {};
+    
+    Object.keys(modelsData).forEach(modelId => {
+        const modelData = modelsData[modelId];
+        
+        // Parse config_json if it's a string (same logic as openModelPreview)
+        let config;
+        if (typeof modelData.config_json === 'string') {
+            try {
+                config = JSON.parse(modelData.config_json);
+            } catch (e) {
+                console.error(`❌ Error parsing config for model ${modelId}:`, e);
+                config = {};
+            }
+        } else {
+            config = modelData.config_json || {};
+        }
+        
+        // Update framework first based on model_type
+        const frameworkElement = document.getElementById(`framework-${modelId}`);
+        if (frameworkElement) {
+            if (modelData.model_type === 'ml') {
+                frameworkElement.textContent = 'Scikit-learn';
+            } else {
+                // For DL models, use stored framework or default to PyTorch
+                const framework = config.framework || 'PyTorch';
+                frameworkElement.textContent = framework;
+            }
+        }
+        
+        // Check if this is an ML model
+        if (modelData.model_type === 'ml') {
+            // Handle ML model info
+            const algorithmElement = document.getElementById(`algorithm-${modelId}`);
+            if (algorithmElement) {
+                const algorithm = config.algorithm || 'Unknown';
+                const algorithmNames = {
+                    'RandomForestClassifier': 'Random Forest',
+                    'DecisionTreeClassifier': 'Decision Tree',
+                    'KNeighborsClassifier': 'K-Neighbors',
+                    'KMeans': 'K-Means',
+                    'SVC': 'SVM'
+                };
+                algorithmElement.textContent = algorithmNames[algorithm] || algorithm;
+            }
+            
+            const hyperparamsElement = document.getElementById(`hyperparams-${modelId}`);
+            if (hyperparamsElement) {
+                const hyperparams = config.hyperparameters || {};
+                const algorithm = config.algorithm || '';
+                
+                // Show specific parameters based on algorithm
+                let paramText = '';
+                switch(algorithm) {
+                    case 'RandomForestClassifier':
+                        const nEstimators = hyperparams.n_estimators || 100;
+                        const maxDepthRF = hyperparams.max_depth || 'None';
+                        paramText = `${nEstimators} trees, depth: ${maxDepthRF}`;
+                        break;
+                        
+                    case 'DecisionTreeClassifier':
+                        const maxDepthDT = hyperparams.max_depth || 'None';
+                        const minSamplesSplit = hyperparams.min_samples_split || 2;
+                        paramText = `depth: ${maxDepthDT}, split: ${minSamplesSplit}`;
+                        break;
+                        
+                    case 'KNeighborsClassifier':
+                        const nNeighbors = hyperparams.n_neighbors || 5;
+                        const metric = hyperparams.metric || 'minkowski';
+                        const metricNames = {
+                            'minkowski': 'Minkowski',
+                            'euclidean': 'Euclidean',
+                            'manhattan': 'Manhattan',
+                            'chebyshev': 'Chebyshev'
+                        };
+                        paramText = `k=${nNeighbors}, ${metricNames[metric] || metric}`;
+                        break;
+                        
+                    case 'KMeans':
+                        const nClusters = hyperparams.n_clusters || 8;
+                        const init = hyperparams.init || 'k-means++';
+                        paramText = `${nClusters} clusters, ${init}`;
+                        break;
+                        
+                    case 'SVC':
+                        const C = hyperparams.C || 1.0;
+                        const kernel = hyperparams.kernel || 'rbf';
+                        paramText = `C=${C}, kernel: ${kernel}`;
+                        break;
+                        
+                    default:
+                        const paramCount = Object.keys(hyperparams).length;
+                        paramText = `${paramCount} params`;
+                        break;
+                }
+                
+                hyperparamsElement.textContent = paramText;
+            }
+        } else {
+            // Handle DL model info
+            
+            // Update optimizer
+            const optElement = document.getElementById(`opt-${modelId}`);
+            if (optElement) {
+                let optimizer = config.training?.optimizer || config.model?.training?.optimizer || {};
+                
+                const optimizerType = optimizer.type || 'N/A';
+                optElement.textContent = optimizerType !== 'N/A' ? optimizerType.toUpperCase() : 'N/A';
+            }
+            
+            // Update loss function
+            const lossElement = document.getElementById(`loss-${modelId}`);
+            if (lossElement) {
+                let lossFunction = config.training?.loss_function || config.model?.training?.loss_function || 'N/A';
+                
+                const lossNames = {
+                    'bce_with_logits': 'BCE+Logits',
+                    'cross_entropy': 'CrossEntropy',
+                    'mse': 'MSE',
+                    'mae': 'MAE',
+                    'bce': 'BCE'
+                };
+                
+                const displayLoss = typeof lossFunction === 'string' ? 
+                    (lossNames[lossFunction.toLowerCase()] || lossFunction) : 
+                    lossFunction;
+                    
+                lossElement.textContent = displayLoss;
+            }
+            
+            // Update layer count
+            const layersElement = document.getElementById(`layers-${modelId}`);
+            if (layersElement) {
+                let layers = [];
+                
+                if (config.architecture && config.architecture.layers && Array.isArray(config.architecture.layers)) {
+                    layers = config.architecture.layers;
+                } else if (config.model && config.model.architecture && config.model.architecture.layers && Array.isArray(config.model.architecture.layers)) {
+                    layers = config.model.architecture.layers;
+                }
+                
+                // Count only real layers (exclude fictional input/output layers)
+                const realLayers = layers.filter(layer => {
+                    const layerType = layer.type || layer.layer_type || '';
+                    return layerType !== 'input' && layerType !== 'output';
+                });
+                
+                const realLayerCount = realLayers.length;
+                layersElement.textContent = `${realLayerCount} layers`;
+            }
+            
+            // Update learning rate
+            const lrElement = document.getElementById(`lr-${modelId}`);
+            if (lrElement) {
+                let optimizer = config.training?.optimizer || config.model?.training?.optimizer || {};
+                
+                const learningRate = optimizer.learning_rate || 'N/A';
+                lrElement.textContent = `LR: ${learningRate}`;
+            }
+        }
+    });
+}
+
+// Open model preview modal - simplified to show only layers
+function openModelPreview(modelId, modelName) {
+    let modelsData = window.modelsData || {};
+    
+    // If modelsData is empty, something went wrong with loading
+    if (Object.keys(modelsData).length === 0) {
+        console.error('modelsData is empty! This should not happen.');
+        showToast('Model data not loaded. Please refresh the page.', 'danger');
+        return;
+    }
+    
+    // Try to find the model by ID (check both string and number versions)
+    let modelData = modelsData[modelId] || modelsData[String(modelId)] || modelsData[Number(modelId)];
+    
+    if (!modelData) {
+        console.error('Model data not found for ID:', modelId);
+        console.error('Available models:', modelsData);
+        showToast('Model data not found', 'danger');
+        return;
+    }
+    
+    // Parse config_json if it's a string (same logic as loadModelConfigInfo)
+    let config;
+    if (typeof modelData.config_json === 'string') {
+        try {
+            config = JSON.parse(modelData.config_json);
+        } catch (e) {
+            console.error('Error parsing config JSON for preview:', e);
+            showToast('Error reading model configuration', 'danger');
+            return;
+        }
+    } else {
+        config = modelData.config_json || {};
+    }
+    
+    // Update modal title
+    document.getElementById('previewModelTitle').textContent = `${modelName} - Architecture`;
+    
+    // Show only architecture
+    updateArchitecture(config);
+    
+    // Open the modal
+    const modal = new bootstrap.Modal(document.getElementById('modelPreviewModal'));
+    modal.show();
+}
+
+// Simplified architecture update function
+function updateArchitecture(config) {
+    const previewContent = document.getElementById('previewModelContent');
+    
+    // Find layers in unified structure
+    let layers = [];
+    if (config.architecture && config.architecture.layers) {
+        layers = config.architecture.layers;
+    } else if (config.model && config.model.architecture && config.model.architecture.layers) {
+        layers = config.model.architecture.layers;
+    }
+    
+    // Create layers visualization
+    let html = `<div class="layers-list">`;
+    
+    if (layers && layers.length > 0) {
+        layers.forEach((layer, index) => {
+            const layerType = layer.type || layer.layer_type || 'Unknown';
+            const layerName = layer.name || layerType;
+            const features = layer.params?.features || layer.features || '—';
+            
+            // Determine layer class
+            let layerClass = 'layer-box';
+            const lowerType = layerType.toLowerCase();
+            
+            if (lowerType === 'input') {
+                layerClass += ' input-layer';
+            } else if (lowerType === 'output') {
+                layerClass += ' output-layer';
+            } else if (lowerType === 'linear') {
+                layerClass += ' hidden-layer';
+            } else if (lowerType.includes('conv')) {
+                layerClass += ' conv-layer';
+            } else if (lowerType.includes('norm')) {
+                layerClass += ' norm-layer';
+            } else if (lowerType.includes('pool')) {
+                layerClass += ' pool-layer';
+            } else if (lowerType === 'dropout') {
+                layerClass += ' dropout-layer';
+            } else if (['relu', 'sigmoid', 'tanh', 'leakyrelu'].includes(lowerType)) {
+                layerClass += ' activation-layer';
+            } else if (lowerType === 'flatten') {
+                layerClass += ' flatten-layer';
+            } else if (['lstm', 'gru'].includes(lowerType)) {
+                layerClass += ' recurrent-layer';
+            } else if (['add', 'concat'].includes(lowerType)) {
+                layerClass += ' operation-layer';
+            } else {
+                layerClass += ` ${lowerType}-layer`;
+            }
+            
+            html += `
+                <div class="${layerClass}">
+                    <div class="layer-content">${layerName}</div>
+                    <div class="layer-features">Features: ${features}</div>
+                </div>
+            `;
+            
+            // Add connector between layers (except for the last one)
+            if (index < layers.length - 1) {
+                html += `<div class="text-center"><div class="layer-connector"></div></div>`;
+            }
+        });
+    } else {
+        html += `
+            <div class="text-center py-5">
+                <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No layers defined</h5>
+                <p class="text-muted">This model doesn't have any layers configured yet.</p>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    previewContent.innerHTML = html;
+}
+
+// Delete model function
+function deleteModel(modelId) {
+    // Get model name from the card
+    const modelCard = document.querySelector(`[onclick="deleteModel(${modelId})"]`).closest('.card');
+    const modelName = modelCard.querySelector('.card-header h6').textContent.trim().replace('🗑️', '').trim();
+    
+    document.getElementById('deleteModelName').textContent = modelName;
+    
+    // Store modelId in the modal for later use
+    document.getElementById('confirmDeleteModel').setAttribute('data-model-id', modelId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModelModal'));
+    modal.show();
+}
+
+// Confirm delete model
+document.addEventListener('DOMContentLoaded', function() {
+    // ... existing code ...
+    
+    // Delete confirmation handler
+    document.getElementById('confirmDeleteModel').addEventListener('click', function() {
+        const modelId = this.getAttribute('data-model-id');
+        
+        fetch(`/api/delete-model-config/${modelId}/`, {
+            method: 'POST', // Changed to POST
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('deleteModelModal')).hide();
+            
+            if (data.success) {
+                showToast('Model deleted successfully', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('Error deleting model: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            bootstrap.Modal.getInstance(document.getElementById('deleteModelModal')).hide();
+            showToast('Error deleting model', 'danger');
+        });
+    });
+});
+
+// CSRF Token function
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Model Comparison JavaScript
+{% if selected_models and selected_models|length == 2 %}
+
+// Include Chart.js if not already included
+if (typeof Chart === 'undefined') {
+    const chartScript = document.createElement('script');
+    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    document.head.appendChild(chartScript);
+    
+    chartScript.onload = function() {
+        initializeCharts();
+    };
+} else {
+    initializeCharts();
+}
+
+function initializeCharts() {
+    // Debug: Log raw metric values
+    console.log('🔍 RADAR CHART DEBUG - Raw metric values:');
+    console.log('Model 1 ({{ selected_models.0.name }}):');
+    console.log('  - Accuracy:', {{ selected_models.0.metrics.accuracy }});
+    console.log('  - F1 Score:', {{ selected_models.0.metrics.f1 }});
+    console.log('  - Precision:', {{ selected_models.0.metrics.precision }});
+    console.log('  - Recall:', {{ selected_models.0.metrics.recall }});
+    console.log('  - Loss (raw):', {{ selected_models.0.metrics.loss }});
+    console.log('  - 1 - Loss:', 1 - {{ selected_models.0.metrics.loss }});
+    
+    console.log('Model 2 ({{ selected_models.1.name }}):');
+    console.log('  - Accuracy:', {{ selected_models.1.metrics.accuracy }});
+    console.log('  - F1 Score:', {{ selected_models.1.metrics.f1 }});
+    console.log('  - Precision:', {{ selected_models.1.metrics.precision }});
+    console.log('  - Recall:', {{ selected_models.1.metrics.recall }});
+    console.log('  - Loss (raw):', {{ selected_models.1.metrics.loss }});
+    console.log('  - 1 - Loss:', 1 - {{ selected_models.1.metrics.loss }});
+    
+    // Calculate normalized loss values with better visibility
+    const model1LossRaw = {{ selected_models.0.metrics.loss }};
+    const model2LossRaw = {{ selected_models.1.metrics.loss }};
+    
+    // Use a more aggressive normalization that makes loss values more visible
+    // Formula: 1 - min(loss/100, 0.9) 
+    // This maps loss values to a more visible range (0.1 to 1.0)
+    const model1LossNormalized = Math.max(0.1, 1 - Math.min(model1LossRaw / 100, 0.9));
+    const model2LossNormalized = Math.max(0.1, 1 - Math.min(model2LossRaw / 100, 0.9));
+    
+    console.log('🔍 NORMALIZED LOSS VALUES (aggressive scale):');
+    console.log('Model 1 raw loss:', model1LossRaw, '→ normalized:', model1LossNormalized);
+    console.log('Model 2 raw loss:', model2LossRaw, '→ normalized:', model2LossNormalized);
+    
+    // Gráfico de radar
+    const radarChart = new Chart(document.getElementById('radar-chart'), {
+        type: 'radar',
+        data: {
+            labels: ['Accuracy', 'F1 Score', 'Precision', 'Recall', 'Loss (normalized)'],
+            datasets: [
+                {
+                    label: '{{ selected_models.0.name }}',
+                    data: [
+                        {{ selected_models.0.metrics.accuracy }},
+                        {{ selected_models.0.metrics.f1 }},
+                        {{ selected_models.0.metrics.precision }},
+                        {{ selected_models.0.metrics.recall }},
+                        model1LossNormalized
+                    ],
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)'
+                },
+                {
+                    label: '{{ selected_models.1.name }}',
+                    data: [
+                        {{ selected_models.1.metrics.accuracy }},
+                        {{ selected_models.1.metrics.f1 }},
+                        {{ selected_models.1.metrics.precision }},
+                        {{ selected_models.1.metrics.recall }},
+                        model2LossNormalized
+                    ],
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.2)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    min: 0,
+                    max: 1,
+                    ticks: {
+                        stepSize: 0.2
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed) {
+                                label += context.parsed.toFixed(4);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Gráfico de barras
+    const metrics = ['Accuracy', 'F1 Score', 'Precision', 'Recall'];
+    const model1Data = [
+        {{ selected_models.0.metrics.accuracy }},
+        {{ selected_models.0.metrics.f1 }},
+        {{ selected_models.0.metrics.precision }},
+        {{ selected_models.0.metrics.recall }}
+    ];
+    const model2Data = [
+        {{ selected_models.1.metrics.accuracy }},
+        {{ selected_models.1.metrics.f1 }},
+        {{ selected_models.1.metrics.precision }},
+        {{ selected_models.1.metrics.recall }}
+    ];
+    
+    const barChart = new Chart(document.getElementById('bar-chart'), {
+        type: 'bar',
+        data: {
+            labels: metrics,
+            datasets: [
+                {
+                    label: '{{ selected_models.0.name }}',
+                    data: model1Data,
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '{{ selected_models.1.name }}',
+                    data: model2Data,
+                    backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 1
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(4);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+
+    
+    // Add click functionality to custom legends
+    document.querySelectorAll('#radar-legend .legend-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const datasetIndex = parseInt(this.dataset.dataset);
+            const isVisible = radarChart.isDatasetVisible(datasetIndex);
+            
+            if (isVisible) {
+                radarChart.hide(datasetIndex);
+                this.style.opacity = '0.5';
+            } else {
+                radarChart.show(datasetIndex);
+                this.style.opacity = '1';
+            }
+        });
+    });
+    
+    document.querySelectorAll('#bar-legend .legend-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const datasetIndex = parseInt(this.dataset.dataset);
+            const isVisible = barChart.isDatasetVisible(datasetIndex);
+            
+            if (isVisible) {
+                barChart.hide(datasetIndex);
+                this.style.opacity = '0.5';
+            } else {
+                barChart.show(datasetIndex);
+                this.style.opacity = '1';
+            }
+        });
+    });
+    
+    // Renderizar arquitectura de los modelos - función directa 
+    function renderModelArchitectureComparison(modelIndex) {
+        const architectureContainer = document.getElementById(`architecture-model-${modelIndex}`);
+        
+        // Get model data from the JSON script tag
+        const selectedModelsElement = document.getElementById('selected-models-data');
+        if (!selectedModelsElement) {
+            architectureContainer.innerHTML = '<div class="alert alert-info">No comparison data available.</div>';
+            return;
+        }
+        
+        const selectedModelsData = JSON.parse(selectedModelsElement.textContent);
+        const modelData = selectedModelsData[modelIndex];
+        
+        if (!modelData) {
+            architectureContainer.innerHTML = '<div class="alert alert-info">No architecture information available for this model.</div>';
+            return;
+        }
+        
+        // Get layers from unified structure
+        let layers = [];
+        if (modelData.config && modelData.config.model && modelData.config.model.architecture && modelData.config.model.architecture.layers) {
+            layers = modelData.config.model.architecture.layers;
+        }
+        
+        // Create layers visualization directly
+        let html = `<div class="layers-list">`;
+        
+        if (layers && layers.length > 0) {
+            layers.forEach((layer, index) => {
+                const layerType = layer.type || layer.layer_type || 'Unknown';
+                const layerName = layer.name || layerType;
+                const features = layer.params?.features || layer.features || '—';
+                
+                // Determine layer class
+                let layerClass = 'layer-box';
+                const lowerType = layerType.toLowerCase();
+                
+                if (lowerType === 'input') {
+                    layerClass += ' input-layer';
+                } else if (lowerType === 'output') {
+                    layerClass += ' output-layer';
+                } else if (lowerType === 'linear') {
+                    layerClass += ' hidden-layer';
+                } else if (lowerType.includes('conv')) {
+                    layerClass += ' conv-layer';
+                } else if (lowerType.includes('norm')) {
+                    layerClass += ' norm-layer';
+                } else if (lowerType.includes('pool')) {
+                    layerClass += ' pool-layer';
+                } else if (lowerType === 'dropout') {
+                    layerClass += ' dropout-layer';
+                } else if (['relu', 'sigmoid', 'tanh', 'leakyrelu'].includes(lowerType)) {
+                    layerClass += ' activation-layer';
+                } else if (lowerType === 'flatten') {
+                    layerClass += ' flatten-layer';
+                } else if (['lstm', 'gru'].includes(lowerType)) {
+                    layerClass += ' recurrent-layer';
+                } else if (['add', 'concat'].includes(lowerType)) {
+                    layerClass += ' operation-layer';
+                } else {
+                    layerClass += ` ${lowerType}-layer`;
+                }
+                
+                html += `
+                    <div class="${layerClass}">
+                        <div class="layer-content">${layerName}</div>
+                        <div class="layer-features">Features: ${features}</div>
+                    </div>
+                `;
+                
+                // Add connector between layers (except for the last one)
+                if (index < layers.length - 1) {
+                    html += `<div class="text-center"><div class="layer-connector"></div></div>`;
+                }
+            });
+        } else {
+            html += `
+                <div class="text-center py-5">
+                    <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No layers defined</h5>
+                    <p class="text-muted">This model doesn't have any layers configured yet.</p>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        // Set directly to the architecture container
+        architectureContainer.innerHTML = html;
+    }
+    
+    // Llamar la función para cada modelo
+    renderModelArchitectureComparison(0);
+    renderModelArchitectureComparison(1);
+}
+
+function initializeChartControls(radarChart, barChart) {
+    const modelColors = ['#0d6efd', '#ffc107']; // Blue, Yellow
+    const toggleContainer = document.getElementById('chart-toggle-buttons');
+    
+    if (!toggleContainer) return;
+    
+    const toggleButtons = toggleContainer.querySelectorAll('.chart-toggle-btn');
+    
+    // Set colors for indicators
+    toggleButtons.forEach((button, index) => {
+        const indicator = button.querySelector('.toggle-indicator');
+        if (indicator && modelColors[index]) {
+            // For inactive state, use the model color as background
+            indicator.style.setProperty('--model-color', modelColors[index]);
+            
+            // Set initial background color for inactive state
+            if (button.classList.contains('inactive')) {
+                indicator.style.backgroundColor = modelColors[index];
+            }
+        }
+    });
+    
+    // Add click event listeners
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const modelIndex = parseInt(button.dataset.modelIndex, 10);
+            const isCurrentlyActive = button.classList.contains('active');
+            const indicator = button.querySelector('.toggle-indicator');
+            
+            // Toggle button state
+            if (isCurrentlyActive) {
+                button.classList.remove('active');
+                button.classList.add('inactive');
+                // Set background color for inactive state
+                if (indicator && modelColors[modelIndex]) {
+                    indicator.style.backgroundColor = modelColors[modelIndex];
+                }
+            } else {
+                button.classList.remove('inactive');
+                button.classList.add('active');
+                // Clear background color for active state (will use CSS white)
+                if (indicator) {
+                    indicator.style.backgroundColor = '';
+                }
+            }
+            
+            // Toggle dataset visibility on both charts
+            const newVisibility = !isCurrentlyActive;
+            radarChart.setDatasetVisibility(modelIndex, newVisibility);
+            radarChart.update();
+            
+            barChart.setDatasetVisibility(modelIndex, newVisibility);
+            barChart.update();
+        });
+    });
+}
+
+{% endif %}
+
+// Template functionality - reuse existing openModelPreview
+function previewTemplate(templateId) {
+    // Get template data in the same format as modelsData
+    const templateData = getTemplateAsModelData(templateId);
+    
+    if (!templateData) {
+        showToast('Template not found', 'danger');
+        return;
+    }
+    
+    // Temporarily add template to modelsData so openModelPreview can find it
+    const tempId = `template_${templateId}`;
+    window.modelsData = window.modelsData || {};
+    window.modelsData[tempId] = templateData;
+    
+    // Use existing openModelPreview function
+    openModelPreview(tempId, templateData.name);
+    
+    // Clean up temporary data after modal is shown
+    setTimeout(() => {
+        delete window.modelsData[tempId];
+    }, 100);
+}
+
+function useTemplate(templateId) {
+    // Redirect to model designer with template parameter
+    window.location.href = `/model-designer/?template=${templateId}`;
+}
+
+function getTemplateAsModelData(templateId) {
+    // Template data in the same format as modelsData expects
+    const templates = {
+        'cnn-medical-images': {
+            id: 'template_cnn_medical_images',
+            name: 'CNN for Medical Images',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '224x224x1' },
+                    { type: 'Conv2d', features: '32 filters, 3x3' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'MaxPool2d', features: '2x2' },
+                    { type: 'Conv2d', features: '64 filters, 3x3' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'MaxPool2d', features: '2x2' },
+                    { type: 'Flatten', features: 'flatten' },
+                    { type: 'Linear', features: '128' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Dropout', features: '0.5' },
+                    { type: 'Linear', features: '1' },
+                    { type: 'Sigmoid', features: 'output' }
+                ]
+            }
+        },
+        'unet-segmentation': {
+            id: 'template_unet_segmentation',
+            name: 'U-Net for Segmentation',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '256x256x1' },
+                    { type: 'Conv2d', features: '64 filters, 3x3' },
+                    { type: 'Conv2d', features: '64 filters, 3x3' },
+                    { type: 'MaxPool2d', features: '2x2' },
+                    { type: 'Conv2d', features: '128 filters, 3x3' },
+                    { type: 'Conv2d', features: '128 filters, 3x3' },
+                    { type: 'MaxPool2d', features: '2x2' },
+                    { type: 'Conv2d', features: '256 filters, 3x3' },
+                    { type: 'Conv2d', features: '256 filters, 3x3' },
+                    { type: 'ConvTranspose2d', features: '128 filters, 2x2' },
+                    { type: 'Conv2d', features: '128 filters, 3x3' },
+                    { type: 'Conv2d', features: '128 filters, 3x3' },
+                    { type: 'ConvTranspose2d', features: '64 filters, 2x2' },
+                    { type: 'Conv2d', features: '64 filters, 3x3' },
+                    { type: 'Conv2d', features: '64 filters, 3x3' },
+                    { type: 'Conv2d', features: '1 filter, 1x1' },
+                    { type: 'Sigmoid', features: 'output' }
+                ]
+            }
+        },
+        'lstm-ecg': {
+            id: 'template_lstm_ecg',
+            name: 'LSTM for ECG Analysis',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '1000x12' },
+                    { type: 'LSTM', features: '128 units' },
+                    { type: 'Dropout', features: '0.3' },
+                    { type: 'LSTM', features: '64 units' },
+                    { type: 'Dropout', features: '0.3' },
+                    { type: 'Linear', features: '32' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Dropout', features: '0.5' },
+                    { type: 'Linear', features: '5' },
+                    { type: 'Softmax', features: 'output' }
+                ]
+            }
+        },
+        'cnn-lstm-eeg': {
+            id: 'template_cnn_lstm_eeg',
+            name: 'CNN-LSTM for EEG',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '1000x64' },
+                    { type: 'Conv1d', features: '32 filters, 3' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'MaxPool1d', features: '2' },
+                    { type: 'Conv1d', features: '64 filters, 3' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'MaxPool1d', features: '2' },
+                    { type: 'LSTM', features: '128 units' },
+                    { type: 'Dropout', features: '0.3' },
+                    { type: 'LSTM', features: '64 units' },
+                    { type: 'Dropout', features: '0.3' },
+                    { type: 'Linear', features: '32' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '2' },
+                    { type: 'Sigmoid', features: 'output' }
+                ]
+            }
+        },
+        'bert-clinical': {
+            id: 'template_bert_clinical',
+            name: 'BERT for Clinical NLP',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '512 tokens' },
+                    { type: 'BERT Embeddings', features: '768 dim' },
+                    { type: 'BERT Encoder', features: '12 layers' },
+                    { type: 'Pooler', features: '768 dim' },
+                    { type: 'Dropout', features: '0.1' },
+                    { type: 'Linear', features: '256' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Dropout', features: '0.1' },
+                    { type: 'Linear', features: 'num_classes' },
+                    { type: 'Softmax', features: 'output' }
+                ]
+            }
+        },
+        'basic-nn': {
+            id: 'template_basic_nn',
+            name: 'Basic Neural Network',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '784' },
+                    { type: 'Linear', features: '128' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Dropout', features: '0.2' },
+                    { type: 'Linear', features: '64' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Dropout', features: '0.2' },
+                    { type: 'Linear', features: '32' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '10' },
+                    { type: 'Softmax', features: 'output' }
+                ]
+            }
+        },
+        'autoencoder': {
+            id: 'template_autoencoder',
+            name: 'Deep Autoencoder',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '784' },
+                    { type: 'Linear', features: '512' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '256' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '128' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '64' },
+                    { type: 'ReLU', features: 'activation (bottleneck)' },
+                    { type: 'Linear', features: '128' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '256' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '512' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'Linear', features: '784' },
+                    { type: 'Sigmoid', features: 'output' }
+                ]
+            }
+        },
+        'resnet18': {
+            id: 'template_resnet18',
+            name: 'ResNet-18',
+            config_json: {
+                layers: [
+                    { type: 'Input', features: '224x224x3' },
+                    { type: 'Conv2d', features: '64 filters, 7x7, stride=2' },
+                    { type: 'BatchNorm2d', features: '64' },
+                    { type: 'ReLU', features: 'activation' },
+                    { type: 'MaxPool2d', features: '3x3, stride=2' },
+                    { type: 'ResBlock', features: '64 filters x2' },
+                    { type: 'ResBlock', features: '64 filters x2' },
+                    { type: 'ResBlock', features: '128 filters x2' },
+                    { type: 'ResBlock', features: '128 filters x2' },
+                    { type: 'ResBlock', features: '256 filters x2' },
+                    { type: 'ResBlock', features: '256 filters x2' },
+                    { type: 'ResBlock', features: '512 filters x2' },
+                    { type: 'ResBlock', features: '512 filters x2' },
+                    { type: 'AdaptiveAvgPool2d', features: '1x1' },
+                    { type: 'Linear', features: '1000' },
+                    { type: 'Softmax', features: 'output' }
+                ]
+            }
+        }
+    };
+    
+    return templates[templateId] || null;
+}
+
+
+
+// Template category filtering
+document.addEventListener('DOMContentLoaded', function() {
+    // Category filtering
+    const categoryButtons = document.querySelectorAll('[data-category]');
+    const templateCategories = document.querySelectorAll('.template-category');
+    
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const category = this.getAttribute('data-category');
+            
+            // Update active button
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show/hide template categories
+            templateCategories.forEach(categoryDiv => {
+                if (category === 'all' || categoryDiv.getAttribute('data-category') === category) {
+                    categoryDiv.style.display = 'block';
+                } else {
+                    categoryDiv.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // Template search functionality
+    const searchInput = document.getElementById('template-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const templateCards = document.querySelectorAll('.template-card');
+            
+            templateCards.forEach(card => {
+                const title = card.querySelector('.card-header h6').textContent.toLowerCase();
+                const description = card.querySelector('.card-text').textContent.toLowerCase();
+                const useCases = card.querySelector('.template-use-cases').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || description.includes(searchTerm) || useCases.includes(searchTerm)) {
+                    card.closest('[class*="col-"]').style.display = 'block';
+                } else {
+                    card.closest('[class*="col-"]').style.display = 'none';
+                }
+            });
+        });
+    }
+});
+
+</script>
+
+
+
+<style>
+/* Template-specific styles */
+.template-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Make template text more readable */
+.template-card .card-body {
+    padding: 1.5rem;
+}
+
+.template-card .card-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.template-card .template-use-cases,
+.template-card .template-performance {
+    font-size: 0.9rem;
+}
+
+.template-badges .badge {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+}
+
+.template-rating {
+    font-size: 0.8rem;
+}
+
+.template-stats .badge {
+    font-size: 0.7rem;
+}
+
+.template-use-cases {
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+.template-performance {
+    font-size: 0.8rem;
+}
+
+/* Custom purple color for templates */
+.bg-purple {
+    background-color: #6f42c1;
+}
+
+
+
+/* Category sidebar styles */
+.list-group-item-action:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item-action.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+.list-group-item-action.active .badge {
+    background-color: rgba(255,255,255,0.2) !important;
+}
+</style>
+
+<!-- New Model Type Selection Modal -->
+<div class="modal fade" id="newModelTypeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Create a New Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>What kind of model would you like to create?</p>
+                <div class="d-grid gap-2 model-type-selection">
+                    <a href="{% url 'model_designer' %}" class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-center p-3">
+                        <i class="fas fa-layer-group fa-2x me-3"></i>
+                        <div>
+                            <strong>Sequential Model</strong>
+                            <small class="d-block text-muted">Build linear sequential neural networks</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'model_designer_advanced' %}" class="btn btn-outline-info btn-lg d-flex align-items-center justify-content-center p-3">
+                        <i class="fas fa-project-diagram fa-2x me-3"></i>
+                        <div>
+                            <strong>Advanced Model (Residual Connections)</strong>
+                            <small class="d-block text-muted">Build complex architectures with skip connections (ResNet, U-Net, etc.)</small>
+                        </div>
+                    </a>
+                    <a href="{% url 'ml_model_designer' %}" id="new-ml-model-link" class="btn btn-outline-success btn-lg d-flex align-items-center justify-content-center p-3">
+                        <i class="fas fa-cogs fa-2x me-3"></i>
+                        <div>
+                            <strong>Machine Learning Model</strong>
+                            <small class="d-block text-muted">Configure classic algorithms like SVM, Random Forest, etc.</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 

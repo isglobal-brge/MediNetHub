@@ -1,0 +1,786 @@
+{% extends 'base.html' %}
+
+{% block title %}MediNet - Client Performance Monitor{% endblock %}
+{% load webapp_filters %}
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .client-sidebar {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 0;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .client-sidebar-header {
+        padding: 15px;
+        text-align: center;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .client-sidebar-header h5 {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .client-sidebar-header small {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+    }
+    
+    .client-list-item {
+        padding: 15px 20px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .client-list-item:hover {
+        background-color: #e7f0fe;
+    }
+    
+    .client-list-item.active {
+        background-color: #0d6efd; /* Use the consistent blue color */
+        color: white;
+    }
+    
+    .client-list-item.active .client-status {
+        background-color: white; /* Make circle white on active */
+        border: 2px solid white;
+    }
+
+    .client-list-item.active .text-muted {
+        color: rgba(255, 255, 255, 0.85); /* Improve contrast for sub-text */
+    }
+    
+    .client-status {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+    }
+    
+    .status-training {
+        background-color: #007bff;
+    }
+    
+    .status-completed {
+        background-color: #28a745;
+    }
+    
+    .status-warning {
+        background-color: #ffc107;
+    }
+    
+    .status-error {
+        background-color: #dc3545;
+    }
+    
+    .status-offline {
+        background-color: #6c757d;
+    }
+    
+    .client-summary {
+        background-color: var(--light-color);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px; /* Reduced padding */
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        height: 100%;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .metric-value {
+        font-size: 1.9rem; /* Reduced font size */
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .metric-trend {
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+    
+    .trend-up {
+        color: #28a745;
+    }
+    
+    .trend-down {
+        color: #dc3545;
+    }
+    
+    .trend-stable {
+        color: #6c757d;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .client-info-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px 20px; /* Slightly reduced padding */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px; /* Reduced margin */
+        padding: 6px 0; /* Reduced padding */
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-icon {
+        width: 20px;
+        margin-right: 10px;
+        color: var(--secondary-color);
+    }
+    
+    .info-label {
+        font-weight: 500;
+        color: #495057;
+        margin-right: 10px;
+    }
+    
+    .info-value {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .overview-stats {
+        background: linear-gradient(135deg, #1d79f2 0%, #0d6efd 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 91, 255, 0.2);
+    }
+    
+    .stat-item {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        text-align: center;
+        padding: 15px;
+        position: relative;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .stat-item:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+    }
+
+    .stat-item:not(:last-child)::after {
+        display: none; /* Replaced by card model */
+    }
+    
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Chart legend styling - target Chart.js generated elements */
+    .chart-legend-custom {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid transparent;
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.025em;
+    }
+    
+    .legend-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        background: rgba(255,255,255,1);
+    }
+    
+    .legend-item:active {
+        transform: translateY(0px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+</style>
+
+<!-- Chart.js para los gráficos -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-network-wired me-2"></i>Client Performance Monitor</h2>
+            <p class="text-muted">Real-time monitoring of federated training clients</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-outline-primary me-2" id="refresh-btn">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <button type="button" class="btn btn-outline-secondary me-2" id="export-btn">
+                <i class="fas fa-download me-1"></i>Export Data
+            </button>
+            <a href="{% url 'dashboard' job_id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Overview Stats -->
+    <div class="overview-stats">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <span class="stat-number" id="total-clients">{{ overview_stats.total_clients }}</span>
+                    <span class="stat-label">Total Clients</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <span class="stat-number" id="active-clients">{{ overview_stats.active_clients }}</span>
+                    <span class="stat-label">Active</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <span class="stat-number" id="warning-clients">{{ overview_stats.warning_clients }}</span>
+                    <span class="stat-label">Issues</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <span class="stat-number" id="avg-accuracy">{{ overview_stats.avg_accuracy }}%</span>
+                    <span class="stat-label">Avg Accuracy</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Sidebar with Client List -->
+        <div class="col-md-3">
+            <div class="client-sidebar">
+                <div class="client-sidebar-header">
+                    <h5 class="mb-0">Clients</h5>
+                    <small>Click to view details</small>
+                </div>
+                
+                <!-- Client List -->
+                {% for client in clients %}
+                <div class="client-list-item {% if forloop.first %}active{% endif %}" data-client-id="{{ client.id }}">
+                    <div class="d-flex align-items-center">
+                        <span class="client-status status-{{ client.status }}"></span>
+                        <div>
+                            <div class="fw-bold">{{ client.name }}</div>
+                            <small class="text-muted">
+                                {% if client.status != 'offline' %}
+                                    {{ client.accuracy }}%
+                                {% else %}
+                                    Offline
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        {% if client.trend == 'up' %}
+                            <i class="fas fa-arrow-up trend-up me-1"></i>
+                            <small>+{{ client.trend_value|floatformat:1 }}%</small>
+                        {% elif client.trend == 'down' %}
+                            <i class="fas fa-arrow-down trend-down me-1"></i>
+                            <small>{{ client.trend_value|floatformat:1 }}%</small>
+                        {% elif client.trend == 'stable' %}
+                            <i class="fas fa-minus trend-stable me-1"></i>
+                            <small>±0.0%</small>
+                        {% elif client.trend == 'warning' %}
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                        {% elif client.trend == 'offline' %}
+                            <i class="fas fa-times text-danger"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Main Panel -->
+        <div class="col-md-9">
+            <!-- Client Details Header -->
+            <div class="client-summary">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-1" id="client-name">{{ clients.0.name }} Details</h4>
+                        <p class="text-muted mb-0" id="client-description">{{ clients.0.description }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-{% if job.status == 'completed' %}success{% elif job.status == 'running' %}primary{% elif job.status == 'failed' %}danger{% else %}warning{% endif %} p-2" id="client-status-badge">
+                            <i class="fas fa-circle me-1"></i>{{ job.status|title }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                                            <div class="metric-card">
+                            <div class="metric-value" id="client-accuracy">{{ clients.0.accuracy }}%</div>
+                            <div class="metric-label">Accuracy</div>
+                            <div class="metric-trend trend-{{ clients.0.trend }}">
+                                {% if clients.0.trend == 'up' %}
+                                    <i class="fas fa-arrow-up me-1"></i>+{{ clients.0.trend_value|floatformat:1 }}%
+                                {% elif clients.0.trend == 'down' %}
+                                    <i class="fas fa-arrow-down me-1"></i>{{ clients.0.trend_value|floatformat:1 }}%
+                                {% else %}
+                                    <i class="fas fa-minus me-1"></i>±0.0%
+                                {% endif %}
+                            </div>
+                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value" id="client-loss">{{ clients.0.loss|floatformat:3 }}</div>
+                        <div class="metric-label">Loss</div>
+                        <div class="metric-trend trend-down">
+                            <i class="fas fa-arrow-down me-1"></i>Improving
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                                            <div class="metric-card">
+                            <div class="metric-value" id="client-samples">{{ clients.0.train_samples }}</div>
+                            <div class="metric-label">Train Samples</div>
+                            <div class="metric-trend trend-stable">
+                                <i class="fas fa-database me-1"></i>Fixed
+                            </div>
+                        </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value" id="client-response">{{ clients.0.response_time|floatformat:1 }}s</div>
+                        <div class="metric-label">Avg Response</div>
+                        <div class="metric-trend trend-up">
+                            <i class="fas fa-wifi me-1"></i>Good
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Client Information -->
+            <div class="row mb-4">
+                <div class="col-12">
+                     <div class="client-info-card">
+                        <h5 class="mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Client Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-item">
+                                    <i class="fas fa-map-marker-alt info-icon"></i>
+                                    <span class="info-label">IP Address:</span>
+                                    <span class="info-value" id="client-ip">{{ clients.0.ip }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-database info-icon"></i>
+                                    <span class="info-label">Train Samples:</span>
+                                    <span class="info-value" id="client-train-samples">{{ clients.0.train_samples }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-vial info-icon"></i>
+                                    <span class="info-label">Test Samples:</span>
+                                    <span class="info-value" id="client-test-samples">{{ clients.0.test_samples }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-item">
+                                    <i class="fas fa-clock info-icon"></i>
+                                    <span class="info-label">Last Seen:</span>
+                                    <span class="info-value" id="client-last-seen">{{ clients.0.last_seen }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-tachometer-alt info-icon"></i>
+                                    <span class="info-label">Avg Response:</span>
+                                    <span class="info-value" id="client-avg-response">{{ clients.0.response_time|floatformat:1 }}s</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fas fa-exchange-alt info-icon"></i>
+                                    <span class="info-label">Rounds Completed:</span>
+                                    <span class="info-value" id="client-rounds">{{ clients.0.rounds }}/{{ total_rounds }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Chart -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h5 class="mb-3">
+                            <i class="fas fa-chart-line me-2"></i>Performance Trends (Last 10 Rounds)
+                        </h5>
+                        <div class="chart-legend-custom" id="accuracy-loss-legend">
+                            <div class="legend-item" data-dataset="0">
+                                <span class="legend-color" style="background-color: rgba(52, 152, 219, 1);"></span>
+                                <span>Accuracy</span>
+                            </div>
+                            <div class="legend-item" data-dataset="1">
+                                <span class="legend-color" style="background-color: rgba(231, 76, 60, 1);"></span>
+                                <span>Loss</span>
+                            </div>
+                        </div>
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="clientPerformanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+{{ performance_chart_data|json_script:"chart-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {    
+    // Chart data from backend
+    const chartDataElement = document.getElementById('chart-data');
+    const chartData = JSON.parse(chartDataElement.textContent);
+    
+    const canvas = document.getElementById('clientPerformanceChart');
+    if (!canvas) {
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const clientPerformanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Accuracy',
+                data: [],
+                borderColor: 'rgba(52, 152, 219, 1)',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 3,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }, {
+                label: 'Loss',
+                data: [],
+                borderColor: 'rgba(231, 76, 60, 1)',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                borderWidth: 3,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Training Rounds'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    min: 0,
+                    max: 1,
+                    title: {
+                        display: true,
+                        text: 'Accuracy'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return (value * 100).toFixed(0) + '%';
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    min: 0,
+                    title: {
+                        display: true,
+                        text: 'Loss'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            // Format large numbers appropriately
+                            if (value > 1000) {
+                                return value.toExponential(2);
+                            } else if (value > 100) {
+                                return value.toFixed(1);
+                            } else {
+                                return value.toFixed(3);
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+        
+    // Update chart with data from backend (like dashboard.html does)
+    clientPerformanceChart.data.labels = chartData.labels;
+    clientPerformanceChart.data.datasets[0].data = chartData.accuracy;
+    clientPerformanceChart.data.datasets[1].data = chartData.loss;
+    
+    // Dynamically adjust the Loss axis max to allow it to scale properly
+    if (chartData.loss && chartData.loss.length > 0) {
+        const maxLoss = Math.max(...chartData.loss);
+        // Add 10% padding for better visualization, ensure it's at least 1
+        clientPerformanceChart.options.scales.y1.max = Math.max(1, maxLoss * 1.1);
+    }
+    
+    clientPerformanceChart.update();
+
+    
+    // Client data from backend
+    const clientsData = {
+        {% for client in clients %}
+        '{{ client.id }}': {
+            name: '{{ client.name }} Details',
+            description: '{{ client.description }}',
+            accuracy: '{{ client.accuracy }}%',
+            loss: '{{ client.loss|floatformat:3 }}',
+            samples: '{{ client.train_samples }}',
+            response: '{{ client.response_time|floatformat:1 }}s',
+            ip: '{{ client.ip }}',
+            trainSamples: '{{ client.train_samples }}',
+            testSamples: '{{ client.test_samples }}',
+            lastSeen: '{{ client.last_seen }}',
+            avgResponse: '{{ client.response_time|floatformat:1 }}s',
+            rounds: '{{ client.rounds }}/{{ total_rounds }}',
+            roundsHistory: {{ client.rounds_history|json_string }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    // Add click functionality to custom legend
+    document.querySelectorAll('#accuracy-loss-legend .legend-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const datasetIndex = parseInt(this.dataset.dataset);
+            const isVisible = clientPerformanceChart.isDatasetVisible(datasetIndex);
+            
+            if (isVisible) {
+                clientPerformanceChart.hide(datasetIndex);
+                this.style.opacity = '0.5';
+            } else {
+                clientPerformanceChart.show(datasetIndex);
+                this.style.opacity = '1';
+            }
+        });
+    });
+
+    // Client selection functionality
+    document.querySelectorAll('.client-list-item').forEach(item => {
+        item.addEventListener('click', function() {
+            // Remove active class from all items
+            document.querySelectorAll('.client-list-item').forEach(i => i.classList.remove('active'));
+            // Add active class to clicked item
+            this.classList.add('active');
+            
+            // Update client details and chart
+            const clientId = this.dataset.clientId;
+            updateClientDetails(clientId);
+            updateClientChart(clientId);
+        });
+    });
+    
+    // Function to update client details
+    function updateClientDetails(clientId) {
+        const data = clientsData[clientId];
+        if (!data) {
+            return;
+        }
+        
+        document.getElementById('client-name').textContent = data.name;
+        document.getElementById('client-description').textContent = data.description;
+        document.getElementById('client-accuracy').textContent = data.accuracy;
+        document.getElementById('client-loss').textContent = data.loss;
+        document.getElementById('client-samples').textContent = data.samples;
+        document.getElementById('client-response').textContent = data.response;
+        document.getElementById('client-ip').textContent = data.ip;
+        document.getElementById('client-train-samples').textContent = data.trainSamples;
+        document.getElementById('client-test-samples').textContent = data.testSamples;
+        document.getElementById('client-last-seen').textContent = data.lastSeen;
+        document.getElementById('client-avg-response').textContent = data.avgResponse;
+        document.getElementById('client-rounds').textContent = data.rounds;
+    }
+    
+    // Function to update client chart with specific client data
+    function updateClientChart(clientId) {
+        const data = clientsData[clientId];
+        if (!data || !data.roundsHistory) {
+            return;
+        }
+        
+        const roundsHistory = data.roundsHistory;
+        const labels = [];
+        const accuracyData = [];
+        const lossData = [];
+        
+        // Sort rounds by number
+        const sortedRounds = Object.keys(roundsHistory).sort((a, b) => parseInt(a) - parseInt(b));
+        
+        sortedRounds.forEach(roundNum => {
+            const roundData = roundsHistory[roundNum];
+            labels.push(`R${roundNum}`);
+            accuracyData.push(roundData.accuracy || 0);
+            lossData.push(roundData.loss || 0);
+        });
+        
+        // Update chart data
+        clientPerformanceChart.data.labels = labels;
+        clientPerformanceChart.data.datasets[0].data = accuracyData;
+        clientPerformanceChart.data.datasets[1].data = lossData;
+        
+        // Dynamically adjust the Loss axis max for this client
+        if (lossData.length > 0) {
+            const maxLoss = Math.max(...lossData);
+            clientPerformanceChart.options.scales.y1.max = Math.max(1, maxLoss * 1.1);
+        }
+        
+        // Update the chart
+        clientPerformanceChart.update();
+    }
+
+    // Refresh functionality
+    document.getElementById('refresh-btn').addEventListener('click', function() {
+        // Add refresh logic here
+        console.log('Refreshing client data...');
+    });
+
+    // Export functionality
+    document.getElementById('export-btn').addEventListener('click', function() {
+        // Add export logic here
+        console.log('Exporting client data...');
+    });
+    
+    // Initialize with first client
+    const firstClientId = Object.keys(clientsData)[0];
+    if (firstClientId) {
+        console.log('Initializing with first client:', firstClientId);
+        updateClientDetails(firstClientId);
+    }
+});
+</script>
+{% endblock %} 

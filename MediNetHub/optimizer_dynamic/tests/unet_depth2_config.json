@@ -1,0 +1,28 @@
+{
+    "name": "UNet-Depth-2",
+    "layers": [
+        {"id": "input", "type": "Input", "params": {}},
+
+        {"id": "d_conv1", "type": "Conv2d", "params": {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "padding": 1}, "inputs": ["input"]},
+        {"id": "d_relu1", "type": "ReLU", "params": {"inplace": true}, "inputs": ["d_conv1"]},
+        {"id": "d_conv2", "type": "Conv2d", "params": {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "padding": 1}, "inputs": ["d_relu1"]},
+        {"id": "d_relu2", "type": "ReLU", "params": {"inplace": true}, "inputs": ["d_conv2"]},
+        {"id": "pool1", "type": "MaxPool2d", "params": {"kernel_size": 2, "stride": 2}, "inputs": ["d_relu2"]},
+
+        {"id": "d_conv3", "type": "Conv2d", "params": {"in_channels": 64, "out_channels": 128, "kernel_size": 3, "padding": 1}, "inputs": ["pool1"]},
+        {"id": "d_relu3", "type": "ReLU", "params": {"inplace": true}, "inputs": ["d_conv3"]},
+        {"id": "d_conv4", "type": "Conv2d", "params": {"in_channels": 128, "out_channels": 128, "kernel_size": 3, "padding": 1}, "inputs": ["d_relu3"]},
+        {"id": "d_relu4", "type": "ReLU", "params": {"inplace": true}, "inputs": ["d_conv4"]},
+
+        {"id": "up1", "type": "Upsample", "params": {"scale_factor": 2, "mode": "bilinear"}, "inputs": ["d_relu4"]},
+        {"id": "concat1", "type": "Concat", "inputs": ["up1", "d_relu2"]},
+        {"id": "u_conv1", "type": "Conv2d", "params": {"in_channels": 192, "out_channels": 64, "kernel_size": 3, "padding": 1}, "inputs": ["concat1"]},
+        {"id": "u_relu1", "type": "ReLU", "params": {"inplace": true}, "inputs": ["u_conv1"]},
+        {"id": "u_conv2", "type": "Conv2d", "params": {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "padding": 1}, "inputs": ["u_relu1"]},
+        {"id": "u_relu2", "type": "ReLU", "params": {"inplace": true}, "inputs": ["u_conv2"]},
+
+        {"id": "out_conv", "type": "Conv2d", "params": {"in_channels": 64, "out_channels": 1, "kernel_size": 1}, "inputs": ["u_relu2"]},
+        {"id": "output", "type": "Output", "inputs": ["out_conv"]}
+    ],
+    "output_layers": ["output"]
+} 

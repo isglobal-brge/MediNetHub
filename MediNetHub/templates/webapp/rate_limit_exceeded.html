@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Rate Limit Exceeded - MediNet{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Rate Limit Exceeded
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-clock fa-4x text-warning mb-3"></i>
+                        <h5>Too Many Requests</h5>
+                        <p class="text-muted">{{ message }}</p>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Why am I seeing this?</strong><br>
+                        This security measure protects our system from abuse and ensures fair usage for all users.
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>What you can do:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-pause text-primary me-2"></i>Wait a few minutes before trying again</li>
+                            <li><i class="fas fa-home text-primary me-2"></i>Return to the homepage</li>
+                            <li><i class="fas fa-envelope text-primary me-2"></i>Contact support if this persists</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'home' %}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>Return to Homepage
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh after 60 seconds
+setTimeout(function() {
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'btn btn-success mt-3';
+    refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Try Again';
+    refreshBtn.onclick = function() { location.reload(); };
+    
+    const cardBody = document.querySelector('.card-body');
+    cardBody.appendChild(refreshBtn);
+}, 60000);
+</script>
+{% endblock %} 

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}User Profile - MediNet{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-color: #1976d2;
+    --danger-color: #d32f2f;
+    --danger-light: #ffebee;
+    --gray-100: #f5f5f5;
+    --gray-200: #eeeeee;
+    --gray-600: #757575;
+    --gray-800: #424242;
+    --body-bg: #f7f9fc;
+}
+
+body {
+    background-color: var(--body-bg);
+}
+
+.profile-card, .management-card {
+    background-color: #ffffff;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    font-size: 3rem;
+    background-color: var(--primary-color);
+}
+
+.nav-pills .nav-link {
+    border-radius: 8px;
+    font-weight: 500;
+    color: var(--gray-800);
+    padding: 10px 15px;
+    transition: all 0.2s ease-in-out;
+}
+
+.nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+    color: #fff;
+    background-color: var(--primary-color);
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+    background-color: var(--gray-100);
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(25, 118, 210, 0.25);
+}
+
+.danger-zone {
+    border: 2px solid var(--danger-light);
+    background-color: var(--danger-light);
+    border-radius: 12px;
+}
+
+.danger-zone h5 {
+    color: var(--danger-color);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Profile Card -->
+        <div class="col-lg-4">
+            <div class="profile-card text-center p-4">
+                <div class="profile-avatar rounded-circle text-white d-flex align-items-center justify-content-center mx-auto mb-3">
+                    {{ user.username.0|upper }}
+                </div>
+                <h4 class="fw-bold mb-1">{{ user.first_name }} {{ user.last_name }}</h4>
+                <p class="text-muted">@{{ user.username }}</p>
+                <p class="text-muted mb-3">{{ profile.organization|default:"No organization specified" }}</p>
+                <span class="badge bg-light text-dark">{{ user.groups.first.name|default:"User" }}</span>
+            </div>
+        </div>
+
+        <!-- Management Tabs -->
+        <div class="col-lg-8">
+            <div class="management-card">
+                <div class="card-header bg-white border-0 p-4">
+                    <ul class="nav nav-pills" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pills-account-tab" data-bs-toggle="pill" data-bs-target="#pills-account" type="button" role="tab" aria-controls="pills-account" aria-selected="true">
+                                <i class="fas fa-user-cog me-2"></i>Account
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-security-tab" data-bs-toggle="pill" data-bs-target="#pills-security" type="button" role="tab" aria-controls="pills-security" aria-selected="false">
+                                <i class="fas fa-shield-alt me-2"></i>Security
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pills-danger-tab" data-bs-toggle="pill" data-bs-target="#pills-danger" type="button" role="tab" aria-controls="pills-danger" aria-selected="false">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-4">
+                    <div class="tab-content" id="pills-tabContent">
+                        <!-- Account Settings Tab -->
+                        <div class="tab-pane fade show active" id="pills-account" role="tabpanel" aria-labelledby="pills-account-tab">
+                            <h5 class="fw-bold mb-4">Account Settings</h5>
+                            <form method="post">
+                                {% csrf_token %}
+                                {{ user_form|crispy }}
+                                {{ profile_form|crispy }}
+                                <button type="submit" name="update_profile" class="btn btn-primary mt-3">Save Changes</button>
+                            </form>
+                        </div>
+
+                        <!-- Security Tab -->
+                        <div class="tab-pane fade" id="pills-security" role="tabpanel" aria-labelledby="pills-security-tab">
+                            <h5 class="fw-bold mb-4">Change Password</h5>
+                            <form method="post">
+                                {% csrf_token %}
+                                {{ password_form|crispy }}
+                                <button type="submit" name="change_password" class="btn btn-primary mt-3">Update Password</button>
+                            </form>
+                        </div>
+
+                        <!-- Danger Zone Tab -->
+                        <div class="tab-pane fade" id="pills-danger" role="tabpanel" aria-labelledby="pills-danger-tab">
+                            <div class="danger-zone p-4">
+                                <h5 class="fw-bold mb-3">Danger Zone</h5>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">Export Account Data</h6>
+                                        <p class="text-muted small mb-0">Download all your personal data and configurations.</p>
+                                    </div>
+                                    <button class="btn btn-outline-dark" disabled>Export Data</button>
+                                </div>
+                                
+                                <hr>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">Delete This Account</h6>
+                                        <p class="text-muted small mb-0">Once deleted, there is no going back. Please be certain.</p>
+                                    </div>
+                                    <button class="btn btn-danger" disabled>Delete Account</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

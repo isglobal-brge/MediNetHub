@@ -1,0 +1,141 @@
+{% load humanize %}
+{% load dataset_filters %}
+<!-- Tabular Dataset Metrics - Professional Medical Style -->
+
+{% if dataset.metadata %}
+<!-- Metadata Analysis -->
+{% if dataset.metadata.statistical_summary.statistical_summary %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Metadata Analysis
+                </h6>
+                <small class="text-white">
+                    <i class="fas fa-clock me-1"></i>Last updated
+                </small>
+            </div>
+            <div class="card-body" style="background-color: #fff;">
+                <div class="mb-3">
+                    <p class="text-muted mb-0" style="font-size: 14px;">
+                        Statistical Summary for {{ dataset.num_columns|default:"13" }} columns
+                    </p>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size: 14px;">
+                        <thead style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+                            <tr>
+                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Column</th>
+                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Type</th>
+                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Mean</th>
+                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Median</th>
+                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Std Dev</th>
+                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">P5 - P95</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for column, stats in dataset.metadata.statistical_summary.statistical_summary.items %}
+                            <tr style="border-bottom: 1px solid #f1f3f4;">
+                                <td style="padding: 12px; vertical-align: middle;">
+                                    <strong style="color: #1f2937;">{{ column }}</strong>
+                                    {% if column == dataset.target_column %}
+                                        <span class="badge ms-2" style="background-color: #f59e0b; color: white; font-size: 10px;">Target</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px; vertical-align: middle;">
+                                    <span class="badge" style="background-color: #6b7280; color: white; font-size: 10px;">
+                                        {% if dataset.metadata.statistical_summary.column_types %}
+                                            {{ dataset.metadata.statistical_summary.column_types|lookup:column|default:"numeric" }}
+                                        {% else %}
+                                            numeric
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
+                                    {% if stats.mean %}
+                                        {{ stats.mean|floatformat:2 }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
+                                    {% if stats.median is not None %}
+                                        {{ stats.median|floatformat:2 }}
+                                    {% else %}
+                                        {{ stats|lookup:"50%"|default:"-"|floatformat:2 }}
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
+                                    {% if stats.std is not None %}
+                                        {{ stats.std|floatformat:2 }}
+                                    {% else %}
+                                        {{ stats.stddev|default:"-"|floatformat:2 }}
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
+                                    {% if stats.p5 is not None and stats.p95 is not None %}
+                                        {{ stats.p5|floatformat:1 }} - {{ stats.p95|floatformat:1 }}
+                                    {% else %}
+                                        {% with p5_val=stats|lookup:"5%" p95_val=stats|lookup:"95%" %}
+                                            {% if p5_val and p95_val %}
+                                                {{ p5_val|floatformat:1 }} - {{ p95_val|floatformat:1 }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Fallback for datasets without rich metadata -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="text-center py-4">
+            <div class="mb-3">
+                <i class="fas fa-info-circle" style="font-size: 3rem; color: #0ea5e9;"></i>
+            </div>
+            <h5 class="text-dark mb-3">Limited Metadata Available</h5>
+            <p class="text-muted mb-4">This dataset doesn't have detailed statistical metadata. Here's the basic information:</p>
+            
+            <div class="row g-3 justify-content-center">
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                        <div class="fw-bold text-primary">{{ dataset.patient_count|intcomma|default:"299" }}</div>
+                        <small class="text-muted">Samples</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                        <div class="fw-bold text-success">{{ dataset.num_columns|default:"13" }}</div>
+                        <small class="text-muted">Features</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                        <div class="fw-bold text-info">{{ dataset.file_size|filesizeformat }}</div>
+                        <small class="text-muted">Size</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                        <div class="fw-bold text-warning">{{ dataset.target_column|default:"DEATH_EVENT" }}</div>
+                        <small class="text-muted">Target</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
