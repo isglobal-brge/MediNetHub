@@ -35,7 +35,6 @@ def json_string(value):
         json_str = json_str.replace('>', '\\u003e')
         json_str = json_str.replace('&', '\\u0026')
         json_str = json_str.replace("'", '\\u0027')
-        json_str = json_str.replace('"', '&quot;')
         return mark_safe(json_str)
     except (TypeError, ValueError):
         return 'null' 
