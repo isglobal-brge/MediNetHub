@@ -85,6 +85,8 @@ python manage.py migrate
 # ==============================================================================
 echo "[MEDINET ENTRYPOINT] Collecting static files..."
 python manage.py collectstatic --noinput
+python manage.py createcachetable
+
 
 # ==============================================================================
 # Start Django development server

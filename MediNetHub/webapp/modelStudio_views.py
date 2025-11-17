@@ -88,8 +88,6 @@ def models_list(request):
         'models_json': models_json,
     }
     
-    logger.error(f"🔍 DEBUG: Rendering template")
-    print(f"🔍 DEBUG: Rendering template")
     return render(request, 'webapp/models_list.html', context)
 
 
@@ -108,7 +106,7 @@ def model_designer(request):
         try:
             edit_model = ModelConfig.objects.get(id=edit_model_id, user=request.user)
             edit_mode = True
-            
+
             config_to_parse = edit_model.config_json
             if config_to_parse:
                 try:
@@ -121,19 +119,21 @@ def model_designer(request):
         except ModelConfig.DoesNotExist:
             messages.error(request, 'Model not found or access denied.')
             return redirect('models_list')
-    
+
     # Get user's model configurations - ONLY DL models or legacy models without type
     model_configs = ModelConfig.objects.filter(
         user=request.user.id
     ).exclude(
         model_type='ml'  # Exclude ML models
     ).order_by('-created_at')
-    
+
     models_list = [{
         'id': model.id,
         'name': model.name,
         'created_at': model.created_at.strftime('%Y-%m-%d %H:%M'),
     } for model in model_configs]
+
+    selected_datasets = request.session.get('selected_datasets', [])
     
     context = {
         'model_configs': models_list,
@@ -142,15 +142,15 @@ def model_designer(request):
         'loss_types': loss_types,
         'strategy_types': strategy_types,
         'previous_step_completed': True,
-        'selected_datasets': request.session.get('selected_datasets', []),
+        'selected_datasets': selected_datasets,
         'edit_mode': edit_mode,
         'edit_model': edit_model,
         'edit_model_json': edit_model_json,
     }
-    
+
     # Añadir todos los textos de ayuda al contexto
     context.update(parameter_helpers)
-    
+
     return render(request, 'webapp/model_designer.html', context)
 
 

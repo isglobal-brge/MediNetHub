@@ -886,11 +886,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         })
                         .then(data => {
                             if (!data) {
-                                throw new Error("No data received from API");
+                                throw new Error('No s\'han rebut dades de l\'API');
                             }
-
+                            
                             if (!data.id || !data.name) {
-                                throw new Error("Response does not contain expected model data");
+                                throw new Error('La resposta no conté les dades esperades del model');
                             }
                             
                             // Extreure la configuració del model
@@ -904,14 +904,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ...modelConfig
                                 });
                                 loadModal.hide();
-                                showMessage(`Model "${data.name}" loaded correctly`, 'success');
+                                showMessage(`Model "${data.name}" carregat correctament`, 'success');
                             } catch (loadError) {
                                 throw loadError;
                             }
                         })
                         .catch(error => {
-                            console.error('Err:', error.message);
-                            showMessage(`Error loading model: ${error.message}`, 'error');
+                            console.error('Error carregant el model:', error.message);
+                            showMessage(`Error carregant el model: ${error.message}`, 'error');
                         });
                 });
             });
@@ -1094,14 +1094,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Funcions
     function initializeModel() {
         // Get input features and target info from selected datasets
-        const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+        const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
 
-        let inputFeatures = 1; // Default value
+        let inputFeatures = 12; // Default value
         let outputFeatures = 1; // Default value for binary classification
 
         if (selectedDatasets && selectedDatasets.length > 0) {
             const dataset = selectedDatasets[0];
-            console.log(dataset);
             // Get input features from features_info
             if (dataset.features_info && dataset.features_info.input_features) {
                 inputFeatures = dataset.features_info.input_features;
@@ -1708,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         } else if (layer.id === 'output') {
-            const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+            const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
             let targetType = 'unknown';
             if (selectedDatasets && selectedDatasets.length > 0 && selectedDatasets[0].target_info) {
                 targetType = selectedDatasets[0].target_info.type;
@@ -2596,7 +2595,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loss_function: document.getElementById('loss-function').value
             },
             dataset: {
-                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
+                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|json_string }}{% else %}[]{% endif %}
             }
         };
         
@@ -2614,7 +2613,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/datasets/${datasetId}/info/`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error("Could not retrieve dataset information");
+                        throw new Error('No s\'ha pogut obtenir la informació del dataset');
                     }
                     return response.json();
                 })
@@ -2750,7 +2749,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 rounds: 10
             },
             dataset: {
-                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
+                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|json_string }}{% else %}[]{% endif %}
             }
         }
         
@@ -2851,7 +2850,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Verify that at least one dataset is selected
-        const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+        const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
         if (!selectedDatasets || selectedDatasets.length === 0) {
             errors.push({
                 type: 'error',
@@ -2934,7 +2933,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 rounds: 10
             },
             dataset: {
-                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
+                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|json_string }}{% else %}[]{% endif %}
             }
         };
         
@@ -3095,7 +3094,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Obtenir informació del dataset
-            const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+            const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
             let inputFeatures = 12;
             let outputFeatures = 1;
             

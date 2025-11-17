@@ -903,7 +903,7 @@
                 };
                 
                 // Add selected datasets to unified structure
-                const selectedDatasets = {{ selected_datasets|json_string }};
+                const selectedDatasets = {{  selected_datasets|default:'[]'|to_json }};
                 if (selectedDatasets && selectedDatasets.length > 0) {
                     if (!formData.model.config_json.dataset) {
                         formData.model.config_json.dataset = {};

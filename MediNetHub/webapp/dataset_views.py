@@ -557,11 +557,11 @@ def store_selected_datasets(request):
                         'port': new_dataset['connection']['port']
                     }
                 }
-                
+
                 current_datasets.append(clean_dataset)
                 request.session['selected_datasets'] = current_datasets
                 request.session.modified = True
-                
+
                 return JsonResponse({
                     'success': True,
                     'message': f'Dataset {clean_dataset["dataset_name"]} from {clean_dataset["connection"]["name"]} added successfully'
@@ -623,6 +623,7 @@ def check_dataset_status(request):
         }, status=400)
 
 
+@login_required
 @require_http_methods(["POST"])
 @user_rate_limit(rate=settings.RATE_LIMITS['MANAGE_DATASETS'], method='POST', block=True)
 def remove_selected_dataset(request):
@@ -831,7 +832,8 @@ def dataset_detail_view(request, dataset_id):
             messages.error(request, f"Error processing dataset data: {str(e)}")
             return redirect('datasets')
         context = {
-            'dataset': dataset_obj
+            'dataset': dataset_obj,
+            'back_url': 'datasets'
         }
         return render(request, 'webapp/dataset_details.html', context)
         

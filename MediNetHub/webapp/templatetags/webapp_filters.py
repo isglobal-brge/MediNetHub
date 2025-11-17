@@ -29,7 +29,6 @@ def json_string(value):
         return 'null'
 
     try:
-        # Convert to JSON string and escape for safe HTML/JS embedding
         json_str = json.dumps(value)
         # Escape characters that could break out of JavaScript context
         json_str = json_str.replace('<', '\\u003c')
@@ -40,6 +39,25 @@ def json_string(value):
         return mark_safe(json_str)
     except (TypeError, ValueError):
         return 'null' 
+
+@register.filter
+def to_json(value):
+    """
+    Converts a Python object to JSON for use in <script> tags.
+    Escapes only </script> to prevent script injection while keeping valid JSON.
+    Use this filter instead of json_string for JavaScript contexts.
+    """
+    if value is None:
+        return 'null'
+
+    try:
+        # Convert to JSON with ASCII encoding for safety
+        json_str = json.dumps(value, ensure_ascii=True)
+        # Only escape the closing script tag to prevent injection
+        json_str = json_str.replace('</', '<\\/')
+        return mark_safe(json_str)
+    except (TypeError, ValueError):
+        return 'null'
 
 @register.filter
 def get_item(dictionary, key):
