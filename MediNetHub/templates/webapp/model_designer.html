@@ -54,6 +54,11 @@
         border: 1px solid #f5d1d1;
     }
     
+    .linear-layer {
+        background-color: #f8f8f8;
+        border: 1px solid #e1e1e1;
+    }
+
     .hidden-layer {
         background-color: #f8f8f8;
         border: 1px solid #e1e1e1;
@@ -1244,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getLayerCategory(layerType) {
         if (layerType === 'input') return 'input';
         if (layerType === 'output') return 'output';
-        if (layerType === 'linear') return 'hidden';
+        if (layerType === 'linear') return 'linear';
         if (layerType.startsWith('conv')) return 'conv';
         if (layerType.startsWith('activation_')) return 'activation';
         if (layerType.includes('pool')) return 'pool';
@@ -1252,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (layerType === 'dropout') return 'dropout';
         if (layerType === 'flatten') return 'flatten';
         if (layerType === 'lstm' || layerType === 'gru') return 'recurrent';
-        return 'hidden';
+        return 'linear';
     }
 
     function addLayer() {
@@ -1561,7 +1566,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const newLayer = {
             id: 'layer_' + Date.now(),
             name: layerName,
-            type: layerTypeCategory,
+            type: layerName,  // Use PyTorch class name directly (Linear, Conv2d, ReLU, etc.)
+            category: layerTypeCategory,  // Keep category for UI purposes
             params: layerParams,
             fixed: false
         };
@@ -2719,7 +2725,7 @@ document.addEventListener('DOMContentLoaded', function() {
             metadata: {
                 version: "1.0",
                 created_at: new Date().toISOString(),
-                model_type: "dl",
+                model_type: "dl_linear",
                 framework: document.getElementById('framework').value
             },
             basic_info: {
@@ -2745,7 +2751,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 loss_function: document.getElementById('loss-function').value,
                 metrics: ["accuracy", "f1_score"],
-                epochs: 100,
+                epochs: 10,
                 batch_size: 32,
                 rounds: 10
             },
@@ -3098,9 +3104,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
             let inputFeatures = 12;
             let outputFeatures = 1;
-            
+
             if (selectedDatasets && selectedDatasets.length > 0) {
                 const dataset = selectedDatasets[0];
+                console.log('[DEBUG] Loading model with dataset target_info:', dataset.target_info);
+
                 if (dataset.features_info && dataset.features_info.input_features) {
                     inputFeatures = dataset.features_info.input_features;
                 }
@@ -3237,16 +3245,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add the refresh models button event listener
-    document.getElementById('refresh-models-btn').addEventListener('click', refreshModelsList);
-    
-    // Add the initial event listeners
-    attachModelEventListeners();
-    
-    // Remove the modal from the DOM once closed
-    document.getElementById('loadModelModal').addEventListener('hidden.bs.modal', function() {
-        modelContainer.remove();
-    });
 });
 
 function drawCanvasConnections() {

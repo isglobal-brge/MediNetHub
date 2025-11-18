@@ -16,9 +16,81 @@ from multiprocessing import Process
 from .decorators import user_rate_limit
 from datetime import datetime, timedelta
 from .base_views import create_notification, sanitize_config_for_client, create_center_specific_config
+import socket
+import os
 
-# Diccionari per guardar informació de simulació d'entrenament
-training_simulations = {}
+def is_running_in_docker():
+    """
+    Detect if we're running inside a Docker container.
+
+    Returns:
+        bool: True if running in Docker, False otherwise
+    """
+    # Check for .dockerenv file (most common indicator)
+    if os.path.exists('/.dockerenv'):
+        return True
+
+    # Check cgroup for docker
+    try:
+        with open('/proc/1/cgroup', 'r') as f:
+            return 'docker' in f.read()
+    except:
+        pass
+
+    return False
+
+
+def get_server_ip_for_clients():
+    """
+    Get the server IP address that external clients can use to connect.
+    Handles both Docker and non-Docker environments.
+
+    Returns:
+        str: IP address that clients should use to connect to this server
+    """
+    try:
+        # Detect if running in Docker
+        in_docker = is_running_in_docker()
+        print(f"🐳 [ENVIRONMENT] Running in Docker: {in_docker}")
+
+        # if in_docker:
+        #     # DOCKER MODE: Get host machine IP for containers to connect
+        #     # Try to get the actual IP address of the host machine
+        #     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #     s.settimeout(0)
+        #     try:
+        #         # Connect to external address to determine our IP
+        #         s.connect(('10.254.254.254', 1))
+        #         host_ip = s.getsockname()[0]
+        #     except Exception:
+        #         # Fallback: try to get gateway IP (Docker host)
+        #         host_ip = os.popen("ip route | grep default | awk '{print $3}'").read().strip()
+        #         if not host_ip:
+        #             host_ip = '172.17.0.1'  # Default Docker gateway
+        #     finally:
+        #         s.close()
+        #
+        #     print(f"🌐 [DOCKER] Using host IP for clients: {host_ip}")
+        #     return host_ip
+        # else:
+        # NON-DOCKER MODE: Get the local network IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0)
+        try:
+            # Connect to an external address to determine our IP
+            s.connect(('8.8.8.8', 80))
+            local_ip = s.getsockname()[0]
+        except Exception:
+            local_ip = '127.0.0.1'
+        finally:
+            s.close()
+
+        print(f"🌐 [LOCAL] Using local network IP for clients: {local_ip}")
+        return local_ip
+
+    except Exception as e:
+        print(f"⚠️ [ERROR] Error detecting server IP: {e}, using localhost")
+        return 'localhost'
 
 
 @login_required
@@ -393,7 +465,7 @@ def start_training(request):
             clients_config = {}
             clients_status = {}
             
-            print(f"🎯 START_TRAINING: Generando IDs para {len(selected_datasets)} datasets")
+            print(f"🎯 START_TRAINING: Generating IDs for {len(selected_datasets)} datasets")
             
             for i, dataset in enumerate(selected_datasets):
                 connection_info = dataset.get('connection', {})
@@ -530,7 +602,7 @@ def delete_job(request, job_id):
         
         job.delete()
         messages.success(request, f'Training job "{job_name}" deleted successfully.')
-        return redirect('user_dashboard')
+        return redirect('training')
         
     except Exception as e:
         messages.error(request, f'Error deleting job: {str(e)}')
@@ -812,11 +884,11 @@ def activate_clients_for_training(training_job, server_process=None):
             return
         
         # Give additional time for server to fully start listening
-        print(f"🚀 Server ready, waiting additional 5 seconds for full startup...")
+        print(f"Server ready, waiting additional 5 seconds for full startup...")
         time.sleep(5)
         
-        print(f"🚀 [SECURE] activate_clients_for_training - using new authenticated API")
-        print(f"📋 training_job: {training_job}")
+        print(f"[SECURE] activate_clients_for_training - using new authenticated API")
+        print(f"training_job: {training_job}")
         
         if not training_job.dataset_ids:
             print(f"⚠️ No dataset_ids found in training job")
@@ -828,7 +900,7 @@ def activate_clients_for_training(training_job, server_process=None):
         else:
             selected_datasets = training_job.dataset_ids
             
-        print(f"📋 selected_datasets: {selected_datasets}")
+        print(f"Selected_datasets: {selected_datasets}")
         
         unique_connections = {}
         
@@ -839,26 +911,27 @@ def activate_clients_for_training(training_job, server_process=None):
             if conn_key not in unique_connections:
                 unique_connections[conn_key] = conn
                 
-        print(f"📋 unique_connections: {unique_connections}")
-        print(f"🔐 [FEDERATED] Will activate {len(unique_connections)} centers with credential isolation")
+        print(f"Unique_connections: {unique_connections}")
+        print(f"[FEDERATED] Will activate {len(unique_connections)} centers with credential isolation")
         
         # Track client activation results
         activated_clients = []
         failed_clients = []
-        
-        # Get server address for clients (they need to connect to localhost, not 0.0.0.0)
-        client_server_address = "localhost:8080"  # Clients connect to localhost
+
+        # Get server address for clients (automatically detects Docker vs non-Docker)
+        server_ip = get_server_ip_for_clients()
+        server_port = 8080  # Default port
+
         if 'server' in training_job.config_json:
             server_config = training_job.config_json['server']
-            # For clients, use localhost instead of 0.0.0.0
-            host = server_config.get('host', 'localhost')
-            if host == '0.0.0.0':
-                host = 'localhost'  # Convert bind address to connect address
-            client_server_address = f"{host}:{server_config.get('port', 8080)}"
-        
+            server_port = server_config.get('port', 8080)
+
+        client_server_address = f"{server_ip}:{server_port}"
+        print(f"🌐 [SERVER_ADDRESS] Clients will connect to: {client_server_address}")
+
         # Activate each client with secure, center-specific configuration
         for conn_key, conn in unique_connections.items():
-            print(f"🔧 [SECURE] Activating client: {conn['name']} ({conn_key})")
+            print(f"[SECURE] Activating client: {conn['name']} ({conn_key})")
             
             # 🆔 FIND CLIENT_ID: Buscar client_id por IP en clients_config  
             client_id = None

@@ -419,8 +419,8 @@ def delete_model_config(request, model_id):
     # Check ownership
     if config.user != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
-    if request.method == 'DELETE':
+
+    if request.method in ['DELETE', 'POST']:
         config.delete()
         return JsonResponse({'success': True, 'message': 'Model deleted successfully'})
     else:

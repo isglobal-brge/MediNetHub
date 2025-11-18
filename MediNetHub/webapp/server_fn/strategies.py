@@ -9,7 +9,7 @@ from flwr.server.strategy import FedAvg
 from flwr.server.client_proxy import ClientProxy
 from collections import OrderedDict
 from django.utils import timezone
-from .dynamic_model_builder import DynamicModel
+from .model_builder import DynamicModel, SequentialModel
 import logging
 
 logger = logging.getLogger(__name__)
@@ -93,36 +93,38 @@ def update_client_tracking(server_manager, server_round, results):
 
 class ServerManager:
     def __init__(self, training_job, model_config):
-        print(f"🚀 ServerManager.__init__ called")
-        print(f"📋 training_job: {training_job}")
-        print(f"📋 model_config type: {type(model_config)}")
-        print(f"📋 model_config loaded with framework: {model_config.get('framework', 'unknown')}")
+        print(f"ServerManager.__init__ called")
+        print(f"training_job: {training_job}")
+        print(f"model_config type: {type(model_config)}")
+        print(f"model_config loaded with framework: {model_config.get('framework', 'unknown')}")
         
         self.job = training_job
         self.model_config = model_config
         self.framework = model_config.get('framework', 'pytorch')
         self.should_stop = False  # Flag to signal server shutdown
         
-        print(f"🔧 Framework detected: '{self.framework}'")
+        print(f"Framework detected: '{self.framework}'")
         
         self.net: Optional[DynamicModel] = None
         self.initialize_model()
         
     def initialize_model(self):
         """Initialize the model based on configuration"""
-        print(f"🔧 initialize_model called with framework: '{self.framework}'")
+        print(f"initialize_model called with framework: '{self.framework}'")
         
         if self.framework in ['pt', 'pytorch']:
             # Extract layers from model_config and create real model
             layers_config = self.model_config.get('model', {}).get('architecture', {}).get('layers', [])
-            print(f"🔧 Layers config extracted: {len(layers_config)} layers")
-            print(f"🔧 First layer: {layers_config[0] if layers_config else 'No layers'}")
-            print(f"🔧 Model config: {self.model_config}")
+            print(f"Model config: {self.model_config}")
+            if self.model_config.get('model', {}).get('metadata', {}).get('model_type') == 'dl_linear':
+                print("Starting sequential Model")
+                self.net = SequentialModel({'layers': layers_config})
+
+            else:
+                self.net = DynamicModel({"layers": layers_config})
             
-            self.net = DynamicModel({"layers": layers_config})
-            
-            print(f"🔧 Model created. State dict keys: {list(self.net.state_dict().keys())}")
-            print(f"🔧 Model parameters count: {sum(p.numel() for p in self.net.parameters())}")
+            print(f"Model created. State dict keys: {list(self.net.state_dict().keys())}")
+            print(f"Model parameters count: {sum(p.numel() for p in self.net.parameters())}")
             
         else:
             print(f"❌ Framework '{self.framework}' not supported")
@@ -167,7 +169,7 @@ class ServerManager:
         
         self.job.save()
         
-        print(f"📊 Saved metrics for round {round_number}: accuracy={round_metrics['accuracy']:.3f}, loss={round_metrics['loss']:.3f}")
+        print(f"Saved metrics for round {round_number}: accuracy={round_metrics['accuracy']:.3f}, loss={round_metrics['loss']:.3f}")
     
     def update_client_status(self, client_info: Dict):
         """Update client status information with comprehensive metrics structure"""
@@ -379,8 +381,8 @@ class FedAvgModelStrategy(FedAvg):
             # Return None to stop training
             return None, {}
         
-        print(f"🔍 DEBUG aggregate_fit - Round {server_round} completed")
-        print(f"🔍 DEBUG results: {len(results)} success, {len(failures)} failures")
+        print(f"DEBUG aggregate_fit - Round {server_round} completed")
+        print(f"DEBUG results: {len(results)} success, {len(failures)} failures")
         
         if aggregated_parameters is not None:
             # Save model
@@ -388,7 +390,7 @@ class FedAvgModelStrategy(FedAvg):
             self.server_manager.save_model(parameters_as_ndarrays, server_round)            
             print(f"✅ Model saved for round {server_round}")
         
-        # 🎯 NUEVA LÍNEA: Actualizar tracking de clientes
+        # NUEVA LÍNEA: Actualizar tracking de clientes
         update_client_tracking(self.server_manager, server_round, results)
         
         # Check if this is the last round - signal completion and calculate total training time
@@ -402,7 +404,7 @@ class FedAvgModelStrategy(FedAvg):
             
             self.server_manager.job.status = 'completed'
             self.server_manager.job.completed_at = round_end_time
-            self.server_manager.job.progress = 100  # ✅ Assegurar progress 100%
+            self.server_manager.job.progress = 100  # Assegurar progress 100%
             self.server_manager.job.save()
             
             # Signal server to stop

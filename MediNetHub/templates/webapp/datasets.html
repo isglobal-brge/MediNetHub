@@ -283,12 +283,12 @@
                                     <i class="fas fa-network-wired me-1"></i>
                                     {{ dataset.connection.ip }}:{{ dataset.connection.port }}
                                 </div>
-                                <button type="button" 
-                                        class="btn btn-sm {% if dataset.is_selected %}btn-success{% else %}btn-primary{% endif %} add-to-training-btn" 
+                                <button type="button"
+                                        class="btn btn-sm {% if dataset.is_selected %}btn-success{% else %}btn-primary{% endif %} add-to-training-btn"
                                         data-dataset-id="{{ dataset.dataset_id }}"
                                         data-dataset-name="{{ dataset.dataset_name }}"
-                                        data-features-info="{{ dataset.features_info|json_string }}"
-                                        data-target-info="{{ dataset.target_info|json_string }}"
+                                        data-features-info='{{ dataset.features_info|to_json }}'
+                                        data-target-info='{{ dataset.target_info|to_json }}'
                                         data-num-columns="{{ dataset.num_columns }}"
                                         data-num-rows="{{ dataset.num_rows }}"
                                         data-size="{{ dataset.size }}"
@@ -626,7 +626,6 @@
                                 type: "unknown",
                                 num_classes: 0
                             };
-                            console.log('✅ [SUCCESS] Parsed target_info:', targetInfo);
                         } catch (e) {
                             console.error('❌ [ERROR] Error parsing target_info:', e);
                             console.error('  - String that failed to parse:', targetInfoStr);
@@ -671,7 +670,6 @@
                             }
                         };
 
-                        console.log('📊 [DEBUG] Sending dataset info to server:', datasetInfo);
 
                         fetch('/api/store-selected-datasets/', {
                             method: 'POST',
