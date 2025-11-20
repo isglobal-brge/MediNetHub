@@ -863,7 +863,7 @@ def activate_clients_for_training(training_job, server_process=None):
     try:
         # Wait for server to be ready (with timeout and failure check)
         print(f"🔍 Waiting for server to be ready. Current status: {training_job.status}")
-        timeout = 30  # 30 seconds timeout
+        timeout = 60  # 30 seconds timeout
         start_time = time.time()
         
         while training_job.status not in ['server_ready', 'failed', 'cancelled']:
@@ -874,7 +874,7 @@ def activate_clients_for_training(training_job, server_process=None):
                 training_job.save()
                 return
                 
-            time.sleep(1)
+            time.sleep(5)
             training_job.refresh_from_db()
             print(f"🔍 Checking status: {training_job.status}")
         

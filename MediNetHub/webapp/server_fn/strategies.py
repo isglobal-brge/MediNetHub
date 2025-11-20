@@ -111,13 +111,21 @@ class ServerManager:
     def initialize_model(self):
         """Initialize the model based on configuration"""
         print(f"initialize_model called with framework: '{self.framework}'")
-        
+
         if self.framework in ['pt', 'pytorch']:
-            # Extract layers from model_config and create real model
-            layers_config = self.model_config.get('model', {}).get('architecture', {}).get('layers', [])
-            print(f"Model config: {self.model_config}")
-            if self.model_config.get('model', {}).get('metadata', {}).get('model_type') == 'dl_linear':
-                print("Starting sequential Model")
+            # Legacy structure: model_config.model.architecture.layers
+            layers_config = self.model_config.get('architecture', {}).get('layers', [])
+            if not layers_config:
+                layers_config = self.model_config.get('model', {}).get('architecture', {}).get('layers', [])
+
+            # Check model type from both possible locations
+            model_type = self.model_config.get('metadata', {}).get('model_type', '')
+            if not model_type:
+                model_type = self.model_config.get('model', {}).get('metadata', {}).get('model_type', '')
+
+
+            if model_type == 'dl_linear':
+                print("Starting SequentialModel")
                 self.net = SequentialModel({'layers': layers_config})
 
             else:

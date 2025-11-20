@@ -63,9 +63,10 @@ class DynamicModel(nn.Module):
         # Clean the configuration if cleaner is available
         if ModelConfigCleaner:
             self.cleaned_config = ModelConfigCleaner.clean_model_config(self.config)
-            
+
             # Safety check: If no layers after cleaning, use original config
-            if not self.cleaned_config.get('layers'):
+            cleaned_layers = self.cleaned_config.get('layers') or self.cleaned_config.get('architecture', {}).get('layers')
+            if not cleaned_layers:
                 self.cleaned_config = self.config
         else:
             # No cleaner available, use config as-is and add IDs if missing
@@ -191,12 +192,14 @@ class DynamicModel(nn.Module):
     
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]:
         outputs = {"input_data": x}
-        
+
         # Handle both flat and nested structures
         layers = self.cleaned_config.get("layers", [])
+        if not layers and "architecture" in self.cleaned_config:
+            layers = self.cleaned_config["architecture"].get("layers", [])
         if not layers and "model" in self.cleaned_config:
             layers = self.cleaned_config["model"].get("layers", [])
-        
+
         # Process each layer in order
         for layer_config in layers:
             layer_id = layer_config["id"]
@@ -270,7 +273,10 @@ class SequentialModel(nn.Module):
         # Clean the configuration if cleaner is available
         if ModelConfigCleaner:
             self.cleaned_config = ModelConfigCleaner.clean_model_config(self.config)
-            if not self.cleaned_config.get('layers'):
+
+            # Safety check: If no layers after cleaning, use original config
+            cleaned_layers = self.cleaned_config.get('layers') or self.cleaned_config.get('architecture', {}).get('layers')
+            if not cleaned_layers:
                 self.cleaned_config = self.config
         else:
             self.cleaned_config = self.config
@@ -280,9 +286,12 @@ class SequentialModel(nn.Module):
 
     def _build_sequential(self) -> nn.Sequential:
         """Build nn.Sequential from layer list"""
-        layers = self.cleaned_config.get("architecture", {}).get("layers", [])
+        # Try root level first (most common after strategies.py passes {'layers': [...]} )
+        layers = self.cleaned_config.get("layers", [])
+        # Fallback to architecture.layers for full JSON configs
         if not layers:
-            layers = self.cleaned_config.get("layers", [])
+            layers = self.cleaned_config.get("architecture", {}).get("layers", [])
+
 
         pytorch_layers = []
 
