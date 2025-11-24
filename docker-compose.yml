@@ -1,0 +1,33 @@
+services:
+  medinethub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medinethub_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config:/usr/src/app/config
+      - db_data:/usr/src/app
+      - ./media:/usr/src/app/media
+      - ./staticfiles:/usr/src/app/staticfiles
+    environment:
+      - DJANGO_SETTINGS_MODULE=medinet.settings
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000').read()"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    networks:
+      - medinethub_network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  medinethub_network:
+    driver: bridge
