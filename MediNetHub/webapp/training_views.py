@@ -43,53 +43,66 @@ def is_running_in_docker():
 def get_server_ip_for_clients():
     """
     Get the server IP address that external clients can use to connect.
-    Handles both Docker and non-Docker environments.
+    Priority order:
+    1. FLOWER_SERVER_IP environment variable (manually configured)
+    2. Auto-detection based on Docker/non-Docker environment
 
     Returns:
         str: IP address that clients should use to connect to this server
     """
     try:
-        # Detect if running in Docker
+        # PRIORITY 1: Check for manually configured IP in environment variable
+        configured_ip = os.environ.get('FLOWER_SERVER_IP')
+        if configured_ip:
+            return configured_ip
+
+        # PRIORITY 2: Auto-detect based on environment
         in_docker = is_running_in_docker()
-        print(f"🐳 [ENVIRONMENT] Running in Docker: {in_docker}")
+        if in_docker:
+            # DOCKER MODE: Get host machine IP for containers to connect
+            print("[DOCKER] Attempting to detect host machine IP...")
 
-        # if in_docker:
-        #     # DOCKER MODE: Get host machine IP for containers to connect
-        #     # Try to get the actual IP address of the host machine
-        #     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #     s.settimeout(0)
-        #     try:
-        #         # Connect to external address to determine our IP
-        #         s.connect(('10.254.254.254', 1))
-        #         host_ip = s.getsockname()[0]
-        #     except Exception:
-        #         # Fallback: try to get gateway IP (Docker host)
-        #         host_ip = os.popen("ip route | grep default | awk '{print $3}'").read().strip()
-        #         if not host_ip:
-        #             host_ip = '172.17.0.1'  # Default Docker gateway
-        #     finally:
-        #         s.close()
-        #
-        #     print(f"🌐 [DOCKER] Using host IP for clients: {host_ip}")
-        #     return host_ip
-        # else:
-        # NON-DOCKER MODE: Get the local network IP
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(0)
-        try:
-            # Connect to an external address to determine our IP
-            s.connect(('8.8.8.8', 80))
-            local_ip = s.getsockname()[0]
-        except Exception:
-            local_ip = '127.0.0.1'
-        finally:
-            s.close()
+            # Try method 1: Connect to external address
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(2)
+            try:
+                s.connect(('8.8.8.8', 80))
+                host_ip = s.getsockname()[0]
+                return host_ip
+            except Exception as e:
+                print(f"[DOCKER] Socket method failed: {e}")
+            finally:
+                s.close()
 
-        print(f"🌐 [LOCAL] Using local network IP for clients: {local_ip}")
-        return local_ip
+            # Try method 2: Get gateway IP (Docker host)
+            try:
+                gateway_ip = os.popen("ip route | grep default | awk '{print $3}'").read().strip()
+                if gateway_ip and gateway_ip != '':
+                    print(f"[DOCKER] Using gateway IP: {gateway_ip}")
+                    return gateway_ip
+            except Exception as e:
+                print(f"[DOCKER] Gateway detection failed: {e}")
+
+            # Fallback for Docker
+            print("[DOCKER] Using default Docker gateway: 172.17.0.1")
+            return '172.17.0.1'
+        else:
+            # NON-DOCKER MODE: Get the local network IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(2)
+            try:
+                s.connect(('8.8.8.8', 80))
+                local_ip = s.getsockname()[0]
+                print(f"✅ [LOCAL] Using local network IP: {local_ip}")
+                return local_ip
+            except Exception:
+                print("⚠️ [LOCAL] Using fallback: 127.0.0.1")
+                return '127.0.0.1'
+            finally:
+                s.close()
 
     except Exception as e:
-        print(f"⚠️ [ERROR] Error detecting server IP: {e}, using localhost")
+        print(f"[ERROR] Critical error detecting server IP: {e}")
         return 'localhost'
 
 
@@ -167,7 +180,7 @@ def training(request):
         'selected_datasets': selected_datasets,  
         'training_jobs': training_jobs,
         'available_metrics': available_metrics,
-        'model_id': model_id,  # ✅ Agregar model_id al context
+        'model_id': model_id, 
         'NUM_ROUNDS_HELPER': NUM_ROUNDS_HELPER,
         'FRACTION_FIT_HELPER': FRACTION_FIT_HELPER,
         'FRACTION_EVALUATE_HELPER': FRACTION_EVALUATE_HELPER,
@@ -972,13 +985,13 @@ def activate_clients_for_training(training_job, server_process=None):
             ]
             
             if not center_datasets:
-                print(f"⚠️ No datasets found for center {conn['name']}")
+                print(f"No datasets found for center {conn['name']}")
                 failed_clients.append(f"{conn['name']} (No datasets for this center)")
                 continue
             
-            print(f"🎯 [FEDERATED] Center {conn['name']} will receive {len(center_datasets)} datasets (isolated)")
+            print(f"[FEDERATED] Center {conn['name']} will receive {len(center_datasets)} datasets (isolated)")
             
-            # 🔐 SECURITY: Create center-specific config (NO cross-center data)
+            # SECURITY: Create center-specific config (NO cross-center data)
             center_specific_config = create_center_specific_config(center_datasets, training_job.config_json)
             
             # Build secure client configuration
