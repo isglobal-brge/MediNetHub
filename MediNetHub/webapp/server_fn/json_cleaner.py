@@ -67,7 +67,7 @@ class ModelConfigCleaner:
     @staticmethod
     def clean_model_config(model_config: Dict[str, Any]) -> Dict[str, Any]:
         """Clean entire model configuration - PRESERVE everything except layers"""
-        print("🧹 Starting model config cleaning...")
+        print("Starting model config cleaning...")
         
         # Make a copy of the original config to preserve everything
         cleaned_config = model_config.copy()

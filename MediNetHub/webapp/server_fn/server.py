@@ -1,20 +1,9 @@
-import numpy as np
-from torch import save, tensor, load
-import json
-import os
 import warnings
-import time
 from typing import List, Tuple, Union, Optional, Dict
-#import pytorch_model_builder as ptmb
-from flwr.common import Metrics, FitRes, Parameters, NDArrays, parameters_to_ndarrays
-from flwr.server.strategy import FedAvg
-from flwr.server.client_proxy import ClientProxy
 from flwr.server.client_manager import SimpleClientManager
 from collections import OrderedDict
 from django.utils import timezone
 import flwr as fl
-import threading
-from .dynamic_model_builder import DynamicModel
 from .strategies import ServerManager, FedAvgModelStrategy
 warnings.filterwarnings("ignore")
 

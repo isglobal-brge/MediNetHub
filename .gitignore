@@ -195,3 +195,9 @@ clients/debug_received_from_server.json
 webapp/__pycache__/*
 db.sqlite3
 clients/debug_received_from_server.json
+
+# Django static files (collected by collectstatic)
+/staticfiles/
+MediNetHub/staticfiles/
+config/fernet_keys.txt
+config/secret_key.txt

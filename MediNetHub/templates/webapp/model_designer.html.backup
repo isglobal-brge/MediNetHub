@@ -54,11 +54,6 @@
         border: 1px solid #f5d1d1;
     }
     
-    .linear-layer {
-        background-color: #f8f8f8;
-        border: 1px solid #e1e1e1;
-    }
-
     .hidden-layer {
         background-color: #f8f8f8;
         border: 1px solid #e1e1e1;
@@ -694,7 +689,7 @@ function renderLayers() {
 
     modelLayers.forEach((layer, index) => {
         const layerBox = document.createElement('div');
-        layerBox.className = `layer-box ${layer.category || layer.type}-layer`;
+        layerBox.className = `layer-box ${layer.type}-layer`;
         layerBox.setAttribute('data-layer-id', layer.id);
         
         // Crear el contingut de la capa primer
@@ -891,11 +886,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         })
                         .then(data => {
                             if (!data) {
-                                throw new Error("No data received from API");
+                                throw new Error('No s\'han rebut dades de l\'API');
                             }
-
+                            
                             if (!data.id || !data.name) {
-                                throw new Error("Response does not contain expected model data");
+                                throw new Error('La resposta no conté les dades esperades del model');
                             }
                             
                             // Extreure la configuració del model
@@ -909,14 +904,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ...modelConfig
                                 });
                                 loadModal.hide();
-                                showMessage(`Model "${data.name}" loaded correctly`, 'success');
+                                showMessage(`Model "${data.name}" carregat correctament`, 'success');
                             } catch (loadError) {
                                 throw loadError;
                             }
                         })
                         .catch(error => {
-                            console.error('Err:', error.message);
-                            showMessage(`Error loading model: ${error.message}`, 'error');
+                            console.error('Error carregant el model:', error.message);
+                            showMessage(`Error carregant el model: ${error.message}`, 'error');
                         });
                 });
             });
@@ -1099,14 +1094,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Funcions
     function initializeModel() {
         // Get input features and target info from selected datasets
-        const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+        const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
 
-        let inputFeatures = 1; // Default value
+        let inputFeatures = 12; // Default value
         let outputFeatures = 1; // Default value for binary classification
 
         if (selectedDatasets && selectedDatasets.length > 0) {
             const dataset = selectedDatasets[0];
-            console.log(dataset);
             // Get input features from features_info
             if (dataset.features_info && dataset.features_info.input_features) {
                 inputFeatures = dataset.features_info.input_features;
@@ -1191,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modelLayers.forEach((layer, index) => {
             // Layer box
             const layerBox = document.createElement('div');
-            layerBox.className = `layer-box ${layer.category || layer.type}-layer`;
+            layerBox.className = `layer-box ${layer.type}-layer`;
             layerBox.setAttribute('data-layer-id', layer.id);
             
             // Crear contingut correctament amb DOM
@@ -1249,17 +1243,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function getLayerCategory(layerType) {
         if (layerType === 'input') return 'input';
         if (layerType === 'output') return 'output';
-        if (layerType === 'linear' || layerType === 'Linear') return 'linear';
-        if (layerType.startsWith('conv') || layerType.startsWith('Conv')) return 'conv';
+        if (layerType === 'linear') return 'hidden';
+        if (layerType.startsWith('conv')) return 'conv';
         if (layerType.startsWith('activation_')) return 'activation';
-        // Recognize PyTorch activation class names directly
-        if (['ReLU', 'Sigmoid', 'Tanh', 'Softmax', 'LeakyReLU'].includes(layerType)) return 'activation';
-        if (layerType.includes('pool') || layerType.includes('Pool')) return 'pool';
-        if (layerType.includes('norm') || layerType.includes('Norm')) return 'norm';
-        if (layerType === 'dropout' || layerType === 'Dropout') return 'dropout';
-        if (layerType === 'flatten' || layerType === 'Flatten') return 'flatten';
-        if (layerType === 'lstm' || layerType === 'gru' || layerType === 'LSTM' || layerType === 'GRU') return 'recurrent';
-        return 'linear';
+        if (layerType.includes('pool')) return 'pool';
+        if (layerType.includes('norm')) return 'norm';
+        if (layerType === 'dropout') return 'dropout';
+        if (layerType === 'flatten') return 'flatten';
+        if (layerType === 'lstm' || layerType === 'gru') return 'recurrent';
+        return 'hidden';
     }
 
     function addLayer() {
@@ -1568,8 +1560,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newLayer = {
             id: 'layer_' + Date.now(),
             name: layerName,
-            type: layerName,  // Use PyTorch class name directly (Linear, Conv2d, ReLU, etc.)
-            category: layerTypeCategory,  // Keep category for UI purposes
+            type: layerTypeCategory,
             params: layerParams,
             fixed: false
         };
@@ -1716,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         } else if (layer.id === 'output') {
-            const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+            const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
             let targetType = 'unknown';
             if (selectedDatasets && selectedDatasets.length > 0 && selectedDatasets[0].target_info) {
                 targetType = selectedDatasets[0].target_info.type;
@@ -2604,7 +2595,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 loss_function: document.getElementById('loss-function').value
             },
             dataset: {
-                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
+                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|json_string }}{% else %}[]{% endif %}
             }
         };
         
@@ -2622,7 +2613,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/datasets/${datasetId}/info/`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error("Could not retrieve dataset information");
+                        throw new Error('No s\'ha pogut obtenir la informació del dataset');
                     }
                     return response.json();
                 })
@@ -2727,7 +2718,7 @@ document.addEventListener('DOMContentLoaded', function() {
             metadata: {
                 version: "1.0",
                 created_at: new Date().toISOString(),
-                model_type: "dl_linear",
+                model_type: "dl",
                 framework: document.getElementById('framework').value
             },
             basic_info: {
@@ -2753,12 +2744,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 loss_function: document.getElementById('loss-function').value,
                 metrics: ["accuracy", "f1_score"],
-                epochs: 10,
+                epochs: 100,
                 batch_size: 32,
                 rounds: 10
             },
             dataset: {
-                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
+                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|json_string }}{% else %}[]{% endif %}
             }
         }
         
@@ -2859,7 +2850,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Verify that at least one dataset is selected
-        const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+        const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
         if (!selectedDatasets || selectedDatasets.length === 0) {
             errors.push({
                 type: 'error',
@@ -2942,7 +2933,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 rounds: 10
             },
             dataset: {
-                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
+                selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|json_string }}{% else %}[]{% endif %}
             }
         };
         
@@ -3103,14 +3094,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Obtenir informació del dataset
-            const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+            const selectedDatasets = {{ selected_datasets|default:'[]'|json_string }};
             let inputFeatures = 12;
             let outputFeatures = 1;
-
+            
             if (selectedDatasets && selectedDatasets.length > 0) {
                 const dataset = selectedDatasets[0];
-                console.log('[DEBUG] Loading model with dataset target_info:', dataset.target_info);
-
                 if (dataset.features_info && dataset.features_info.input_features) {
                     inputFeatures = dataset.features_info.input_features;
                 }
@@ -3151,7 +3140,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         id: 'layer_' + Date.now() + '_' + index,
                         name: layer.name,
                         type: layer.type,
-                        category: layer.category || getLayerCategory(layer.type),  // Use existing category or calculate it
                         params: { ...layer.params },
                         fixed: false
                     };
@@ -3193,7 +3181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modelLayers.forEach((layer, index) => {
             // Layer box
             const layerBox = document.createElement('div');
-            layerBox.className = `layer-box ${layer.category || layer.type}-layer`;
+            layerBox.className = `layer-box ${layer.type}-layer`;
             layerBox.setAttribute('data-layer-id', layer.id);
             
             // Crear contingut correctament amb DOM
@@ -3248,6 +3236,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Add the refresh models button event listener
+    document.getElementById('refresh-models-btn').addEventListener('click', refreshModelsList);
+    
+    // Add the initial event listeners
+    attachModelEventListeners();
+    
+    // Remove the modal from the DOM once closed
+    document.getElementById('loadModelModal').addEventListener('hidden.bs.modal', function() {
+        modelContainer.remove();
+    });
 });
 
 function drawCanvasConnections() {
