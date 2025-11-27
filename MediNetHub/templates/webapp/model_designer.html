@@ -54,6 +54,11 @@
         border: 1px solid #f5d1d1;
     }
     
+    .linear-layer {
+        background-color: #f8f8f8;
+        border: 1px solid #e1e1e1;
+    }
+
     .hidden-layer {
         background-color: #f8f8f8;
         border: 1px solid #e1e1e1;
@@ -689,7 +694,7 @@ function renderLayers() {
 
     modelLayers.forEach((layer, index) => {
         const layerBox = document.createElement('div');
-        layerBox.className = `layer-box ${layer.type}-layer`;
+        layerBox.className = `layer-box ${layer.category || layer.type}-layer`;
         layerBox.setAttribute('data-layer-id', layer.id);
         
         // Crear el contingut de la capa primer
@@ -1186,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modelLayers.forEach((layer, index) => {
             // Layer box
             const layerBox = document.createElement('div');
-            layerBox.className = `layer-box ${layer.type}-layer`;
+            layerBox.className = `layer-box ${layer.category || layer.type}-layer`;
             layerBox.setAttribute('data-layer-id', layer.id);
             
             // Crear contingut correctament amb DOM
@@ -1244,15 +1249,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function getLayerCategory(layerType) {
         if (layerType === 'input') return 'input';
         if (layerType === 'output') return 'output';
-        if (layerType === 'linear') return 'hidden';
-        if (layerType.startsWith('conv')) return 'conv';
+        if (layerType === 'linear' || layerType === 'Linear') return 'linear';
+        if (layerType.startsWith('conv') || layerType.startsWith('Conv')) return 'conv';
         if (layerType.startsWith('activation_')) return 'activation';
-        if (layerType.includes('pool')) return 'pool';
-        if (layerType.includes('norm')) return 'norm';
-        if (layerType === 'dropout') return 'dropout';
-        if (layerType === 'flatten') return 'flatten';
-        if (layerType === 'lstm' || layerType === 'gru') return 'recurrent';
-        return 'hidden';
+        // Recognize PyTorch activation class names directly
+        if (['ReLU', 'Sigmoid', 'Tanh', 'Softmax', 'LeakyReLU'].includes(layerType)) return 'activation';
+        if (layerType.includes('pool') || layerType.includes('Pool')) return 'pool';
+        if (layerType.includes('norm') || layerType.includes('Norm')) return 'norm';
+        if (layerType === 'dropout' || layerType === 'Dropout') return 'dropout';
+        if (layerType === 'flatten' || layerType === 'Flatten') return 'flatten';
+        if (layerType === 'lstm' || layerType === 'gru' || layerType === 'LSTM' || layerType === 'GRU') return 'recurrent';
+        return 'linear';
     }
 
     function addLayer() {
@@ -1561,7 +1568,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const newLayer = {
             id: 'layer_' + Date.now(),
             name: layerName,
-            type: layerTypeCategory,
+            type: layerName,  // Use PyTorch class name directly (Linear, Conv2d, ReLU, etc.)
+            category: layerTypeCategory,  // Keep category for UI purposes
             params: layerParams,
             fixed: false
         };
@@ -2719,7 +2727,7 @@ document.addEventListener('DOMContentLoaded', function() {
             metadata: {
                 version: "1.0",
                 created_at: new Date().toISOString(),
-                model_type: "dl",
+                model_type: "dl_linear",
                 framework: document.getElementById('framework').value
             },
             basic_info: {
@@ -2745,7 +2753,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 loss_function: document.getElementById('loss-function').value,
                 metrics: ["accuracy", "f1_score"],
-                epochs: 100,
+                epochs: 10,
                 batch_size: 32,
                 rounds: 10
             },
@@ -3098,9 +3106,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
             let inputFeatures = 12;
             let outputFeatures = 1;
-            
+
             if (selectedDatasets && selectedDatasets.length > 0) {
                 const dataset = selectedDatasets[0];
+                console.log('[DEBUG] Loading model with dataset target_info:', dataset.target_info);
+
                 if (dataset.features_info && dataset.features_info.input_features) {
                     inputFeatures = dataset.features_info.input_features;
                 }
@@ -3141,6 +3151,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         id: 'layer_' + Date.now() + '_' + index,
                         name: layer.name,
                         type: layer.type,
+                        category: layer.category || getLayerCategory(layer.type),  // Use existing category or calculate it
                         params: { ...layer.params },
                         fixed: false
                     };
@@ -3182,7 +3193,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modelLayers.forEach((layer, index) => {
             // Layer box
             const layerBox = document.createElement('div');
-            layerBox.className = `layer-box ${layer.type}-layer`;
+            layerBox.className = `layer-box ${layer.category || layer.type}-layer`;
             layerBox.setAttribute('data-layer-id', layer.id);
             
             // Crear contingut correctament amb DOM
@@ -3237,16 +3248,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Add the refresh models button event listener
-    document.getElementById('refresh-models-btn').addEventListener('click', refreshModelsList);
-    
-    // Add the initial event listeners
-    attachModelEventListeners();
-    
-    // Remove the modal from the DOM once closed
-    document.getElementById('loadModelModal').addEventListener('hidden.bs.modal', function() {
-        modelContainer.remove();
-    });
 });
 
 function drawCanvasConnections() {

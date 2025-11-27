@@ -959,6 +959,143 @@
         document.getElementById('refresh-jobs-btn').addEventListener('click', function() {
             window.location.reload();
         });
+
+        // Auto-refresh job progress every 10 seconds
+        const AUTO_REFRESH_INTERVAL = 10000; // 10 seconds
+        let progressPollingInterval = null;
+
+        function updateJobProgress(jobId, progressCell, statusBadge) {
+            fetch(`/api/get-job-metrics/${jobId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const progress = data.progress || 0;
+
+                        // Update or create progress bar
+                        let progressBar = progressCell.querySelector('.progress-bar');
+
+                        if (progress > 0) {
+                            // Job has started, show progress bar
+                            if (!progressBar) {
+                                // Replace the "-" span with a progress bar
+                                progressCell.innerHTML = `
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                `;
+                                progressBar = progressCell.querySelector('.progress-bar');
+                            }
+
+                            progressBar.style.width = `${progress}%`;
+                            progressBar.setAttribute('aria-valuenow', progress);
+                            progressBar.textContent = `${progress}%`;
+                        }
+
+                        // Update status badge
+                        const statusMap = {
+                            'pending': { class: 'warning', text: 'Pending' },
+                            'server_ready': { class: 'info', text: 'Server_ready' },
+                            'running': { class: 'primary', text: 'Running' },
+                            'completed': { class: 'success', text: 'Completed' },
+                            'failed': { class: 'danger', text: 'Failed' }
+                        };
+
+                        const statusInfo = statusMap[data.job_status] || { class: 'secondary', text: data.job_status };
+                        statusBadge.className = `badge bg-${statusInfo.class}`;
+                        statusBadge.textContent = statusInfo.text;
+
+                        // Stop polling if job is complete
+                        if (data.job_status === 'completed' || data.job_status === 'failed') {
+                            console.log(`Job ${jobId} finished with status: ${data.job_status}. Stopping polling.`);
+                            return true; // Signal to stop polling this job
+                        }
+                    }
+                    return false; // Continue polling
+                })
+                .catch(error => {
+                    console.error(`Error fetching metrics for job ${jobId}:`, error);
+                    return false; // Continue polling despite error
+                });
+        }
+
+        function startProgressPolling() {
+            // Get all job rows
+            const jobRows = document.querySelectorAll('tbody tr');
+            const activeJobs = [];
+
+            jobRows.forEach(row => {
+                const statusBadge = row.querySelector('.badge');
+                const progressCell = row.querySelectorAll('td')[3]; // Progress is 4th column (index 3)
+
+                if (statusBadge && progressCell) {
+                    const status = statusBadge.textContent.trim().toLowerCase();
+
+                    // Poll ALL active jobs (not just those with progress bars)
+                    if (status === 'running' || status === 'server_ready' || status === 'pending' || status === 'server ready') {
+                        // Extract job ID from the detail link
+                        const detailLink = row.querySelector('a[href*="/jobs/"]');
+                        if (detailLink) {
+                            const jobId = detailLink.getAttribute('href').match(/\/jobs\/(\d+)\//)?.[1];
+                            if (jobId) {
+                                activeJobs.push({
+                                    jobId: jobId,
+                                    progressCell: progressCell,
+                                    statusBadge: statusBadge,
+                                    row: row
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (activeJobs.length === 0) {
+                console.log('No active jobs to poll. Stopping auto-refresh.');
+                if (progressPollingInterval) {
+                    clearInterval(progressPollingInterval);
+                    progressPollingInterval = null;
+                }
+                return;
+            }
+
+            console.log(`Starting auto-refresh for ${activeJobs.length} active job(s)`);
+
+            // Poll immediately once
+            activeJobs.forEach(job => {
+                updateJobProgress(job.jobId, job.progressCell, job.statusBadge);
+            });
+
+            // Set up interval polling
+            if (!progressPollingInterval) {
+                progressPollingInterval = setInterval(() => {
+                    const stillActiveJobs = activeJobs.filter(job => {
+                        const status = job.statusBadge.textContent.trim().toLowerCase();
+                        return status !== 'completed' && status !== 'failed';
+                    });
+
+                    if (stillActiveJobs.length === 0) {
+                        console.log('All jobs completed. Stopping auto-refresh.');
+                        clearInterval(progressPollingInterval);
+                        progressPollingInterval = null;
+                        return;
+                    }
+
+                    stillActiveJobs.forEach(job => {
+                        updateJobProgress(job.jobId, job.progressCell, job.statusBadge);
+                    });
+                }, AUTO_REFRESH_INTERVAL);
+            }
+        }
+
+        // Start polling on page load if there are active jobs
+        startProgressPolling();
+
+        // Clean up interval on page unload
+        window.addEventListener('beforeunload', function() {
+            if (progressPollingInterval) {
+                clearInterval(progressPollingInterval);
+            }
+        });
         
         // View job details button
         document.querySelectorAll('.view-job-btn').forEach(button => {

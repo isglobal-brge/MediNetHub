@@ -1,0 +1,42 @@
+services:
+  medinethub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medinethub_app
+    ports:
+      - "5000:5000"
+      - "8080:8080"
+    volumes:
+      - ./config:/usr/src/app/config
+      - db_data:/usr/src/app
+      - ./media:/usr/src/app/media
+      - ./staticfiles:/usr/src/app/staticfiles
+    environment:
+      - DJANGO_SETTINGS_MODULE=medinet.settings
+      - PYTHONUNBUFFERED=1
+      # IMPORTANT: Set your host machine IP here so clients can connect to Flower server
+      # Find your IP: Linux/Mac: hostname -I | Windows: ipconfig
+      - FLOWER_SERVER_IP=172.25.0.2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000').read()"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    networks:
+      - medinet_network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  medinet_network:
+    driver: bridge
+    name: medinet_shared_network
+    external: false
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
