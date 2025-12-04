@@ -329,10 +329,28 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- Upload JSON Section -->
+                <div class="card mb-3 border-primary" id="json-upload-zone">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1"><i class="fas fa-bolt text-primary me-2"></i>Quick Setup</h6>
+                                <small class="text-muted">Upload or drag & drop client credentials JSON</small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button type="button" class="btn btn-primary" id="upload-json-btn">
+                                    <i class="fas fa-upload me-1"></i>Upload JSON
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="credentials-json-file" accept=".json,application/json" style="display: none;">
+                    </div>
+                </div>
+
                 <form id="addConnectionForm" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_connection">
-                    
+
                     <div class="mb-3">
                         <label for="connection-name" class="form-label">Name</label>
                         <input type="text" class="form-control" id="connection-name" name="name" required>
@@ -511,6 +529,103 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Handle JSON file upload for quick connection setup
+        document.getElementById('upload-json-btn').addEventListener('click', function() {
+            document.getElementById('credentials-json-file').click();
+        });
+
+        // Function to process JSON file
+        function processJsonFile(file) {
+            if (!file) return;
+
+            // Validate file type
+            if (!file.name.endsWith('.json')) {
+                showMessage('Please upload a valid JSON file', 'danger');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const jsonData = JSON.parse(event.target.result);
+
+                    // Extract base_url to get IP and port
+                    const baseUrl = jsonData.api_access?.endpoints?.base_url;
+                    if (baseUrl) {
+                        // Parse URL: http://your-server:5001
+                        const urlMatch = baseUrl.match(/^https?:\/\/([^:]+):(\d+)$/);
+                        if (urlMatch) {
+                            const ip = urlMatch[1];
+                            const port = urlMatch[2];
+                            document.getElementById('connection-ip').value = ip;
+                            document.getElementById('connection-port').value = port;
+                        }
+                    }
+
+                    // Fill connection name from api_access.name
+                    if (jsonData.api_access?.name) {
+                        document.getElementById('connection-name').value = jsonData.api_access.name;
+                    }
+
+                    // Fill username
+                    if (jsonData.user_credentials?.username) {
+                        document.getElementById('connection-username').value = jsonData.user_credentials.username;
+                    }
+
+                    // Fill password
+                    if (jsonData.user_credentials?.password) {
+                        document.getElementById('connection-password').value = jsonData.user_credentials.password;
+                    }
+
+                    // Fill API key
+                    if (jsonData.api_access?.api_key) {
+                        document.getElementById('connection-api-key').value = jsonData.api_access.api_key;
+                    }
+
+                    // Show success message
+                    showMessage('Credentials loaded successfully from JSON', 'success');
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
+                    showMessage('Error parsing JSON file. Please check the format.', 'danger');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Handle file input change
+        document.getElementById('credentials-json-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            processJsonFile(file);
+            // Clear file input for reuse
+            e.target.value = '';
+        });
+
+        // Drag and drop functionality
+        const dropZone = document.getElementById('json-upload-zone');
+
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processJsonFile(files[0]);
+            }
+        });
+
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -971,6 +1086,37 @@
 }
 .color-choice:hover .color-option {
     transform: scale(1.05);
+}
+
+/* Drag and drop styles */
+#json-upload-zone {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+#json-upload-zone:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+#json-upload-zone.drag-over {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-color: #0d6efd;
+    border-width: 2px;
+    box-shadow: 0 0 0 0.3rem rgba(13, 110, 253, 0.25);
+    transform: scale(1.02);
+}
+
+/* Responsive spacing for Quick Setup card */
+@media (max-width: 767px) {
+    #json-upload-zone .col-md-4 {
+        margin-top: 10px;
+        text-align: center !important;
+    }
+
+    #json-upload-zone .btn {
+        width: 100%;
+    }
 }
 </style>
 {% endblock %} 
