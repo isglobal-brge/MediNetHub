@@ -250,6 +250,11 @@ class ServerManager:
     
     def _update_client_metrics(self, client_data: Dict, metrics: Dict, round_number: int = 0):
         """Update client metrics and add to history"""
+        if 'current_metrics' not in client_data:
+            client_data['current_metrics'] = self._get_empty_metrics_structure()
+        if 'metrics_history' not in client_data:
+            client_data['metrics_history'] = []
+
         # Update current metrics
         current_metrics = client_data['current_metrics']
         

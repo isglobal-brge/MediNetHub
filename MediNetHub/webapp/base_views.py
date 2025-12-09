@@ -5,29 +5,19 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from .models import UserProfile, ModelConfig, TrainingJob, Connection, Dataset, Model, Notification, Project
 from .forms import (
-    UserProfileForm,
-    ConnectionForm,
     UserUpdateForm,
     ProfileUpdateForm,
     CustomPasswordChangeForm,
 )
 import json
-import re
-import ipaddress
-import threading
-import random
-import time
+
 from django.utils import timezone
-import requests
 from django.views.decorators.http import require_http_methods
-from multiprocessing import Process
 from .decorators import ip_rate_limit, user_rate_limit
-from datetime import datetime, timedelta
-from .helpers import parameter_helpers
-from .training_params import layer_types, optimizer_types, loss_types, strategy_types
+
 
 
 def sanitize_config_for_client(config):
@@ -51,70 +41,6 @@ def sanitize_config_for_client(config):
     
     return sanitized
 
-
-def create_center_specific_config(center_datasets, base_config):
-    """
-    Create configuration containing ONLY data for specific center.
-    Critical for federated learning security - prevents credential/data leakage between centers.
-    """
-    import copy
-    
-    print(f"🎯 Creating center-specific config for {len(center_datasets)} datasets")
-    
-    center_config = copy.deepcopy(base_config)
-    
-    # Include only datasets from this specific center (NO other center data)
-    center_config['dataset'] = {
-        'selected_datasets': [{
-            'dataset_name': ds['dataset_name'],
-            'features_info': ds['features_info'],
-            'target_info': ds['target_info'],
-            'num_columns': ds.get('num_columns', 0),
-            'num_rows': ds.get('num_rows', 0),
-            'size': ds.get('size', 0),
-            # ✅ SECURITY: NO connection info included to prevent credential leakage
-        } for ds in center_datasets]
-    }
-    
-    # Log security compliance
-    for ds in center_datasets:
-        print(f"🔐 [FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
-    
-    return center_config
-
-
-def prepare_center_authentication(connection):
-    """
-    Prepare authentication headers and credentials for center-specific API communication.
-    Follows the same pattern as the datasets function with enhanced security.
-    """
-    headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'MediNet-WebApp/1.0'
-    }
-    auth = None
-    
-    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
-    print(f"  - IP: {connection.ip}")
-    print(f"  - Port: {connection.port}")
-    print(f"  - Username: {connection.username if connection.username else 'Not set'}")
-    print(f"  - Password: {'Set' if connection.password else 'Not set'}")
-    print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
-    
-    # API Key authentication (preferred for external APIs)
-    if connection.api_key:
-        headers['Authorization'] = f'Bearer {connection.api_key}'
-        print("🔑 [AUTH] Using API Key authentication")
-    
-    # Basic HTTP authentication fallback
-    elif connection.username and connection.password:
-        auth = (connection.username, connection.password)
-        print("🔐 [AUTH] Using Basic HTTP authentication")
-    
-    else:
-        print("⚠️ [AUTH] No authentication method available")
-    
-    return headers, auth
 
 
 def create_notification(user, title, message, link=None):

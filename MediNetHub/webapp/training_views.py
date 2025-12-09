@@ -15,9 +15,76 @@ from django.views.decorators.http import require_http_methods
 from multiprocessing import Process
 from .decorators import user_rate_limit
 from datetime import datetime, timedelta
-from .base_views import create_notification, sanitize_config_for_client, create_center_specific_config
+from .base_views import create_notification
 import socket
 import os
+
+
+def create_center_specific_config(center_datasets, base_config):
+    """
+    Create configuration containing ONLY data for specific center.
+    Critical for federated learning security - prevents credential/data leakage between centers.
+    """
+    import copy
+    
+    print(f"🎯 Creating center-specific config for {len(center_datasets)} datasets")
+    
+    center_config = copy.deepcopy(base_config)
+    
+    # Include only datasets from this specific center (NO other center data)
+    center_config['dataset'] = {
+        'selected_datasets': [{
+            'dataset_name': ds['dataset_name'],
+            'features_info': ds['features_info'],
+            'target_info': ds['target_info'],
+            'num_columns': ds.get('num_columns', 0),
+            'num_rows': ds.get('num_rows', 0),
+            'size': ds.get('size', 0),
+            # ✅ SECURITY: NO connection info included to prevent credential leakage
+        } for ds in center_datasets]
+    }
+    
+    # Log security compliance
+    for ds in center_datasets:
+        print(f"🔐 [FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
+    
+    return center_config
+
+
+def prepare_center_authentication(connection):
+    """
+    Prepare authentication headers and credentials for center-specific API communication.
+    Follows the same pattern as the datasets function with enhanced security.
+    """
+    headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'MediNet-WebApp/1.0'
+    }
+    auth = None
+    
+    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
+    print(f"  - IP: {connection.ip}")
+    print(f"  - Port: {connection.port}")
+    print(f"  - Username: {connection.username if connection.username else 'Not set'}")
+    print(f"  - Password: {'Set' if connection.password else 'Not set'}")
+    print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
+    
+    # API Key authentication (preferred for external APIs)
+    if connection.api_key:
+        headers['Authorization'] = f'Bearer {connection.api_key}'
+        print("🔑 [AUTH] Using API Key authentication")
+    
+    # Basic HTTP authentication fallback
+    elif connection.username and connection.password:
+        auth = (connection.username, connection.password)
+        print("🔐 [AUTH] Using Basic HTTP authentication")
+    
+    else:
+        print("⚠️ [AUTH] No authentication method available")
+    
+    return headers, auth
+
+
 
 def is_running_in_docker():
     """
@@ -1007,8 +1074,8 @@ def activate_clients_for_training(training_job, server_process=None):
             print(f"📋 [SECURE] Sending center-specific config with {len(center_datasets)} datasets")
             print(f"📋 [SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
 
-            # Validate port in allowed range (5000-5099)
-            if not (5000 <= int(conn['port']) <= 5099):
+            # Validate port in allowed range (8000-8099)
+            if not (8000 <= int(conn['port']) <= 8099):
                 print(f"❌ Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
                 failed_clients.append(f"{conn['name']} (Invalid port)")
                 continue

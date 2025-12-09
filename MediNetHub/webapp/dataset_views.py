@@ -14,7 +14,6 @@ from django.utils import timezone
 import requests
 from django.views.decorators.http import require_http_methods
 from .decorators import user_rate_limit
-from .base_views import sanitize_config_for_client, create_center_specific_config, prepare_center_authentication
 
 
 @login_required
@@ -177,7 +176,7 @@ def datasets(request):
             try:
                 connection = get_object_or_404(Connection, pk=connection_id, user=request.user)
                 # Validar puerto en rango permitido (5000-5099)
-                if not (5000 <= connection.port <= 5099):
+                if not (8000 <= connection.port <= 8099):
                     messages.error(request, f'Port {connection.port} is not allowed. Use ports 5000-5099')
                     return redirect('datasets')
                 
