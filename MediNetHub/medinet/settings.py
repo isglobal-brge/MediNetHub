@@ -272,7 +272,15 @@ CONTENT_SECURITY_POLICY = {
     'DIRECTIVES': {
         'base-uri': ("'self'",),
         'block-all-mixed-content': True,
-        'connect-src': ("'self'", 'ws:', 'wss:'),
+        'connect-src': (
+            "'self'",
+            'ws:',
+            'wss:',
+            'cdn.jsdelivr.net',
+            'cdnjs.cloudflare.com',
+            'stackpath.bootstrapcdn.com',
+            'code.jquery.com'
+        ),
         'default-src': ("'self'",),
         'font-src': (
             "'self'",

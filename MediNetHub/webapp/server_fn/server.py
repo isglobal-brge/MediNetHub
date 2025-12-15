@@ -4,7 +4,7 @@ from flwr.server.client_manager import SimpleClientManager
 from collections import OrderedDict
 from django.utils import timezone
 import flwr as fl
-from .strategies import ServerManager, FedAvgModelStrategy
+from .strategies import ServerManager, FedAvgModelStrategy, FedSVMStrategy
 warnings.filterwarnings("ignore")
 
 
@@ -148,21 +148,45 @@ def evaluate_metrics_aggregation_fn(metrics: List[Tuple[int, Dict]]) -> Dict:
     print(f"✅ Aggregated evaluation metrics: {aggregated}")
     return aggregated
 
-def get_strategy(server_manager: ServerManager, config: Dict) -> FedAvgModelStrategy:
-    """Create Flower strategy"""
+def get_strategy(server_manager: ServerManager, config: Dict):
+    """Create Flower strategy based on model type"""
+
+    # Check if it's a Machine Learning (SVM) model
+    model_config = server_manager.model_config
+    model_type = model_config.get('metadata', {}).get('model_type', 'dl')
+    framework = model_config.get('metadata', {}).get('framework', 'pytorch')
+
+    print(f"🔍 Detecting strategy: model_type='{model_type}', framework='{framework}'")
+
+    # Use FedSVM strategy for ML models with sklearn framework
+    if model_type == 'ml':
+        print(f"✅ Using FedSVMStrategy for ML/SVM model")
+        strategy = FedSVMStrategy(
+            server_manager=server_manager,
+            fraction_fit=config.get("fraction_fit", 1.0),
+            fraction_evaluate=config.get("fraction_evaluate", 0.3),
+            min_fit_clients=config.get("min_fit_clients", 1),
+            min_evaluate_clients=config.get("min_evaluate_clients", 1),
+            min_available_clients=config.get("min_available_clients", 1),
+            evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
+        )
+        return strategy
+
+    # Default: Use FedAvg for Deep Learning models
+    print(f"✅ Using FedAvgModelStrategy for DL model")
     strategy = FedAvgModelStrategy(
         server_manager=server_manager,
         fraction_fit=config.get("fraction_fit", 1.0),
         fraction_evaluate=config.get("fraction_evaluate", 0.3),
-        min_fit_clients=config.get("min_fit_clients", 1),  # Reduït per testing
-        min_evaluate_clients=config.get("min_evaluate_clients", 1),  # Reduït per testing
-        min_available_clients=config.get("min_available_clients", 1),  # Reduït per testing
-        evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,  # ✅ Agregació de mètriques d'avaluació
+        min_fit_clients=config.get("min_fit_clients", 1),
+        min_evaluate_clients=config.get("min_evaluate_clients", 1),
+        min_available_clients=config.get("min_available_clients", 1),
+        evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
     )
-    
-    # ✅ Afegir la funció de fit metrics després de crear l'estratègia
+
+    # Add fit metrics aggregation function
     strategy.fit_metrics_aggregation_fn = create_fit_metrics_aggregation_fn(server_manager, strategy)
-    
+
     return strategy
 
 def start_flower_server(training_job):

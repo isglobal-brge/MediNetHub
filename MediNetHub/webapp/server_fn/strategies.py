@@ -3,13 +3,15 @@ from torch import save, tensor, load
 import json
 import os
 from typing import List, Tuple, Union, Optional, Dict
-#import pytorch_model_builder as ptmb
-from flwr.common import Metrics, FitRes, Parameters, NDArrays, parameters_to_ndarrays
-from flwr.server.strategy import FedAvg
+import torch
+from flwr.common import Metrics, FitRes, Parameters, NDArrays, parameters_to_ndarrays, ndarrays_to_parameters
+from flwr.server.strategy import FedAvg, Strategy
 from flwr.server.client_proxy import ClientProxy
 from collections import OrderedDict
 from django.utils import timezone
 from .model_builder import DynamicModel, SequentialModel
+from sklearn.svm import SVC
+from sklearn.kernel_approximation import RBFSampler
 import logging
 
 logger = logging.getLogger(__name__)
@@ -403,7 +405,6 @@ class FedAvgModelStrategy(FedAvg):
             self.server_manager.save_model(parameters_as_ndarrays, server_round)            
             print(f"✅ Model saved for round {server_round}")
         
-        # NUEVA LÍNEA: Actualizar tracking de clientes
         update_client_tracking(self.server_manager, server_round, results)
         
         # Check if this is the last round - signal completion and calculate total training time
@@ -425,5 +426,264 @@ class FedAvgModelStrategy(FedAvg):
         else:
             # Prepare for next round
             self.round_start_time = round_end_time
-                
+
         return aggregated_parameters, aggregated_metrics
+
+
+class FedSVMStrategy(Strategy):
+    """
+    Custom Flower strategy for FedSVM (Support Vector Machine Federation)
+    Implements the OptMD (Optimized Multiple Deltas) variant
+    """
+
+    def __init__(
+        self,
+        server_manager: ServerManager,
+        fraction_fit: float = 1.0,
+        fraction_evaluate: float = 0.3,
+        min_fit_clients: int = 1,
+        min_evaluate_clients: int = 1,
+        min_available_clients: int = 1,
+        **kwargs
+    ):
+        super().__init__()
+        self.server_manager = server_manager
+        self.fraction_fit = fraction_fit
+        self.fraction_evaluate = fraction_evaluate
+        self.min_fit_clients = min_fit_clients
+        self.min_evaluate_clients = min_evaluate_clients
+        self.min_available_clients = min_available_clients
+
+        self.round_start_time = None
+        self.training_start_time = None
+        self.current_round = 0
+
+        # FedSVM specific attributes
+        self.support_vectors_pool = {}  # Maps client_id -> list of (sha, sv, label)
+        self.convergence_threshold = server_manager.model_config.get('algorithm', {}).get('ml_algorithm', {}).get('hyperparameters', {}).get('server_eps', 1e-2)
+
+        print(f"FedSVMStrategy initialized with convergence threshold: {self.convergence_threshold}")
+
+    def initialize_parameters(self, client_manager):
+        """Initialize global model parameters (not used in FedSVM)"""
+        return None
+
+    def configure_fit(self, server_round: int, parameters, client_manager):
+        """Configure the next round of federated training"""
+        print(f"🔧 FedSVM configure_fit - Round {server_round}")
+
+        # Sample clients for this round
+        sample_size, min_num_clients = self.num_fit_clients(
+            client_manager.num_available()
+        )
+        clients = client_manager.sample(
+            num_clients=sample_size, min_num_clients=min_num_clients
+        )
+
+        # Create fit configuration for each client
+        fit_configurations = []
+        for client in clients:
+            # Get support vectors from other clients (excluding current client)
+            other_svs = self._get_support_vectors_for_client(client.cid)
+
+            config = {
+                "server_round": server_round,
+                "support_vectors": other_svs,  # Send SVs from other clients
+            }
+            fit_configurations.append((client, config))
+
+        print(f"📋 Configured {len(fit_configurations)} clients for round {server_round}")
+        return fit_configurations
+
+    def aggregate_fit(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
+    ) -> Tuple[Optional[Parameters], Dict]:
+        """Aggregate support vectors from clients"""
+
+        self.current_round = server_round
+        round_end_time = timezone.now()
+
+        # Update status to 'running' when first round starts
+        if server_round == 1 and self.server_manager.job.status == 'server_ready':
+            print(f"Round 1 started - updating status to 'running'")
+            self.server_manager.job.status = 'running'
+            self.server_manager.job.logs = f"FedSVM training started - Round 1 of {self.server_manager.job.total_rounds}"
+            self.server_manager.job.started_at = timezone.now()
+            self.training_start_time = self.server_manager.job.started_at
+            self.server_manager.job.save()
+
+        if self.round_start_time is None:
+            self.round_start_time = self.server_manager.job.started_at or timezone.now()
+
+        print(f"🔄 FedSVM aggregate_fit - Round {server_round}")
+        print(f"📊 Received {len(results)} results, {len(failures)} failures")
+
+        if not results:
+            print("❌ No results to aggregate")
+            return None, {}
+
+        # Collect support vectors from all clients
+        new_svs_count = 0
+        total_svs_exchanged = 0
+
+        for client_proxy, fit_res in results:
+            client_id = fit_res.metrics.get('client_id', client_proxy.cid)
+
+            # Extract support vectors from parameters
+            # Format: [svs_array, labels_array, shas_array]
+            if fit_res.parameters:
+                svs_data = parameters_to_ndarrays(fit_res.parameters)
+
+                if len(svs_data) >= 3:
+                    svs = svs_data[0]  # Support vectors
+                    labels = svs_data[1]  # Labels
+                    shas = svs_data[2]  # SHA hashes
+
+                    # Initialize client pool if needed
+                    if client_id not in self.support_vectors_pool:
+                        self.support_vectors_pool[client_id] = []
+
+                    # Add new support vectors to pool
+                    existing_shas = set([sha for sha, _, _ in self.support_vectors_pool[client_id]])
+
+                    for i in range(len(svs)):
+                        sha = shas[i] if i < len(shas) else f"sha_{i}"
+                        if sha not in existing_shas:
+                            self.support_vectors_pool[client_id].append((sha, svs[i], labels[i]))
+                            new_svs_count += 1
+
+                    total_svs_exchanged += len(svs)
+
+                    print(f"✅ Client {client_id}: received {len(svs)} SVs ({new_svs_count} new)")
+
+        print(f"📦 Total SVs in pool: {sum(len(svs) for svs in self.support_vectors_pool.values())}")
+
+        # Update client tracking
+        update_client_tracking(self.server_manager, server_round, results)
+
+        # Aggregate metrics
+        aggregated_metrics = self._aggregate_metrics(results)
+
+        # Save metrics
+        clients_info = {'active_clients': len(results)}
+        self.server_manager.save_metrics(
+            aggregated_metrics,
+            server_round,
+            round_start_time=self.round_start_time,
+            round_end_time=round_end_time,
+            clients_info=clients_info
+        )
+
+        # Check convergence
+        if new_svs_count == 0:
+            print(f"🏁 Convergence achieved - no new support vectors")
+            self.server_manager.job.status = 'completed'
+            self.server_manager.job.completed_at = round_end_time
+            self.server_manager.job.progress = 100
+
+            if self.training_start_time:
+                total_duration = (round_end_time - self.training_start_time).total_seconds()
+                self.server_manager.job.training_duration = total_duration
+
+            self.server_manager.job.save()
+            self.server_manager.should_stop = True
+
+            return None, aggregated_metrics
+
+        # Check if final round
+        if server_round >= self.server_manager.job.total_rounds:
+            print(f"🏁 Final round {server_round} completed")
+
+            if self.training_start_time:
+                total_duration = (round_end_time - self.training_start_time).total_seconds()
+                self.server_manager.job.training_duration = total_duration
+
+            self.server_manager.job.status = 'completed'
+            self.server_manager.job.completed_at = round_end_time
+            self.server_manager.job.progress = 100
+            self.server_manager.job.save()
+
+            self.server_manager.should_stop = True
+        else:
+            self.round_start_time = round_end_time
+
+        # Return empty parameters (FedSVM doesn't aggregate model weights)
+        return None, aggregated_metrics
+
+    def configure_evaluate(self, server_round: int, parameters, client_manager):
+        """Configure evaluation (optional for FedSVM)"""
+        return []
+
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[Union[Tuple[ClientProxy, FitRes], BaseException]],
+    ) -> Tuple[Optional[float], Dict]:
+        """Aggregate evaluation results"""
+        if not results:
+            return None, {}
+
+        aggregated_metrics = self._aggregate_metrics(results)
+        loss = aggregated_metrics.get('loss', 0.0)
+
+        return loss, aggregated_metrics
+
+    def evaluate(self, server_round: int, parameters):
+        """Evaluate global model (not used in FedSVM)"""
+        return None
+
+    def num_fit_clients(self, num_available_clients: int) -> Tuple[int, int]:
+        """Return sample size and required number of clients for fitting"""
+        num_clients = int(num_available_clients * self.fraction_fit)
+        return max(num_clients, self.min_fit_clients), self.min_available_clients
+
+    def num_evaluation_clients(self, num_available_clients: int) -> Tuple[int, int]:
+        """Return sample size and required number of clients for evaluation"""
+        num_clients = int(num_available_clients * self.fraction_evaluate)
+        return max(num_clients, self.min_evaluate_clients), self.min_available_clients
+
+    def _get_support_vectors_for_client(self, client_id: str) -> Dict:
+        """Get support vectors from all OTHER clients (excluding current client)"""
+        other_svs = {}
+
+        for cid, svs_list in self.support_vectors_pool.items():
+            if cid != client_id:  # Exclude current client's own SVs
+                other_svs[cid] = {
+                    'support_vectors': [sv for _, sv, _ in svs_list],
+                    'labels': [label for _, _, label in svs_list],
+                    'shas': [sha for sha, _, _ in svs_list]
+                }
+
+        return other_svs
+
+    def _aggregate_metrics(self, results: List[Tuple[ClientProxy, FitRes]]) -> Dict:
+        """Aggregate metrics from multiple clients (weighted average)"""
+        if not results:
+            return {}
+
+        total_examples = 0
+        weighted_metrics = {
+            'accuracy': 0.0,
+            'loss': 0.0,
+            'precision': 0.0,
+            'recall': 0.0,
+            'f1': 0.0,
+        }
+
+        for _, fit_res in results:
+            num_examples = fit_res.num_examples
+            total_examples += num_examples
+
+            for metric in weighted_metrics.keys():
+                weighted_metrics[metric] += num_examples * fit_res.metrics.get(metric, 0.0)
+
+        if total_examples > 0:
+            for metric in weighted_metrics.keys():
+                weighted_metrics[metric] /= total_examples
+
+        print(f"📊 Aggregated metrics: {weighted_metrics}")
+        return weighted_metrics

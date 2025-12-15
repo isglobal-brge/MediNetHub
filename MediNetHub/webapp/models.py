@@ -236,17 +236,17 @@ def get_artifact_upload_path(instance, filename):
 
 class ModelArtifact(models.Model):
     job = models.ForeignKey(TrainingJob, on_delete=models.CASCADE, related_name='artifacts')
-    
+
     # Tipo de artefacto: 'architecture', 'checkpoint', 'final_model'
     artifact_type = models.CharField(max_length=20)
-    
+
     # Para checkpoints, el número de ronda correspondiente.
     round_number = models.PositiveIntegerField(null=True, blank=True)
 
     # El archivo físico en el sistema de archivos.
     file = models.FileField(upload_to=get_artifact_upload_path)
     file_size = models.BigIntegerField(help_text="Size of the file in bytes.") # Se calculará en bytes al guardar.
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -257,3 +257,137 @@ class ModelArtifact(models.Model):
 
     def __str__(self):
         return f'{self.artifact_type} for job {self.job.name} ({self.file.name})'
+
+
+class Experiment(models.Model):
+    """
+    Model to store hyperparameter tuning experiments.
+    An experiment groups multiple TrainingJobs with different parameter combinations.
+    """
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='experiments')
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    base_model_config = models.ForeignKey(
+        ModelConfig,
+        on_delete=models.CASCADE,
+        related_name='experiments',
+        help_text='Base model configuration to use for all jobs in this experiment'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Grid search configuration stored as JSON
+    # Example: {"kernel": ["rbf", "linear"], "C": [0.1, 1.0, 10.0], "gamma": [0.001, 0.01]}
+    parameter_grid = models.JSONField(
+        default=dict,
+        help_text='Parameter grid for grid search, e.g. {"kernel": ["rbf", "linear"], "C": [0.1, 1.0]}'
+    )
+
+    # List of TrainingJob IDs belonging to this experiment
+    # Jobs are fetched on-demand using get_jobs() method
+    job_ids = models.JSONField(
+        default=list,
+        help_text='List of TrainingJob IDs in this experiment'
+    )
+
+    # Track the best performing job
+    best_job_id = models.IntegerField(null=True, blank=True)
+    best_accuracy = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+    @property
+    def total_jobs(self):
+        """Total number of jobs in this experiment"""
+        return len(self.job_ids)
+
+    @property
+    def completed_jobs(self):
+        """Number of completed jobs"""
+        return TrainingJob.objects.filter(
+            id__in=self.job_ids,
+            status='completed'
+        ).count()
+
+    @property
+    def progress(self):
+        """Progress percentage (0-100)"""
+        if self.total_jobs == 0:
+            return 0
+        return int((self.completed_jobs / self.total_jobs) * 100)
+
+    def get_jobs(self):
+        """
+        Fetch all TrainingJobs belonging to this experiment.
+        Returns QuerySet ordered by best accuracy (descending).
+        """
+        return TrainingJob.objects.filter(
+            id__in=self.job_ids
+        ).order_by('-metrics_json__best_accuracy')
+
+    def update_best_job(self):
+        """
+        Update best_job_id and best_accuracy based on completed jobs.
+        Should be called whenever a job completes.
+        """
+        # Find the best completed job
+        best_job = self.get_jobs().filter(
+            status='completed'
+        ).order_by('-metrics_json__best_accuracy').first()
+
+        if best_job:
+            # Extract best accuracy from metrics_json
+            # Assuming metrics_json has a structure like: {"best_accuracy": 92.34, ...}
+            if best_job.metrics_json and 'best_accuracy' in best_job.metrics_json:
+                self.best_job_id = best_job.id
+                self.best_accuracy = best_job.metrics_json['best_accuracy']
+                self.save()
+
+
+class ExperimentJobConfig(models.Model):
+    """
+    Links a TrainingJob to an Experiment and stores its specific parameter combination.
+    This model tracks what hyperparameters were used for each job in the experiment.
+    """
+    experiment = models.ForeignKey(
+        Experiment,
+        on_delete=models.CASCADE,
+        related_name='job_configs'
+    )
+    job = models.OneToOneField(
+        TrainingJob,
+        on_delete=models.CASCADE,
+        related_name='experiment_config'
+    )
+
+    # Specific parameter combination for this job
+    # Example: {"kernel": "rbf", "C": 1.0, "gamma": 0.001}
+    parameters = models.JSONField(
+        default=dict,
+        help_text='Specific parameter combination for this job'
+    )
+
+    # Ranking within the experiment (1 = best, 2 = second best, etc.)
+    # Updated when jobs complete and rankings change
+    rank = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['rank', '-job__metrics_json__best_accuracy']
+
+    def __str__(self):
+        return f"{self.experiment.name} - Job {self.job.id} (Rank: {self.rank or 'N/A'})"

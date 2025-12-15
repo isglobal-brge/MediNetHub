@@ -57,7 +57,8 @@
                             <div class="col-md-4">
                                 <label for="ml-model-algorithm" class="form-label">Algorithm</label>
                                 <select class="form-select" id="ml-model-algorithm">
-                                    <option value="RandomForestClassifier" selected>Random Forest Classifier</option>
+                                    <option value="FedSVMOptMD" selected>FedSVM (Federated SVM OptMD)</option>
+                                    <option value="RandomForestClassifier">Random Forest Classifier</option>
                                     <option value="DecisionTreeClassifier">Decision Tree Classifier</option>
                                     <option value="KNeighborsClassifier">K-Nearest Neighbors</option>
                                     <option value="KMeans">K-Means Clustering</option>
@@ -75,7 +76,7 @@
                         <h5 class="mb-3">Hyperparameters</h5>
                         <div id="hyperparameters-container">
                             <!-- RandomForestClassifier Parameters -->
-                            <div class="param-card" id="params-RandomForestClassifier">
+                            <div class="param-card d-none" id="params-RandomForestClassifier">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="rfc-n-estimators" class="form-label">
@@ -102,6 +103,64 @@
                                         <label for="rfc-min-samples-split" class="form-label">Min Samples Split</label>
                                         <input type="number" class="form-control" id="rfc-min-samples-split" value="2" min="2">
                                         <div class="form-text">The minimum number of samples required to split an internal node.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FedSVM OptMD Parameters -->
+                            <div class="param-card" id="params-FedSVMOptMD">
+                                <div class="row g-3">
+                                    <!-- Kernel Selection -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-kernel" class="form-label">Kernel</label>
+                                        <select class="form-select" id="fedsvm-kernel">
+                                            <option value="linear">Linear</option>
+                                            <option value="rbf" selected>RBF (Radial Basis Function)</option>
+                                            <option value="poly">Polynomial</option>
+                                        </select>
+                                        <div class="form-text">Kernel function for the SVM. RBF is recommended for non-linear data.</div>
+                                    </div>
+
+                                    <!-- C Parameter -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-c" class="form-label">C (Regularization)</label>
+                                        <input type="number" class="form-control" id="fedsvm-c" value="2.0" min="0.1" step="0.1">
+                                        <div class="form-text">Regularization parameter. Higher values = less regularization.</div>
+                                    </div>
+
+                                    <!-- Gamma (for RBF/Poly) -->
+                                    <div class="col-md-6" id="fedsvm-gamma-container">
+                                        <label for="fedsvm-gamma" class="form-label">Gamma</label>
+                                        <input type="number" class="form-control" id="fedsvm-gamma" value="0.1" min="0.001" step="0.001">
+                                        <div class="form-text">Kernel coefficient for RBF/Poly. Default: 1/n_features.</div>
+                                    </div>
+
+                                    <!-- Degree (for Poly only) -->
+                                    <div class="col-md-6 d-none" id="fedsvm-degree-container">
+                                        <label for="fedsvm-degree" class="form-label">Degree (Polynomial)</label>
+                                        <input type="number" class="form-control" id="fedsvm-degree" value="3" min="2" max="5">
+                                        <div class="form-text">Degree of the polynomial kernel (2-5).</div>
+                                    </div>
+
+                                    <!-- Server Epsilon -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-server-eps" class="form-label">Server Epsilon (Convergence)</label>
+                                        <input type="number" class="form-control" id="fedsvm-server-eps" value="0.01" min="0.001" step="0.001">
+                                        <div class="form-text">Server convergence threshold (0.001-0.1).</div>
+                                    </div>
+
+                                    <!-- Client Epsilon -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-client-eps" class="form-label">Client Epsilon (Delta Optimization)</label>
+                                        <input type="number" class="form-control" id="fedsvm-client-eps" value="0.0001" min="0.00001" step="0.00001">
+                                        <div class="form-text">Client delta optimization threshold (0.00001-0.001).</div>
+                                    </div>
+
+                                    <!-- Random Fourier Features -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-n-random-features" class="form-label">Random Fourier Features</label>
+                                        <input type="number" class="form-control" id="fedsvm-n-random-features" value="0" min="0" step="100">
+                                        <div class="form-text">0 = disabled. Use 1000-5000 for large datasets (>10k samples).</div>
                                     </div>
                                 </div>
                             </div>
@@ -363,6 +422,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (rfcNEstimatorsInput) {
         rfcNEstimatorsInput.addEventListener('input', function() {
             if(algorithmSelect.value === 'RandomForestClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for FedSVM parameters
+    const fedsvmKernelInput = document.getElementById('fedsvm-kernel');
+    if (fedsvmKernelInput) {
+        fedsvmKernelInput.addEventListener('change', function() {
+            if(algorithmSelect.value === 'FedSVMOptMD') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    const fedsvmCInput = document.getElementById('fedsvm-c');
+    if (fedsvmCInput) {
+        fedsvmCInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'FedSVMOptMD') {
                 updateVisualization(algorithmSelect.value);
             }
         });
@@ -668,6 +746,161 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             }
 
+            case 'FedSVMOptMD': {
+                const kernel = document.getElementById('fedsvm-kernel')?.value || 'rbf';
+                const C = parseFloat(document.getElementById('fedsvm-c')?.value) || 2.0;
+                vizContent = document.createElement('div');
+
+                let fedsvmSvgContent = `
+                    <h6 class="text-start mb-2">FedSVM Decision Boundary</h6>
+                    <p class="text-muted small text-start mt-0 mb-2" style="font-size: 0.75rem;">
+                        Support vectors (circled) are closest to the decision boundary. Kernel: <strong>${kernel.toUpperCase()}</strong>
+                    </p>
+                    <svg viewBox="0 0 400 350" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .data-point-class0 { fill: #0d6efd; stroke: #fff; stroke-width: 1.5; }
+                            .data-point-class1 { fill: #dc3545; stroke: #fff; stroke-width: 1.5; }
+                            .support-vector { stroke: #ffc107; stroke-width: 3; fill: none; }
+                            .decision-boundary { stroke: #198754; stroke-width: 2.5; fill: none; }
+                            .margin-line { stroke: #198754; stroke-width: 1.5; stroke-dasharray: 5,5; fill: none; opacity: 0.6; }
+                            .legend-text { font-size: 10px; font-weight: 600; }
+                            .label-text { font-size: 11px; font-weight: bold; }
+                        </style>
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        <!-- Background region labels -->
+                        <text class="label-text" x="50" y="30" fill="#0d6efd" opacity="0.5">Class 0</text>
+                        <text class="label-text" x="300" y="320" fill="#dc3545" opacity="0.5">Class 1</text>
+                `;
+
+                // Generate data points - SVs are closest to boundary
+                let allPoints = [];
+
+                if (kernel === 'linear') {
+                    // Linear kernel - diagonal boundary
+                    allPoints = [
+                        // Class 0 - far from boundary
+                        {x: 60, y: 80, cls: 0, isSV: false},
+                        {x: 80, y: 100, cls: 0, isSV: false},
+                        {x: 70, y: 60, cls: 0, isSV: false},
+                        // Class 0 - support vectors (near diagonal)
+                        {x: 130, y: 150, cls: 0, isSV: true},
+                        {x: 150, y: 170, cls: 0, isSV: true},
+                        {x: 110, y: 130, cls: 0, isSV: true},
+                        // Class 1 - far from boundary
+                        {x: 320, y: 290, cls: 1, isSV: false},
+                        {x: 300, y: 270, cls: 1, isSV: false},
+                        {x: 330, y: 310, cls: 1, isSV: false},
+                        // Class 1 - support vectors (near diagonal)
+                        {x: 230, y: 210, cls: 1, isSV: true},
+                        {x: 250, y: 230, cls: 1, isSV: true},
+                        {x: 210, y: 190, cls: 1, isSV: true}
+                    ];
+
+                    fedsvmSvgContent += `<line class="decision-boundary" x1="20" y1="20" x2="380" y2="380" filter="url(#glow)"/>`;
+                    fedsvmSvgContent += `<line class="margin-line" x1="50" y1="20" x2="410" y2="380"/>`;
+                    fedsvmSvgContent += `<line class="margin-line" x1="0" y1="50" x2="350" y2="380"/>`;
+                } else if (kernel === 'rbf') {
+                    // RBF kernel - curved boundary
+                    allPoints = [
+                        // Class 0 - far from boundary
+                        {x: 80, y: 100, cls: 0, isSV: false},
+                        {x: 100, y: 120, cls: 0, isSV: false},
+                        {x: 90, y: 80, cls: 0, isSV: false},
+                        // Class 0 - support vectors (near curve)
+                        {x: 150, y: 130, cls: 0, isSV: true},
+                        {x: 140, y: 150, cls: 0, isSV: true},
+                        {x: 130, y: 110, cls: 0, isSV: true},
+                        // Class 1 - far from boundary
+                        {x: 300, y: 280, cls: 1, isSV: false},
+                        {x: 320, y: 260, cls: 1, isSV: false},
+                        {x: 280, y: 300, cls: 1, isSV: false},
+                        // Class 1 - support vectors (near curve)
+                        {x: 220, y: 200, cls: 1, isSV: true},
+                        {x: 240, y: 220, cls: 1, isSV: true},
+                        {x: 200, y: 180, cls: 1, isSV: true}
+                    ];
+
+                    fedsvmSvgContent += `<path class="decision-boundary" d="M 170 80 Q 200 120, 210 180 Q 220 240, 200 290" filter="url(#glow)"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 150 70 Q 180 110, 190 170 Q 200 230, 180 280"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 190 90 Q 220 130, 230 190 Q 240 250, 220 300"/>`;
+                } else { // poly
+                    // Polynomial kernel - wavy boundary
+                    allPoints = [
+                        // Class 0 - far from boundary
+                        {x: 70, y: 120, cls: 0, isSV: false},
+                        {x: 90, y: 140, cls: 0, isSV: false},
+                        {x: 80, y: 100, cls: 0, isSV: false},
+                        // Class 0 - support vectors (near wave)
+                        {x: 140, y: 160, cls: 0, isSV: true},
+                        {x: 130, y: 140, cls: 0, isSV: true},
+                        {x: 120, y: 180, cls: 0, isSV: true},
+                        // Class 1 - far from boundary
+                        {x: 310, y: 260, cls: 1, isSV: false},
+                        {x: 290, y: 280, cls: 1, isSV: false},
+                        {x: 320, y: 240, cls: 1, isSV: false},
+                        // Class 1 - support vectors (near wave)
+                        {x: 230, y: 210, cls: 1, isSV: true},
+                        {x: 250, y: 230, cls: 1, isSV: true},
+                        {x: 240, y: 190, cls: 1, isSV: true}
+                    ];
+
+                    fedsvmSvgContent += `<path class="decision-boundary" d="M 160 100 Q 180 140, 190 180 Q 210 220, 230 250" filter="url(#glow)"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 140 90 Q 160 130, 170 170 Q 190 210, 210 240"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 180 110 Q 200 150, 210 190 Q 230 230, 250 260"/>`;
+                }
+
+                // Draw all points
+                allPoints.forEach(point => {
+                    const cssClass = point.cls === 0 ? 'data-point-class0' : 'data-point-class1';
+                    fedsvmSvgContent += `<circle class="${cssClass}" cx="${point.x}" cy="${point.y}" r="6"/>`;
+                    if (point.isSV) {
+                        fedsvmSvgContent += `<circle class="support-vector" cx="${point.x}" cy="${point.y}" r="11"/>`;
+                    }
+                });
+
+                // Legend
+                fedsvmSvgContent += `
+                    <g transform="translate(20, 300)">
+                        <circle class="data-point-class0" cx="0" cy="0" r="5"/>
+                        <text class="legend-text" x="10" y="4" fill="#333">Class 0</text>
+
+                        <circle class="data-point-class1" cx="80" cy="0" r="5"/>
+                        <text class="legend-text" x="90" y="4" fill="#333">Class 1</text>
+
+                        <circle cx="160" cy="0" r="5" fill="#666"/>
+                        <circle class="support-vector" cx="160" cy="0" r="10"/>
+                        <text class="legend-text" x="175" y="4" fill="#333">Support Vector</text>
+                    </g>
+                `;
+
+                fedsvmSvgContent += `</svg>`;
+
+                // Add explanation below
+                fedsvmSvgContent += `
+                    <div class="mt-3 p-2" style="background: #f8f9fa; border-radius: 5px; font-size: 0.8rem;">
+                        <strong>How FedSVM works:</strong>
+                        <ul class="mb-0 mt-1" style="padding-left: 1.2rem;">
+                            <li>Each client trains a local SVM on their data</li>
+                            <li>Only <strong>support vectors</strong> (circled points) are shared</li>
+                            <li>Vectors are <strong>perturbed</strong> for privacy (OptMD)</li>
+                            <li>Server aggregates SVs to build global model</li>
+                        </ul>
+                    </div>
+                `;
+
+                vizContent.innerHTML = fedsvmSvgContent;
+                break;
+            }
+
             default: {
                 vizContent = document.createElement('div');
                 vizContent.className = 'd-flex flex-column justify-content-center align-items-center h-100';
@@ -695,6 +928,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 svcDegreeContainer.style.display = 'none';
             }
         });
+    }
+
+    // Handle FedSVM kernel parameter changes
+    const fedsvmKernelSelect = document.getElementById('fedsvm-kernel');
+    const fedsvmGammaContainer = document.getElementById('fedsvm-gamma-container');
+    const fedsvmDegreeContainer = document.getElementById('fedsvm-degree-container');
+
+    if (fedsvmKernelSelect && fedsvmGammaContainer && fedsvmDegreeContainer) {
+        fedsvmKernelSelect.addEventListener('change', function() {
+            if (this.value === 'linear') {
+                // Hide both gamma and degree for linear kernel
+                fedsvmGammaContainer.style.display = 'none';
+                fedsvmDegreeContainer.classList.add('d-none');
+            } else if (this.value === 'rbf') {
+                // Show gamma, hide degree for RBF
+                fedsvmGammaContainer.style.display = 'block';
+                fedsvmDegreeContainer.classList.add('d-none');
+            } else if (this.value === 'poly') {
+                // Show both gamma and degree for polynomial
+                fedsvmGammaContainer.style.display = 'block';
+                fedsvmDegreeContainer.classList.remove('d-none');
+            }
+        });
+        // Initial check
+        fedsvmKernelSelect.dispatchEvent(new Event('change'));
     }
 
     // Handle special case for KNN 'p' parameter
@@ -920,6 +1178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 else if (algorithm === 'DecisionTreeClassifier') prefix = 'dt-';
                 else if (algorithm === 'KNeighborsClassifier') prefix = 'knn-';
                 else if (algorithm === 'KMeans') prefix = 'kmeans-';
+                else if (algorithm === 'FedSVMOptMD') prefix = 'fedsvm-';
 
                 const inputId = prefix + key.replace(/_/g, '-');
                 const inputElement = document.getElementById(inputId);
@@ -930,6 +1189,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         inputElement.value = '';
                     }
                 }
+            }
+
+            // Trigger kernel change event for FedSVM to show/hide degree field
+            if (algorithm === 'FedSVMOptMD' && fedsvmKernelSelect) {
+                fedsvmKernelSelect.dispatchEvent(new Event('change'));
             }
         }
         
