@@ -4,7 +4,8 @@ import json
 import os
 from typing import List, Tuple, Union, Optional, Dict
 import torch
-from flwr.common import Metrics, FitRes, Parameters, NDArrays, parameters_to_ndarrays, ndarrays_to_parameters
+import traceback
+from flwr.common import Metrics, FitRes, Parameters, NDArrays, FitIns, parameters_to_ndarrays, ndarrays_to_parameters
 from flwr.server.strategy import FedAvg, Strategy
 from flwr.server.client_proxy import ClientProxy
 from collections import OrderedDict
@@ -470,6 +471,8 @@ class FedSVMStrategy(Strategy):
 
     def configure_fit(self, server_round: int, parameters, client_manager):
         """Configure the next round of federated training"""
+        
+
         print(f"🔧 FedSVM configure_fit - Round {server_round}")
 
         # Sample clients for this round
@@ -484,13 +487,50 @@ class FedSVMStrategy(Strategy):
         fit_configurations = []
         for client in clients:
             # Get support vectors from other clients (excluding current client)
-            other_svs = self._get_support_vectors_for_client(client.cid)
+            other_svs_dict = self._get_support_vectors_for_client(client.cid)
 
+            # Convert support vectors to ndarrays for Flower serialization
+            if other_svs_dict:
+                # Aggregate all SVs from different clients into single arrays
+                all_svs = []
+                all_labels = []
+
+                # other_svs_dict format: {client_id: {'support_vectors': [...], 'labels': [...], 'shas': [...]}}
+                for other_client_id, sv_data in other_svs_dict.items():
+                    support_vectors = sv_data['support_vectors']
+                    labels = sv_data['labels']
+
+                    # Add all SVs from this client
+                    all_svs.extend(support_vectors)
+                    all_labels.extend(labels)
+
+                if all_svs:
+                    # Convert to numpy arrays
+                    svs_array = np.array(all_svs, dtype=np.float32)
+                    labels_array = np.array(all_labels, dtype=np.float32)
+
+                    # Pack into Parameters
+                    params = ndarrays_to_parameters([svs_array, labels_array])
+                    print(f"📤 Sending {len(all_svs)} SVs to client {client.cid}")
+                else:
+                    params = Parameters(tensors=[], tensor_type="")
+            else:
+                # No support vectors to send (first round)
+                params = Parameters(tensors=[], tensor_type="")
+                print(f"📤 No SVs to send to client {client.cid} (first round or no other clients)")
+
+            # Config only contains scalar metadata
             config = {
                 "server_round": server_round,
-                "support_vectors": other_svs,  # Send SVs from other clients
             }
-            fit_configurations.append((client, config))
+
+            # Create FitIns object
+            fit_ins = FitIns(
+                parameters=params,
+                config=config
+            )
+
+            fit_configurations.append((client, fit_ins))
 
         print(f"📋 Configured {len(fit_configurations)} clients for round {server_round}")
         return fit_configurations
@@ -520,6 +560,32 @@ class FedSVMStrategy(Strategy):
 
         print(f"🔄 FedSVM aggregate_fit - Round {server_round}")
         print(f"📊 Received {len(results)} results, {len(failures)} failures")
+
+        if failures:
+            print(f"🚨 ===== FAILURE DETAILS FOR ROUND {server_round} =====")
+            for i, failure in enumerate(failures):
+                print(f"❌ Failure {i+1}/{len(failures)}:")
+
+                # Check if it's a tuple (ClientProxy, Exception) or just Exception
+                if isinstance(failure, tuple):
+                    client_proxy, exception = failure
+                    print(f"   Client CID: {client_proxy.cid}")
+                    print(f"   Exception Type: {type(exception).__name__}")
+                    print(f"   Exception Message: {str(exception)}")
+
+                    # Print full traceback if available
+                    if hasattr(exception, '__traceback__'):
+                        print(f"   Traceback:")
+                        traceback.print_exception(type(exception), exception, exception.__traceback__)
+                else:
+                    # It's a BaseException
+                    print(f"   Exception Type: {type(failure).__name__}")
+                    print(f"   Exception Message: {str(failure)}")
+
+                    if hasattr(failure, '__traceback__'):
+                        print(f"   Traceback:")
+                        traceback.print_exception(type(failure), failure, failure.__traceback__)
+
 
         if not results:
             print("❌ No results to aggregate")
