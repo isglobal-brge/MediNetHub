@@ -4,20 +4,95 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
-from .models import ModelConfig, TrainingJob, Connection, Notification
+from .models import ModelConfig, TrainingJob, Connection
+from webapp.server_process import run_flower_server_process
 import json
 import time
 import threading
 import random
 from django.utils import timezone
 import requests
-from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 from multiprocessing import Process
 from .decorators import user_rate_limit
-from datetime import datetime, timedelta
-from .base_views import create_notification
 import socket
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+def clean_model_json_for_ml(model_json):
+    """
+    Clean model JSON by removing DL-specific fields when model is ML type.
+
+    Args:
+        model_json (dict): Original model configuration
+
+    Returns:
+        dict: Cleaned model configuration
+    """
+    if not isinstance(model_json, dict):
+        return model_json
+
+    model_type = model_json.get('model', {}).get('metadata', {}).get('model_type')
+
+    if model_type != 'ml':
+        return model_json
+
+    cleaned = model_json.copy()
+
+    # Remove DL-specific fields from train section
+    if 'train' in cleaned:
+        train = cleaned['train'].copy()
+        train.pop('epochs', None)
+        train.pop('batch_size', None)
+        cleaned['train'] = train
+
+    # Remove DL-specific fields from model.training section
+    if 'model' in cleaned and 'training' in cleaned['model']:
+        training = cleaned['model']['training'].copy()
+        training.pop('epochs', None)
+        training.pop('batch_size', None)
+        cleaned['model']['training'] = training
+
+    return cleaned
+
+
+def extract_dataset_id_from_model(model_json):
+    """
+    Extract dataset ID from model configuration.
+    
+    Args:
+        model_json (dict): Model configuration JSON
+        
+    Returns:
+        int: Dataset ID or None if not found
+    """
+    try:
+        if isinstance(model_json, dict):
+            # Check model.dataset.selected_datasets[0] structure
+            model_config = model_json.get('model', {})
+            dataset_config = model_config.get('dataset', {})
+            selected_datasets = dataset_config.get('selected_datasets', [])
+            
+            if selected_datasets and len(selected_datasets) > 0:
+                first_dataset = selected_datasets[0]
+                if isinstance(first_dataset, dict):
+                    dataset_id = first_dataset.get('dataset_id')
+                    if dataset_id:
+                        return int(dataset_id)
+            
+            # Check direct dataset_id reference
+            dataset_id = model_json.get('dataset_id')
+            if dataset_id:
+                return int(dataset_id)
+                
+    except Exception as e:
+        logger.error(f"Error extracting dataset ID from model config: {str(e)}")
+        return None
+    
+    return None
+
 
 
 def create_center_specific_config(center_datasets, base_config):
@@ -239,7 +314,6 @@ def training(request):
 
     # Get selected datasets from session
     selected_datasets = request.session.get('selected_datasets', [])
-    print("🔍 DEBUG: selected_datasets: ", selected_datasets)
     context = {
         'model_json': json.dumps(model_json),  
         'model_configs': model_configs,
@@ -257,7 +331,7 @@ def training(request):
         'STRATEGY_HELPER': STRATEGY_HELPER,
     }
 
-    return render(request, 'webapp/training.html', context)
+    return render(request, 'webapp/training_copy.html', context)
 
 
 @login_required
@@ -565,7 +639,6 @@ def start_training(request):
                 }
                 
                 # Inicializar estado del cliente
-                from django.utils import timezone
                 clients_status[client_id] = {
                     'client_id': client_id,
                     'connection_name': connection_info.get('name', ''),
@@ -586,6 +659,8 @@ def start_training(request):
             print(f"📋 CLIENTS_CONFIG: {clients_config}")
             print(f"📊 CLIENTS_STATUS initialized with {len(clients_status)} clients")
             
+            model_config = clean_model_json_for_ml(model_config)
+            
             training_job = TrainingJob.objects.create(
                 user=request.user,
                 model_config=model_config,
@@ -602,7 +677,6 @@ def start_training(request):
             )
             
             # Use real Flower server in separate process
-            from webapp.server_process import run_flower_server_process
             server_process = Process(target=run_flower_server_process, args=(training_job.id,))
             server_process.start()
             
@@ -1209,5 +1283,89 @@ def prepare_center_authentication(connection):
         def __init__(self, headers, basic_auth):
             self.headers = headers
             self.basic_auth = basic_auth
-    
+
     return AuthConfig(headers, auth)
+
+
+@login_required
+@user_rate_limit('training')
+def experiment_detail(request, experiment_id):
+    """
+    Display experiment detail with all jobs comparison.
+    Currently uses dummy data until Experiment model is implemented.
+    """
+    # Dummy experiment data (will be replaced with database query later)
+    experiments_data = {
+        1: {
+            'id': 1,
+            'name': 'FedSVM Kernel Grid Search',
+            'description': 'Testing RBF kernel with gamma variations',
+            'status': 'completed',
+            'status_color': 'success',
+            'progress': 100,
+            'created': '2024-01-15',
+            'total_jobs': 9,
+            'completed_jobs': 9,
+            'best_accuracy': 92.34,
+            'jobs': [
+                {'id': 101, 'name': 'rbf_gamma_0.001', 'accuracy': 92.34, 'loss': 0.1245, 'f1': 0.9156, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 1.0}, 'rank': 1},
+                {'id': 102, 'name': 'rbf_gamma_0.01', 'accuracy': 91.56, 'loss': 0.1389, 'f1': 0.9078, 'params': {'kernel': 'rbf', 'gamma': 0.01, 'C': 1.0}, 'rank': 2},
+                {'id': 103, 'name': 'rbf_gamma_0.1', 'accuracy': 90.87, 'loss': 0.1523, 'f1': 0.8998, 'params': {'kernel': 'rbf', 'gamma': 0.1, 'C': 1.0}, 'rank': 3},
+                {'id': 104, 'name': 'rbf_gamma_1.0', 'accuracy': 89.23, 'loss': 0.1876, 'f1': 0.8845, 'params': {'kernel': 'rbf', 'gamma': 1.0, 'C': 1.0}, 'rank': 4},
+                {'id': 105, 'name': 'linear_C_0.1', 'accuracy': 88.45, 'loss': 0.1945, 'f1': 0.8767, 'params': {'kernel': 'linear', 'C': 0.1}, 'rank': 5},
+                {'id': 106, 'name': 'linear_C_1.0', 'accuracy': 87.34, 'loss': 0.2123, 'f1': 0.8656, 'params': {'kernel': 'linear', 'C': 1.0}, 'rank': 6},
+                {'id': 107, 'name': 'poly_degree_2', 'accuracy': 86.12, 'loss': 0.2289, 'f1': 0.8534, 'params': {'kernel': 'poly', 'degree': 2, 'C': 1.0}, 'rank': 7},
+                {'id': 108, 'name': 'poly_degree_3', 'accuracy': 85.34, 'loss': 0.2456, 'f1': 0.8456, 'params': {'kernel': 'poly', 'degree': 3, 'C': 1.0}, 'rank': 8},
+                {'id': 109, 'name': 'sigmoid', 'accuracy': 84.01, 'loss': 0.2678, 'f1': 0.8323, 'params': {'kernel': 'sigmoid', 'C': 1.0}, 'rank': 9}
+            ]
+        },
+        2: {
+            'id': 2,
+            'name': 'FedSVM Regularization Tuning',
+            'description': 'Optimizing C parameter for RBF kernel',
+            'status': 'running',
+            'status_color': 'primary',
+            'progress': 67,
+            'created': '2024-01-16',
+            'total_jobs': 6,
+            'completed_jobs': 4,
+            'best_accuracy': 91.45,
+            'jobs': [
+                {'id': 201, 'name': 'C_0.01', 'accuracy': 89.23, 'loss': 0.1876, 'f1': 0.8845, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 0.01}, 'rank': 3},
+                {'id': 202, 'name': 'C_0.1', 'accuracy': 91.45, 'loss': 0.1423, 'f1': 0.9067, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 0.1}, 'rank': 1},
+                {'id': 203, 'name': 'C_1.0', 'accuracy': 90.98, 'loss': 0.1534, 'f1': 0.9012, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 1.0}, 'rank': 2},
+                {'id': 204, 'name': 'C_10.0', 'accuracy': 88.67, 'loss': 0.1912, 'f1': 0.8789, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 10.0}, 'rank': 4},
+            ]
+        },
+        3: {
+            'id': 3,
+            'name': 'Multi-kernel Comparison',
+            'description': 'Comparing different kernel types with optimal parameters',
+            'status': 'pending',
+            'status_color': 'secondary',
+            'progress': 0,
+            'created': '2024-01-17',
+            'total_jobs': 4,
+            'completed_jobs': 0,
+            'best_accuracy': None,
+            'jobs': []
+        }
+    }
+
+    # Get experiment data (or 404 if not found)
+    if experiment_id not in experiments_data:
+        messages.error(request, f'Experiment with ID {experiment_id} not found.')
+        return redirect('training')
+
+    experiment = experiments_data[experiment_id]
+
+    # Prepare jobs data as JSON for JavaScript
+    jobs_json = json.dumps(experiment['jobs'])
+
+    context = {
+        'experiment': experiment,
+        'jobs': experiment['jobs'],
+        'jobs_json': jobs_json,
+    }
+
+    return render(request, 'webapp/experiment_detail.html', context)

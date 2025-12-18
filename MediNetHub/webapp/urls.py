@@ -18,6 +18,7 @@ urlpatterns = [
     path('model-designer-advanced/<int:model_id>/', modelStudio_views.model_designer_advanced, name='edit_model_advanced'),
     path('model-studio/', modelStudio_views.model_studio, name='model_studio'),
     path('training/', training_views.training, name='training'),
+    path('experiment/<int:experiment_id>/', training_views.experiment_detail, name='experiment_detail'),
     path('dashboard/<int:job_id>/', training_views.dashboard, name='dashboard'),
     path('dashboard/<int:job_id>/clients/', training_views.client_dashboard, name='client_dashboard'),
     path('notifications/', base_views.notifications, name='notifications'),

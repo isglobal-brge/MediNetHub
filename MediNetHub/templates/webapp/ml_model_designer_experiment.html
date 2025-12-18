@@ -1,0 +1,1913 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load webapp_filters %}
+
+{% block title %}ML Model Designer - MediNet{% endblock %}
+
+{% block extra_css %}
+<style>
+    .param-card {
+        transition: all 0.3s ease;
+    }
+    .param-card.d-none {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0"><i class="fas fa-cogs me-2"></i>Machine Learning Model Designer</h2>
+            <p class="text-muted">Configure classic Scikit-learn models for training</p>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-outline-info me-2" id="load-model-btn">
+                <i class="fas fa-folder-open me-1"></i>Load Model
+            </button>
+            <button type="button" class="btn btn-outline-secondary me-2" id="preview-json-btn">
+                <i class="fas fa-code me-1"></i>Preview JSON
+            </button>
+            <button type="button" class="btn btn-primary me-2" id="save-ml-model-btn">
+                <i class="fas fa-save me-1"></i>Save Model
+            </button>
+            <button type="button" class="btn btn-success" id="go-to-training-btn" disabled>
+                <i class="fas fa-play me-1"></i>Go to Training
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Configuration Panel -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Algorithm Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="ml-model-form">
+                        <!-- Model Info -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <label for="ml-model-name" class="form-label">Model Name</label>
+                                <input type="text" class="form-control" id="ml-model-name" placeholder="My Random Forest Model">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="ml-model-algorithm" class="form-label">Algorithm</label>
+                                <select class="form-select" id="ml-model-algorithm">
+                                    <option value="FedSVMOptMD" selected>FedSVM (Federated SVM OptMD)</option>
+                                    <option value="RandomForestClassifier">Random Forest Classifier</option>
+                                    <option value="DecisionTreeClassifier">Decision Tree Classifier</option>
+                                    <option value="KNeighborsClassifier">K-Nearest Neighbors</option>
+                                    <option value="KMeans">K-Means Clustering</option>
+                                </select>
+                            </div>
+                        </div>
+                         <div class="mb-3">
+                            <label for="ml-model-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="ml-model-description" rows="2" placeholder="A brief description of the model's purpose."></textarea>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Dynamic Hyperparameters Section -->
+                        <h5 class="mb-3">Hyperparameters</h5>
+                        <div id="hyperparameters-container">
+                            <!-- RandomForestClassifier Parameters -->
+                            <div class="param-card d-none" id="params-RandomForestClassifier">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="rfc-n-estimators" class="form-label">
+                                            Number of Estimators
+                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="rfc-n-estimators-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="rfc-n-estimators" value="3" min="1">
+                                        <div class="form-text">The number of trees in the forest.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="rfc-criterion" class="form-label">Criterion</label>
+                                        <select class="form-select" id="rfc-criterion">
+                                            <option value="gini" selected>Gini</option>
+                                            <option value="entropy">Entropy</option>
+                                        </select>
+                                        <div class="form-text">The function to measure the quality of a split.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="rfc-max-depth" class="form-label">Max Depth</label>
+                                        <input type="number" class="form-control" id="rfc-max-depth" placeholder="None" min="1">
+                                        <div class="form-text">The maximum depth of the tree. If not specified, nodes are expanded until all leaves are pure.</div>
+                                    </div>
+                                     <div class="col-md-6">
+                                        <label for="rfc-min-samples-split" class="form-label">Min Samples Split</label>
+                                        <input type="number" class="form-control" id="rfc-min-samples-split" value="2" min="2">
+                                        <div class="form-text">The minimum number of samples required to split an internal node.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FedSVM OptMD Parameters -->
+                            <div class="param-card" id="params-FedSVMOptMD">
+                                <div class="row g-3">
+                                    <!-- Kernel Selection -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-kernel" class="form-label">Kernel</label>
+                                        <select class="form-select" id="fedsvm-kernel">
+                                            <option value="linear">Linear</option>
+                                            <option value="rbf" selected>RBF (Radial Basis Function)</option>
+                                            <option value="poly">Polynomial</option>
+                                        </select>
+                                        <div class="form-text">Kernel function for the SVM. RBF is recommended for non-linear data.</div>
+                                    </div>
+
+                                    <!-- C Parameter -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-c" class="form-label">C (Regularization)</label>
+                                        <input type="number" class="form-control" id="fedsvm-c" value="2.0" min="0.1" step="0.1">
+                                        <div class="form-text">Regularization parameter. Higher values = less regularization.</div>
+                                    </div>
+
+                                    <!-- Gamma (for RBF/Poly) -->
+                                    <div class="col-md-6" id="fedsvm-gamma-container">
+                                        <label for="fedsvm-gamma" class="form-label">Gamma</label>
+                                        <input type="number" class="form-control" id="fedsvm-gamma" value="0.1" min="0.001" step="0.001">
+                                        <div class="form-text">Kernel coefficient for RBF/Poly. Default: 1/n_features.</div>
+                                    </div>
+
+                                    <!-- Degree (for Poly only) -->
+                                    <div class="col-md-6 d-none" id="fedsvm-degree-container">
+                                        <label for="fedsvm-degree" class="form-label">Degree (Polynomial)</label>
+                                        <input type="number" class="form-control" id="fedsvm-degree" value="3" min="2" max="5">
+                                        <div class="form-text">Degree of the polynomial kernel (2-5).</div>
+                                    </div>
+
+                                    <!-- Server Epsilon -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-server-eps" class="form-label">Server Epsilon (Convergence)</label>
+                                        <input type="number" class="form-control" id="fedsvm-server-eps" value="0.01" min="0.001" step="0.001">
+                                        <div class="form-text">Server convergence threshold (0.001-0.1).</div>
+                                    </div>
+
+                                    <!-- Client Epsilon -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-client-eps" class="form-label">Client Epsilon (Delta Optimization)</label>
+                                        <input type="number" class="form-control" id="fedsvm-client-eps" value="0.0001" min="0.00001" step="0.00001">
+                                        <div class="form-text">Client delta optimization threshold (0.00001-0.001).</div>
+                                    </div>
+
+                                    <!-- Random Fourier Features -->
+                                    <div class="col-md-6">
+                                        <label for="fedsvm-n-random-features" class="form-label">Random Fourier Features</label>
+                                        <input type="number" class="form-control" id="fedsvm-n-random-features" value="0" min="0" step="100">
+                                        <div class="form-text">0 = disabled. Use 1000-5000 for large datasets (>10k samples).</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DecisionTreeClassifier Parameters -->
+                            <div class="param-card d-none" id="params-DecisionTreeClassifier">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="dt-criterion" class="form-label">Criterion</label>
+                                        <select class="form-select" id="dt-criterion">
+                                            <option value="gini" selected>Gini</option>
+                                            <option value="entropy">Entropy</option>
+                                        </select>
+                                        <div class="form-text">The function to measure the quality of a split.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dt-max-depth" class="form-label">Max Depth</label>
+                                        <input type="number" class="form-control" id="dt-max-depth" value="3" placeholder="None" min="1">
+                                        <div class="form-text">The maximum depth of the tree.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dt-min-samples-split" class="form-label">Min Samples Split</label>
+                                        <input type="number" class="form-control" id="dt-min-samples-split" value="2" min="2">
+                                        <div class="form-text">The minimum number of samples required to split an internal node.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dt-min-samples-leaf" class="form-label">Min Samples Leaf</label>
+                                        <input type="number" class="form-control" id="dt-min-samples-leaf" value="1" min="1">
+                                        <div class="form-text">The minimum number of samples required to be at a leaf node.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- KNeighborsClassifier Parameters -->
+                            <div class="param-card d-none" id="params-KNeighborsClassifier">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="knn-n-neighbors" class="form-label">
+                                            Number of Neighbors (k)
+                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="knn-k-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting. Odd numbers are recommended."></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="knn-n-neighbors" value="5" min="1">
+                                        <div class="form-text">Number of neighbors to use.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="knn-weights" class="form-label">Weights</label>
+                                        <select class="form-select" id="knn-weights">
+                                            <option value="uniform" selected>Uniform</option>
+                                            <option value="distance">Distance</option>
+                                        </select>
+                                        <div class="form-text">Weight function used in prediction.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="knn-metric" class="form-label">Metric</label>
+                                        <select class="form-select" id="knn-metric">
+                                            <option value="minkowski" selected>Minkowski</option>
+                                            <option value="euclidean">Euclidean</option>
+                                            <option value="manhattan">Manhattan</option>
+                                            <option value="chebyshev">Chebyshev</option>
+                                        </select>
+                                        <div class="form-text">The distance metric to use for the tree.</div>
+                                    </div>
+                                    <div class="col-md-6" id="knn-p-container">
+                                        <label for="knn-p" class="form-label">P (for Minkowski metric)</label>
+                                        <input type="number" class="form-control" id="knn-p" value="2" min="1">
+                                        <div class="form-text">Power parameter. (1=Manhattan, 2=Euclidean).</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- KMeans Parameters -->
+                            <div class="param-card d-none" id="params-KMeans">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="kmeans-n-clusters" class="form-label">Number of Clusters (k)</label>
+                                        <input type="number" class="form-control" id="kmeans-n-clusters" value="3" min="1">
+                                        <div class="form-text">The number of clusters to form.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-init" class="form-label">Initialization Method</label>
+                                        <select class="form-select" id="kmeans-init">
+                                            <option value="k-means++" selected>k-means++</option>
+                                            <option value="random">Random</option>
+                                        </select>
+                                        <div class="form-text">Method for initialization.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-n-init" class="form-label">Number of Initializations</label>
+                                        <input type="number" class="form-control" id="kmeans-n-init" value="10" min="1">
+                                        <div class="form-text">Number of times the algorithm will run. Default is 10.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-max-iter" class="form-label">Max Iterations</label>
+                                        <input type="number" class="form-control" id="kmeans-max-iter" value="300" min="1">
+                                        <div class="form-text">Maximum number of iterations for a single run.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-tol" class="form-label">Tolerance</label>
+                                        <input type="number" class="form-control" id="kmeans-tol" value="0.0001" step="0.0001" min="0">
+                                        <div class="form-text">Relative tolerance for convergence.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="kmeans-random-state" class="form-label">Random State</label>
+                                        <input type="number" class="form-control" id="kmeans-random-state" placeholder="None for random">
+                                        <div class="form-text">Seed for reproducible random initialization.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grid Search Experiment Configuration -->
+                        <hr class="my-4">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-flask me-2 text-warning"></i>Grid Search Experiment (Optional)
+                                        </h5>
+                                        <small class="text-muted">Configure multiple hyperparameter values to test</small>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable-experiment-mode">
+                                        <label class="form-check-label" for="enable-experiment-mode">Enable</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body d-none" id="experiment-config-panel">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>How it works:</strong> For each hyperparameter below, you can specify multiple values. The system will create training jobs testing all combinations.
+                                </div>
+
+                                <div id="experiment-params-container">
+                                    <!-- Dynamic experiment parameters will be injected here -->
+                                </div>
+
+                                <div class="mt-3 p-3 bg-light rounded">
+                                    <strong>Experiment Summary:</strong>
+                                    <p class="mb-0">Total combinations: <span class="badge bg-primary" id="total-combinations">1</span> training jobs</p>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visualization Panel -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Hyperparameter Visualization</h5>
+                </div>
+                <div class="card-body text-center" style="min-height: 400px;" id="visualization-panel">
+                    <div class="d-flex flex-column justify-content-center align-items-center h-100">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Interactive visualizations will appear here.</h6>
+                        <p class="text-muted small">Select a hyperparameter to see its effect.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Model Modal -->
+<div class="modal fade" id="loadMlModelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Load Machine Learning Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if model_configs %}
+                    <div class="list-group">
+                        {% for model in model_configs %}
+                            <a href="#" class="list-group-item list-group-item-action load-model-from-modal-btn" 
+                               data-model-id="{{ model.id }}" data-bs-dismiss="modal">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ model.name }}</h6>
+                                    <small class="text-muted">{{ model.updated_at|timesince }} ago</small>
+                                </div>
+                                <p class="mb-1 text-muted">{{ model.config_json.algorithm|default:'N/A' }}</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted mt-3">No saved Machine Learning models found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview JSON Modal -->
+<div class="modal fade" id="previewJsonModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-code me-2"></i>Model Configuration JSON</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre><code class="language-json" id="json-preview-content"></code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configure Experiment Modal -->
+<div class="modal fade" id="configureExperimentModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-warning bg-opacity-10">
+                <h5 class="modal-title"><i class="fas fa-flask me-2"></i>Advanced Grid Search Experiment Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="experiment-name" class="form-label">Experiment Name</label>
+                        <input type="text" class="form-control" id="experiment-name" placeholder="e.g., FedSVM_Kernel_Grid_Search">
+                        <div class="form-text">A descriptive name for this hyperparameter tuning experiment</div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="experiment-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="experiment-description" rows="2" placeholder="Testing different kernel configurations to find optimal SVM parameters"></textarea>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3"><i class="fas fa-sliders-h me-2"></i>Hyperparameter Ranges</h6>
+                <p class="text-muted small">Select which hyperparameters to vary and configure their values</p>
+
+                <div id="modal-experiment-params-container">
+                    <!-- Dynamic parameter configuration will be injected here -->
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="fas fa-info-circle me-2 text-info"></i>Experiment Summary</h6>
+                                <p class="mb-1"><strong>Total Jobs:</strong> <span id="modal-total-combinations" class="text-primary">1</span></p>
+                                <p class="mb-0"><strong>Variable Parameters:</strong> <span id="modal-variable-params">0</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="fas fa-clock me-2 text-warning"></i>Estimated Time</h6>
+                                <p class="mb-0 small text-muted">Time per job × total jobs = total experiment time</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="preview-experiment-btn">
+                    <i class="fas fa-eye me-1"></i>Preview Jobs
+                </button>
+                <button type="button" class="btn btn-warning" id="save-experiment-btn">
+                    <i class="fas fa-save me-1"></i>Save Experiment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    const algorithmSelect = document.getElementById('ml-model-algorithm');
+    const paramsContainer = document.getElementById('hyperparameters-container');
+    const allParamCards = paramsContainer ? paramsContainer.querySelectorAll('.param-card') : [];
+    const visualizationPanel = document.getElementById('visualization-panel');
+    const knnPContainer = document.getElementById('knn-p-container');
+    const saveBtn = document.getElementById('save-ml-model-btn');
+    const previewBtn = document.getElementById('preview-json-btn');
+    const jsonPreviewContent = document.getElementById('json-preview-content');
+    const previewModalElement = document.getElementById('previewJsonModal');
+    const previewModal = previewModalElement ? new bootstrap.Modal(previewModalElement) : null;
+    const goToTrainingBtn = document.getElementById('go-to-training-btn');
+    const loadBtn = document.getElementById('load-model-btn');
+    const loadModalElement = document.getElementById('loadMlModelModal');
+    const loadModal = loadModalElement ? new bootstrap.Modal(loadModalElement) : null;
+    let currentModelId = null;
+
+    // Store all models data in a JS variable for easy access
+    let allMlModels = JSON.parse('{{ models_json|default:"[]"|escapejs }}');
+
+    // Use global toast notification system
+    function showMessage(message, type = 'success') {
+        // Map error type to danger for consistency
+        const toastType = type === 'error' ? 'danger' : type;
+        if (typeof showToast === 'function') {
+            showToast(message, toastType);
+        } else {
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+    }
+
+    function showParamsFor(algorithm) {
+        // Hide all parameter cards first
+        allParamCards.forEach(card => {
+            card.classList.add('d-none');
+        });
+
+        // Show the specific card for the selected algorithm
+        const selectedCard = document.getElementById('params-' + algorithm);
+        if (selectedCard) {
+            selectedCard.classList.remove('d-none');
+        }
+        updateVisualization(algorithm);
+    }
+
+    // Handle algorithm change
+    if (algorithmSelect) {
+        algorithmSelect.addEventListener('change', function() {
+            showParamsFor(this.value);
+        });
+    }
+
+    // Specific event listeners for live visualization updates
+    const nNeighborsInput = document.getElementById('knn-n-neighbors');
+    if (nNeighborsInput) {
+        nNeighborsInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'KNeighborsClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    const nClustersInput = document.getElementById('kmeans-n-clusters');
+    if (nClustersInput) {
+        nClustersInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'KMeans') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for Decision Tree parameters
+    const dtMaxDepthInput = document.getElementById('dt-max-depth');
+    if (dtMaxDepthInput) {
+        dtMaxDepthInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'DecisionTreeClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for Random Forest parameters
+    const rfcNEstimatorsInput = document.getElementById('rfc-n-estimators');
+    if (rfcNEstimatorsInput) {
+        rfcNEstimatorsInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'RandomForestClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for FedSVM parameters
+    const fedsvmKernelInput = document.getElementById('fedsvm-kernel');
+    if (fedsvmKernelInput) {
+        fedsvmKernelInput.addEventListener('change', function() {
+            if(algorithmSelect.value === 'FedSVMOptMD') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    const fedsvmCInput = document.getElementById('fedsvm-c');
+    if (fedsvmCInput) {
+        fedsvmCInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'FedSVMOptMD') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // --- Warning handlers for even numbers ---
+    function setupEvenNumberWarning(inputId, warningId) {
+        const input = document.getElementById(inputId);
+        const warning = document.getElementById(warningId);
+
+        if (input && warning) {
+            // Initialize tooltip
+            const tooltip = new bootstrap.Tooltip(warning);
+
+            const checkValue = () => {
+                const num = parseInt(input.value, 10);
+                if (!isNaN(num) && num > 0 && num % 2 === 0) {
+                    warning.classList.remove('d-none');
+                } else {
+                    warning.classList.add('d-none');
+                }
+            };
+            
+            input.addEventListener('input', checkValue);
+            checkValue(); // Initial check on load
+        }
+    }
+
+    setupEvenNumberWarning('knn-n-neighbors', 'knn-k-warning');
+    setupEvenNumberWarning('rfc-n-estimators', 'rfc-n-estimators-warning');
+
+    function updateVisualization(algorithm) {
+        visualizationPanel.innerHTML = ''; // Clear previous visualizations
+        let vizContent = null;
+
+        switch(algorithm) {
+            case 'RandomForestClassifier': {
+                const nEstimators = parseInt(document.getElementById('rfc-n-estimators').value, 10) || 3;
+                vizContent = document.createElement('div');
+                
+                const treesToDraw = Math.min(nEstimators, 5);
+                const moreTrees = nEstimators > treesToDraw ? `(showing ${treesToDraw} of ${nEstimators})` : `(${nEstimators} trees)`;
+
+                let forestSvgContent = `
+                    <h6 class="text-start mb-2">Random Forest Ensemble <span class="text-muted small">${moreTrees}</span></h6>
+                    <p class="text-muted small text-start mt-0 mb-2" style="font-size: 0.75rem;">Each tree makes a prediction. The final output is the result of a majority vote.</p>
+                    <svg viewBox="0 0 400 250" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .tree-bg { fill: #f9f9f9; stroke: #ccc; }
+                            .tree-node { fill: #1976d2; stroke: #fff; stroke-width: 1.5; }
+                            .tree-leaf { fill: #e8f5e9; stroke: #388e3c; }
+                            .tree-node-text { fill: #fff; font-size: 10px; font-weight: bold; }
+                            .pred-text { font-size: 10px; font-weight: bold; }
+                            .arrow { stroke: #999; stroke-width: 1.5; marker-end: url(#arrowhead-rf); }
+                            .vote-box { fill: #fff3e0; stroke: #f57c00; stroke-width: 1.5; }
+                        </style>
+                        <defs><marker id="arrowhead-rf" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#999" /></marker></defs>
+                `;
+
+                const treeSpacing = 400 / (treesToDraw + 1);
+                let trees = [];
+                let seed = nEstimators;
+                const pseudoRandom = () => {
+                    var x = Math.sin(seed++) * 10000;
+                    return x - Math.floor(x);
+                };
+
+                for (let i = 0; i < treesToDraw; i++) {
+                    const prediction = pseudoRandom() > 0.5 ? 'A' : 'B';
+                    trees.push({
+                        index: i,
+                        x: (i + 1) * treeSpacing,
+                        y: 30,
+                        prediction: prediction,
+                        color: prediction === 'A' ? '#0d6efd' : '#dc3545'
+                    });
+                }
+                
+                let allPredictions = trees.map(t => t.prediction);
+                if (nEstimators > treesToDraw) {
+                    for (let i = treesToDraw; i < nEstimators; i++) {
+                        allPredictions.push(pseudoRandom() > 0.5 ? 'A' : 'B');
+                    }
+                }
+
+                const votes = {};
+                allPredictions.forEach(p => { votes[p] = (votes[p] || 0) + 1; });
+                const finalPrediction = Object.keys(votes).length > 0 ? Object.keys(votes).reduce((a, b) => votes[a] > votes[b] ? a : b) : '?';
+
+                trees.forEach((tree) => {
+                    forestSvgContent += `
+                        <g transform="translate(${tree.x}, ${tree.y})">
+                            <rect class="tree-bg" x="-40" y="-20" width="80" height="90" rx="5"/>
+                            <circle class="tree-node" cx="0" cy="15" r="15"/>
+                            <text class="tree-node-text" x="0" y="18" text-anchor="middle" fill="#fff" font-size="10px" font-weight="bold">T${tree.index + 1}</text>
+                            <text class="pred-text" x="0" y="55" text-anchor="middle" fill="${tree.color}">Class ${tree.prediction}</text>
+                        </g>
+                    `;
+                    forestSvgContent += `<path class="arrow" d="M ${tree.x} 105 Q ${tree.x} 130 200 150" fill="none"/>`;
+                });
+
+                forestSvgContent += `
+                    <g transform="translate(200, 160)">
+                         <rect class="vote-box" x="-60" y="-15" width="120" height="30" rx="5"/>
+                         <text text-anchor="middle" y="4" font-size="10px" font-weight="bold">Majority Vote</text>
+                    </g>
+                `;
+
+                forestSvgContent += `<path class="arrow" d="M 200 190 L 200 210" fill="none"/>`;
+                forestSvgContent += `
+                     <g transform="translate(200, 225)">
+                         <rect x="-75" y="-12" width="150" height="24" fill="#e8f5e9" stroke="#388e3c" rx="5"/>
+                         <text text-anchor="middle" y="4" font-size="12px" font-weight="bold" fill="#388e3c">Final Prediction: Class ${finalPrediction}</text>
+                     </g>
+                `;
+
+                forestSvgContent += `</svg>`;
+                vizContent.innerHTML = forestSvgContent;
+                break;
+            }
+
+            case 'DecisionTreeClassifier': {
+                const maxDepth = parseInt(document.getElementById('dt-max-depth').value, 10) || 3;
+                vizContent = document.createElement('div');
+                
+                let treeSvgContent = `
+                    <h6 class="text-start mb-2">Decision Tree (Max Depth: ${maxDepth || 'None'})</h6>
+                    <svg viewBox="0 0 400 300" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .node-box { stroke-width: 1; rx: 4; }
+                            .node-text { font-size: 8px; }
+                            .edge { stroke: #999; stroke-width: 1; }
+                            .edge-label { font-size: 8px; fill: #555; }
+                        </style>
+                `;
+
+                const actualDepth = Math.min(maxDepth, 4); // Limit visual depth
+                const nodeWidth = 80, nodeHeight = 45;
+                const levelHeight = 80;
+                
+                // --- Helper function to draw a node ---
+                const drawNode = (x, y, level, isLeaf, samples, gini, value) => {
+                    const totalSamples = value.reduce((a, b) => a + b, 0);
+                    const classRatio = value[0] / totalSamples;
+                    const color = `rgba(3, 169, 244, ${0.1 + (1 - gini) * 0.9})`; // More blue as Gini decreases
+                    
+                    let nodeContent = `<g transform="translate(${x},${y})">
+                        <rect class="node-box" x="-${nodeWidth/2}" y="0" width="${nodeWidth}" height="${nodeHeight}" fill="${isLeaf ? '#e8f5e9' : '#e3f2fd'}" stroke="${isLeaf ? '#388e3c' : '#1976d2'}"/>
+                        <text class="node-text" x="0" y="12" text-anchor="middle">
+                            ${isLeaf ? '' : `Feature_${level} <= ${Math.random().toFixed(2)}`}
+                        </text>
+                        <text class="node-text" x="0" y="22" text-anchor="middle">gini = ${gini.toFixed(3)}</text>
+                        <text class="node-text" x="0" y="32" text-anchor="middle">samples = ${samples}</text>
+                        <text class="node-text" x="0" y="42" text-anchor="middle">value = [${value.join(', ')}]</text>
+                    </g>`;
+                    return nodeContent;
+                };
+
+                const drawEdge = (x1, y1, x2, y2, isTrue) => {
+                    const midX = (x1 + x2) / 2;
+                    const midY = (y1 + y2) / 2;
+                    return `
+                        <line class="edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>
+                        <text class="edge-label" x="${midX - (isTrue ? 10 : -10)}" y="${midY}">${isTrue ? 'True' : 'False'}</text>
+                    `;
+                };
+
+                let nodesToDraw = [{ x: 200, y: 10, level: 1, samples: 150, value: [75, 75], parentX: null, parentY: null }];
+                
+                for (let level = 1; level <= actualDepth; level++) {
+                    const newNodes = [];
+                    nodesToDraw.forEach(node => {
+                        const isLeaf = (level === actualDepth);
+                        const gini = 1 - Math.pow(node.value[0]/node.samples, 2) - Math.pow(node.value[1]/node.samples, 2);
+                        
+                        treeSvgContent += drawNode(node.x, node.y, level, isLeaf, node.samples, gini, node.value);
+                        
+                        if (node.parentX !== null) {
+                            treeSvgContent += drawEdge(node.parentX, node.parentY + nodeHeight, node.x, node.y, node.isLeft);
+                        }
+
+                        if (!isLeaf) {
+                            const levelWidth = 350 / Math.pow(2, level);
+                            
+                            // Left child (True)
+                            const leftSamples = Math.floor(node.samples * (0.3 + Math.random() * 0.4));
+                            const leftValue = [Math.floor(node.value[0] * (0.8 + Math.random() * 0.1)), Math.floor(node.value[1] * (0.1 + Math.random() * 0.1))];
+                            newNodes.push({
+                                x: node.x - levelWidth/2, y: node.y + levelHeight, level: level + 1,
+                                samples: leftSamples, value: leftValue, parentX: node.x, parentY: node.y, isLeft: true
+                            });
+
+                            // Right child (False)
+                            const rightSamples = node.samples - leftSamples;
+                            const rightValue = [node.value[0] - leftValue[0], node.value[1] - leftValue[1]];
+                            newNodes.push({
+                                x: node.x + levelWidth/2, y: node.y + levelHeight, level: level + 1,
+                                samples: rightSamples, value: rightValue, parentX: node.x, parentY: node.y, isLeft: false
+                            });
+                        }
+                    });
+                    nodesToDraw = newNodes;
+                }
+                
+                treeSvgContent += `</svg>`;
+                vizContent.innerHTML = treeSvgContent;
+                break;
+            }
+            
+            case 'KMeans': {
+                const kClusters = parseInt(document.getElementById('kmeans-n-clusters').value, 10) || 3;
+                vizContent = document.createElement('div');
+                
+                const kmeansPoints = [
+                    { x: 50, y: 50 }, { x: 60, y: 70 }, { x: 80, y: 40 }, { x: 40, y: 90 }, { x: 90, y: 60 },
+                    { x: 180, y: 150 }, { x: 200, y: 170 }, { x: 220, y: 140 }, { x: 250, y: 160 }, { x: 170, y: 180 },
+                    { x: 40, y: 200 }, { x: 70, y: 220 }, { x: 90, y: 190 }, { x: 55, y: 240 },
+                    { x: 250, y: 50 }, { x: 230, y: 70 }, { x: 270, y: 90 }
+                ];
+
+                let centroids = [];
+                let seed = kClusters; 
+                const pseudoRandom = () => {
+                    var x = Math.sin(seed++) * 10000;
+                    return x - Math.floor(x);
+                };
+                for(let i = 0; i < kClusters; i++) {
+                    centroids.push({ x: pseudoRandom() * 280 + 10, y: pseudoRandom() * 230 + 10 });
+                }
+                
+                const colors = ['#0d6efd', '#fd7e14', '#198754', '#dc3545', '#6f42c1', '#20c997', '#ffc107', '#6610f2'];
+
+                kmeansPoints.forEach(p => {
+                    let minDist = Infinity;
+                    let bestCentroid = 0;
+                    centroids.forEach((c, i) => {
+                        const dist = Math.sqrt(Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2));
+                        if (dist < minDist) {
+                            minDist = dist;
+                            bestCentroid = i;
+                        }
+                    });
+                    p.cluster = bestCentroid;
+                });
+                
+                let kmeansSvgContent = `
+                    <h6 class="text-start mb-2">Illustrative Example: k = ${kClusters}</h6>
+                    <svg viewBox="0 0 300 250" style="width: 100%; height: auto; border: 1px solid #eee;">`;
+
+                kmeansPoints.forEach(p => {
+                    const color = colors[p.cluster % colors.length];
+                    kmeansSvgContent += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${color}" opacity="0.7"/>`;
+                });
+
+                centroids.forEach((c, i) => {
+                    const color = colors[i % colors.length];
+                    kmeansSvgContent += `<path d="M ${c.x-7},${c.y-7} L ${c.x+7},${c.y+7} M ${c.x+7},${c.y-7} L ${c.x-7},${c.y+7}" stroke="${color}" stroke-width="3"/>`;
+                });
+
+                kmeansSvgContent += `</svg>`;
+                vizContent.innerHTML = kmeansSvgContent;
+                break;
+            }
+            
+            case 'KNeighborsClassifier': {
+                const k = parseInt(document.getElementById('knn-n-neighbors').value, 10) || 5;
+                vizContent = document.createElement('div');
+                const points = [
+                    { x: 50, y: 50, class: 0 }, { x: 60, y: 70, class: 0 }, { x: 80, y: 40, class: 0 },
+                    { x: 180, y: 150, class: 1 }, { x: 200, y: 170, class: 1 }, { x: 220, y: 140, class: 1 }, { x: 250, y: 160, class: 1 },
+                    { x: 40, y: 200, class: 0 }, { x: 70, y: 220, class: 0 },
+                    { x: 150, y: 80, class: 1 }
+                ];
+                const targetPoint = { x: 120, y: 130 };
+                points.forEach(p => {
+                    p.dist = Math.sqrt(Math.pow(p.x - targetPoint.x, 2) + Math.pow(p.y - targetPoint.y, 2));
+                });
+                points.sort((a, b) => a.dist - b.dist);
+
+                const neighbors = points.slice(0, k);
+                const class0Count = neighbors.filter(p => p.class === 0).length;
+                const class1Count = neighbors.filter(p => p.class === 1).length;
+                const prediction = class0Count > class1Count ? 'Class A (Blue)' : 'Class B (Orange)';
+
+                let svgContent = `<h6 class="text-start mb-1">Illustrative Example: k = ${k}</h6>
+                    <p class="text-muted small text-start mt-0 mb-2">Prediction: <strong class="${prediction.includes('Blue') ? 'text-primary' : 'text-warning'}">${prediction}</strong></p>
+                    <svg viewBox="0 0 300 250" style="width: 100%; height: auto; border: 1px solid #eee;">`;
+
+                neighbors.forEach(p => {
+                    svgContent += `<line x1="${targetPoint.x}" y1="${targetPoint.y}" x2="${p.x}" y2="${p.y}" stroke="#ced4da" stroke-width="1"/>`;
+                });
+                points.forEach((p, i) => {
+                    const isNeighbor = neighbors.includes(p);
+                    const color = p.class === 0 ? '#0d6efd' : '#fd7e14';
+                    const shape = p.class === 0 
+                        ? `<circle cx="${p.x}" cy="${p.y}" r="6" fill="${color}" stroke-width="2" stroke="${isNeighbor ? '#343a40' : 'none'}" opacity="${isNeighbor ? 1 : 0.5}"/>`
+                        : `<rect x="${p.x-5}" y="${p.y-5}" width="10" height="10" fill="${color}" stroke-width="2" stroke="${isNeighbor ? '#343a40' : 'none'}" opacity="${isNeighbor ? 1 : 0.5}"/>`;
+                    svgContent += shape;
+                });
+                svgContent += `<polygon points="${targetPoint.x},${targetPoint.y-8} ${targetPoint.x-8},${targetPoint.y+8} ${targetPoint.x+8},${targetPoint.y+8}" fill="#198754" stroke="#fff" stroke-width="1"/>`;
+                svgContent += `</svg>`;
+                vizContent.innerHTML = svgContent;
+                break;
+            }
+
+            case 'FedSVMOptMD': {
+                const kernel = document.getElementById('fedsvm-kernel')?.value || 'rbf';
+                const C = parseFloat(document.getElementById('fedsvm-c')?.value) || 2.0;
+                vizContent = document.createElement('div');
+
+                let fedsvmSvgContent = `
+                    <h6 class="text-start mb-2">FedSVM Decision Boundary</h6>
+                    <p class="text-muted small text-start mt-0 mb-2" style="font-size: 0.75rem;">
+                        Support vectors (circled) are closest to the decision boundary. Kernel: <strong>${kernel.toUpperCase()}</strong>
+                    </p>
+                    <svg viewBox="0 0 400 350" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .data-point-class0 { fill: #0d6efd; stroke: #fff; stroke-width: 1.5; }
+                            .data-point-class1 { fill: #dc3545; stroke: #fff; stroke-width: 1.5; }
+                            .support-vector { stroke: #ffc107; stroke-width: 3; fill: none; }
+                            .decision-boundary { stroke: #198754; stroke-width: 2.5; fill: none; }
+                            .margin-line { stroke: #198754; stroke-width: 1.5; stroke-dasharray: 5,5; fill: none; opacity: 0.6; }
+                            .legend-text { font-size: 10px; font-weight: 600; }
+                            .label-text { font-size: 11px; font-weight: bold; }
+                        </style>
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        <!-- Background region labels -->
+                        <text class="label-text" x="50" y="30" fill="#0d6efd" opacity="0.5">Class 0</text>
+                        <text class="label-text" x="300" y="320" fill="#dc3545" opacity="0.5">Class 1</text>
+                `;
+
+                // Generate data points - SVs are closest to boundary
+                let allPoints = [];
+
+                if (kernel === 'linear') {
+                    // Linear kernel - diagonal boundary
+                    allPoints = [
+                        // Class 0 - far from boundary
+                        {x: 60, y: 80, cls: 0, isSV: false},
+                        {x: 80, y: 100, cls: 0, isSV: false},
+                        {x: 70, y: 60, cls: 0, isSV: false},
+                        // Class 0 - support vectors (near diagonal)
+                        {x: 130, y: 150, cls: 0, isSV: true},
+                        {x: 150, y: 170, cls: 0, isSV: true},
+                        {x: 110, y: 130, cls: 0, isSV: true},
+                        // Class 1 - far from boundary
+                        {x: 320, y: 290, cls: 1, isSV: false},
+                        {x: 300, y: 270, cls: 1, isSV: false},
+                        {x: 330, y: 310, cls: 1, isSV: false},
+                        // Class 1 - support vectors (near diagonal)
+                        {x: 230, y: 210, cls: 1, isSV: true},
+                        {x: 250, y: 230, cls: 1, isSV: true},
+                        {x: 210, y: 190, cls: 1, isSV: true}
+                    ];
+
+                    fedsvmSvgContent += `<line class="decision-boundary" x1="20" y1="20" x2="380" y2="380" filter="url(#glow)"/>`;
+                    fedsvmSvgContent += `<line class="margin-line" x1="50" y1="20" x2="410" y2="380"/>`;
+                    fedsvmSvgContent += `<line class="margin-line" x1="0" y1="50" x2="350" y2="380"/>`;
+                } else if (kernel === 'rbf') {
+                    // RBF kernel - curved boundary
+                    allPoints = [
+                        // Class 0 - far from boundary
+                        {x: 80, y: 100, cls: 0, isSV: false},
+                        {x: 100, y: 120, cls: 0, isSV: false},
+                        {x: 90, y: 80, cls: 0, isSV: false},
+                        // Class 0 - support vectors (near curve)
+                        {x: 150, y: 130, cls: 0, isSV: true},
+                        {x: 140, y: 150, cls: 0, isSV: true},
+                        {x: 130, y: 110, cls: 0, isSV: true},
+                        // Class 1 - far from boundary
+                        {x: 300, y: 280, cls: 1, isSV: false},
+                        {x: 320, y: 260, cls: 1, isSV: false},
+                        {x: 280, y: 300, cls: 1, isSV: false},
+                        // Class 1 - support vectors (near curve)
+                        {x: 220, y: 200, cls: 1, isSV: true},
+                        {x: 240, y: 220, cls: 1, isSV: true},
+                        {x: 200, y: 180, cls: 1, isSV: true}
+                    ];
+
+                    fedsvmSvgContent += `<path class="decision-boundary" d="M 170 80 Q 200 120, 210 180 Q 220 240, 200 290" filter="url(#glow)"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 150 70 Q 180 110, 190 170 Q 200 230, 180 280"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 190 90 Q 220 130, 230 190 Q 240 250, 220 300"/>`;
+                } else { // poly
+                    // Polynomial kernel - wavy boundary
+                    allPoints = [
+                        // Class 0 - far from boundary
+                        {x: 70, y: 120, cls: 0, isSV: false},
+                        {x: 90, y: 140, cls: 0, isSV: false},
+                        {x: 80, y: 100, cls: 0, isSV: false},
+                        // Class 0 - support vectors (near wave)
+                        {x: 140, y: 160, cls: 0, isSV: true},
+                        {x: 130, y: 140, cls: 0, isSV: true},
+                        {x: 120, y: 180, cls: 0, isSV: true},
+                        // Class 1 - far from boundary
+                        {x: 310, y: 260, cls: 1, isSV: false},
+                        {x: 290, y: 280, cls: 1, isSV: false},
+                        {x: 320, y: 240, cls: 1, isSV: false},
+                        // Class 1 - support vectors (near wave)
+                        {x: 230, y: 210, cls: 1, isSV: true},
+                        {x: 250, y: 230, cls: 1, isSV: true},
+                        {x: 240, y: 190, cls: 1, isSV: true}
+                    ];
+
+                    fedsvmSvgContent += `<path class="decision-boundary" d="M 160 100 Q 180 140, 190 180 Q 210 220, 230 250" filter="url(#glow)"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 140 90 Q 160 130, 170 170 Q 190 210, 210 240"/>`;
+                    fedsvmSvgContent += `<path class="margin-line" d="M 180 110 Q 200 150, 210 190 Q 230 230, 250 260"/>`;
+                }
+
+                // Draw all points
+                allPoints.forEach(point => {
+                    const cssClass = point.cls === 0 ? 'data-point-class0' : 'data-point-class1';
+                    fedsvmSvgContent += `<circle class="${cssClass}" cx="${point.x}" cy="${point.y}" r="6"/>`;
+                    if (point.isSV) {
+                        fedsvmSvgContent += `<circle class="support-vector" cx="${point.x}" cy="${point.y}" r="11"/>`;
+                    }
+                });
+
+                // Legend
+                fedsvmSvgContent += `
+                    <g transform="translate(20, 300)">
+                        <circle class="data-point-class0" cx="0" cy="0" r="5"/>
+                        <text class="legend-text" x="10" y="4" fill="#333">Class 0</text>
+
+                        <circle class="data-point-class1" cx="80" cy="0" r="5"/>
+                        <text class="legend-text" x="90" y="4" fill="#333">Class 1</text>
+
+                        <circle cx="160" cy="0" r="5" fill="#666"/>
+                        <circle class="support-vector" cx="160" cy="0" r="10"/>
+                        <text class="legend-text" x="175" y="4" fill="#333">Support Vector</text>
+                    </g>
+                `;
+
+                fedsvmSvgContent += `</svg>`;
+
+                // Add explanation below
+                fedsvmSvgContent += `
+                    <div class="mt-3 p-2" style="background: #f8f9fa; border-radius: 5px; font-size: 0.8rem;">
+                        <strong>How FedSVM works:</strong>
+                        <ul class="mb-0 mt-1" style="padding-left: 1.2rem;">
+                            <li>Each client trains a local SVM on their data</li>
+                            <li>Only <strong>support vectors</strong> (circled points) are shared</li>
+                            <li>Vectors are <strong>perturbed</strong> for privacy (OptMD)</li>
+                            <li>Server aggregates SVs to build global model</li>
+                        </ul>
+                    </div>
+                `;
+
+                vizContent.innerHTML = fedsvmSvgContent;
+                break;
+            }
+
+            default: {
+                vizContent = document.createElement('div');
+                vizContent.className = 'd-flex flex-column justify-content-center align-items-center h-100';
+                vizContent.innerHTML = `<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                           <h6 class="text-muted">Interactive visualizations will appear here.</h6>
+                           <p class="text-muted small">Select an algorithm to see its effect.</p>`;
+                break;
+            }
+        }
+        
+        if (vizContent) {
+            visualizationPanel.appendChild(vizContent);
+        }
+    }
+
+    // Handle special case for SVC degree parameter (skip if elements don't exist)
+    const svcKernelSelect = document.getElementById('svc-kernel');
+    const svcDegreeContainer = document.getElementById('svc-degree-container');
+
+    if (svcKernelSelect && svcDegreeContainer) {
+        svcKernelSelect.addEventListener('change', function() {
+            if (this.value === 'poly') {
+                svcDegreeContainer.style.display = 'block';
+            } else {
+                svcDegreeContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // Handle FedSVM kernel parameter changes
+    const fedsvmKernelSelect = document.getElementById('fedsvm-kernel');
+    const fedsvmGammaContainer = document.getElementById('fedsvm-gamma-container');
+    const fedsvmDegreeContainer = document.getElementById('fedsvm-degree-container');
+
+    if (fedsvmKernelSelect && fedsvmGammaContainer && fedsvmDegreeContainer) {
+        fedsvmKernelSelect.addEventListener('change', function() {
+            if (this.value === 'linear') {
+                // Hide both gamma and degree for linear kernel
+                fedsvmGammaContainer.style.display = 'none';
+                fedsvmDegreeContainer.classList.add('d-none');
+            } else if (this.value === 'rbf') {
+                // Show gamma, hide degree for RBF
+                fedsvmGammaContainer.style.display = 'block';
+                fedsvmDegreeContainer.classList.add('d-none');
+            } else if (this.value === 'poly') {
+                // Show both gamma and degree for polynomial
+                fedsvmGammaContainer.style.display = 'block';
+                fedsvmDegreeContainer.classList.remove('d-none');
+            }
+        });
+        // Initial check
+        fedsvmKernelSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Handle special case for KNN 'p' parameter
+    const knnMetricSelect = document.getElementById('knn-metric');
+    if (knnMetricSelect && knnPContainer) {
+        knnMetricSelect.addEventListener('change', function() {
+            if (this.value === 'minkowski') {
+                knnPContainer.style.display = 'block';
+            } else {
+                knnPContainer.style.display = 'none';
+            }
+        });
+        // Initial check
+        knnMetricSelect.dispatchEvent(new Event('change'));
+    }
+
+    function getModelDataFromForm() {
+        const algorithm = algorithmSelect.value;
+        const hyperparameters = {};
+
+        const paramCard = document.getElementById('params-' + algorithm);
+        if (paramCard) {
+            const inputs = paramCard.querySelectorAll('input[id], select[id]');
+            inputs.forEach(input => {
+                // Skip if the parent container is hidden (e.g., 'p' for non-minkowski)
+                if (input.closest('.col-md-6')?.style.display === 'none') {
+                    return; 
+                }
+
+                const key = input.id.split('-').slice(1).join('_');
+                let value = input.value;
+
+                if (input.type === 'number') {
+                    if (value.trim() === '' || value === null) {
+                        value = null; // Use null for empty optional numbers
+                    } else {
+                        value = Number(value);
+                    }
+                }
+                
+                if (value !== null) {
+                    hyperparameters[key] = value;
+                }
+            });
+        }
+        
+        return {
+            metadata: {
+                version: "1.0",
+                created_at: new Date().toISOString(),
+                model_type: "ml",
+                framework: "sklearn"
+            },
+            basic_info: {
+                name: document.getElementById('ml-model-name').value,
+                description: document.getElementById('ml-model-description').value
+            },
+            architecture: {
+                ml_algorithm: {
+                    type: algorithm,
+                    hyperparameters: hyperparameters
+                }
+            },
+            training: {
+                metrics: ["accuracy", "f1_score"],
+                epochs: 100,
+                batch_size: 32,
+                rounds: 10
+            },
+            dataset: {
+                selected_datasets: {{ selected_datasets|json_string }}
+            }
+        };
+    }
+
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function() {
+            try {
+                const modelData = getModelDataFromForm();
+                if (jsonPreviewContent) {
+                    jsonPreviewContent.textContent = JSON.stringify(modelData, null, 2);
+                }
+                if (previewModal) {
+                    previewModal.show();
+                }
+            } catch (e) {
+                console.error("Error generating model data for preview:", e);
+                showMessage('Could not generate model preview.', 'error');
+            }
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+        try {
+            const modelData = getModelDataFromForm();
+            
+            // Basic validation
+            if (!modelData.basic_info.name) {
+                showMessage('Model Name is a required field.', 'warning');
+                return;
+            }
+            
+            // Validate datasets
+            const selectedDatasets = {{ selected_datasets|json_string }};
+            if (!selectedDatasets || selectedDatasets.length === 0) {
+                showMessage('No datasets selected. Please go to Datasets section and select at least one dataset before saving the model.', 'warning');
+                return;
+            }
+
+            if (currentModelId) {
+                modelData.id = currentModelId;
+            }
+
+            // Show loading message
+            showMessage('Saving the model...', 'info');
+
+            fetch('/api/save-model-config/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    name: modelData.basic_info.name,
+                    description: modelData.basic_info.description,
+                    model_type: modelData.metadata.model_type,
+                    framework: modelData.metadata.framework,
+                    config: modelData
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error in the server response');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showMessage('Model saved successfully!', 'success');
+                    currentModelId = data.model_id;
+                    
+                    console.log('Model saved, currentModelId:', currentModelId);
+                    console.log('Full API response:', data);
+                    
+                    // Enable and setup 'Go to Training' button
+                    goToTrainingBtn.disabled = false;
+                    goToTrainingBtn.onclick = () => { 
+                        if (currentModelId) {
+                            window.location.href = `/go-to-training/${currentModelId}/`;
+                        } else {
+                            console.error('currentModelId is null/undefined:', currentModelId);
+                            showMessage('Error: Model ID not available. Please save the model again.', 'error');
+                        }
+                    };
+                    
+                    // After populating, trigger a change to sync the whole UI.
+                    algorithmSelect.dispatchEvent(new Event('change'));
+                } else {
+                    showMessage('Error saving the model: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving the model:', error);
+                showMessage('Error saving the model: ' + error.message, 'error');
+            });
+        } catch(e) {
+            console.error("Error preparing model data for save:", e);
+            showMessage('Could not save model due to an error.', 'error');
+        }
+        });
+    }
+
+    if (loadBtn) {
+        loadBtn.addEventListener('click', function() {
+            if (loadModal) {
+                loadModal.show();
+            }
+        });
+    }
+
+    const loadModelListGroup = document.querySelector('#loadMlModelModal .list-group');
+    if (loadModelListGroup) {
+        loadModelListGroup.addEventListener('click', function(e) {
+        if (e.target.closest('.load-model-from-modal-btn')) {
+            e.preventDefault();
+            const modelId = parseInt(e.target.closest('.load-model-from-modal-btn').dataset.modelId, 10);
+            const modelToLoad = allMlModels.find(m => m.id === modelId);
+            if (modelToLoad) {
+                populateFormWithModelData(modelToLoad);
+                showMessage(`Model "${modelToLoad.name}" loaded successfully`, 'success');
+            } else {
+                showMessage('Model not found', 'error');
+            }
+        }
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function populateFormWithModelData(modelData) {
+        if (!modelData) return;
+
+        currentModelId = modelData.id;
+
+        // Usa config_json si existe, si no, usa modelData directamente
+        const config = modelData.config_json || modelData;
+
+        // Carregar informació bàsica
+        document.getElementById('ml-model-name').value = config.basic_info?.name || '';
+        document.getElementById('ml-model-description').value = config.basic_info?.description || '';
+        
+        // Carregar algoritme ML
+        const algorithm = config.architecture?.ml_algorithm?.type;
+        
+        if (algorithm) {
+            algorithmSelect.value = algorithm;
+            showParamsFor(algorithm);
+
+            const hyperparams = config.architecture?.ml_algorithm?.hyperparameters || {};
+            for (const key in hyperparams) {
+                // Determina el prefijo según el algoritmo
+                let prefix = '';
+                if (algorithm === 'RandomForestClassifier') prefix = 'rfc-';
+                else if (algorithm === 'DecisionTreeClassifier') prefix = 'dt-';
+                else if (algorithm === 'KNeighborsClassifier') prefix = 'knn-';
+                else if (algorithm === 'KMeans') prefix = 'kmeans-';
+                else if (algorithm === 'FedSVMOptMD') prefix = 'fedsvm-';
+
+                const inputId = prefix + key.replace(/_/g, '-');
+                const inputElement = document.getElementById(inputId);
+                if (inputElement) {
+                    inputElement.value = hyperparams[key];
+                    // Si es un input tipo number y el valor es null/undefined, lo deja vacío
+                    if (inputElement.type === 'number' && (hyperparams[key] === null || hyperparams[key] === undefined)) {
+                        inputElement.value = '';
+                    }
+                }
+            }
+
+            // Trigger kernel change event for FedSVM to show/hide degree field
+            if (algorithm === 'FedSVMOptMD' && fedsvmKernelSelect) {
+                fedsvmKernelSelect.dispatchEvent(new Event('change'));
+            }
+        }
+        
+        // Enable Go to Training button
+        goToTrainingBtn.disabled = false;
+        goToTrainingBtn.onclick = () => { 
+            if (currentModelId) {
+                window.location.href = `/go-to-training/${currentModelId}/`;
+            } else {
+                showMessage('Error: Model ID not available. Please save the model again.', 'error');
+            }
+        };
+
+        // After populating, trigger a change to sync the whole UI.
+        // This is the simplest way to ensure that showParamsFor() and all sub-listeners are called correctly.
+        algorithmSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Populate form if in edit mode
+    const editModelJsonStr = '{{ edit_model_json|escapejs }}';
+    
+    if (editModelJsonStr && editModelJsonStr !== 'null' && editModelJsonStr !== '') {
+        try {
+            const editModelData = JSON.parse(editModelJsonStr);
+            
+            // We need to get the full model object, not just the config
+            const fullEditModel = {
+                id: {{ edit_model.id|default:'null' }},
+                name: '{{ edit_model.name|escapejs }}',
+                description: '{{ edit_model.description|escapejs }}',
+                config_json: editModelData
+            };
+            populateFormWithModelData(fullEditModel);
+        } catch (e) {
+            console.error('Error parsing edit model JSON:', e);
+        }
+    }
+
+    // Initial state setup
+    showParamsFor(algorithmSelect.value);
+    
+    // Trigger dependency checks on load for default algorithm
+    const svcKernelElement = document.getElementById('svc-kernel');
+    if (svcKernelElement) {
+        svcKernelElement.dispatchEvent(new Event('change'));
+    }
+    const knnMetricElement = document.getElementById('knn-metric');
+    if (knnMetricElement) {
+        knnMetricElement.dispatchEvent(new Event('change'));
+    }
+
+    // Also trigger the initial visualization render on page load
+    updateVisualization(algorithmSelect.value);
+
+    // ============================================
+    // GRID SEARCH EXPERIMENT FUNCTIONALITY
+    // ============================================
+
+    const enableExperimentCheckbox = document.getElementById('enable-experiment-mode');
+    const experimentConfigPanel = document.getElementById('experiment-config-panel');
+    const experimentParamsContainer = document.getElementById('experiment-params-container');
+    const totalCombinationsBadge = document.getElementById('total-combinations');
+
+    let experimentConfig = {};
+
+    console.log('Experiment elements:', {
+        enableExperimentCheckbox,
+        experimentConfigPanel,
+        experimentParamsContainer,
+        totalCombinationsBadge
+    });
+
+    // Toggle experiment panel
+    if (enableExperimentCheckbox) {
+        enableExperimentCheckbox.addEventListener('change', function() {
+            console.log('Experiment checkbox changed:', this.checked);
+            if (this.checked) {
+                experimentConfigPanel.classList.remove('d-none');
+                generateExperimentParams();
+            } else {
+                experimentConfigPanel.classList.add('d-none');
+            }
+        });
+    } else {
+        console.error('Enable experiment checkbox not found!');
+    }
+
+    // Generate experiment parameters based on current algorithm
+    function generateExperimentParams() {
+        const algorithm = algorithmSelect.value;
+        experimentParamsContainer.innerHTML = '';
+
+        const params = getAlgorithmParams(algorithm);
+
+        params.forEach(param => {
+            const paramDiv = createExperimentParamControl(param);
+            experimentParamsContainer.appendChild(paramDiv);
+        });
+
+        updateCombinationsCount();
+    }
+
+    // Generate modal experiment parameters
+    function generateModalExperimentParams() {
+        const algorithm = algorithmSelect.value;
+        const modalContainer = document.getElementById('modal-experiment-params-container');
+        modalContainer.innerHTML = '';
+
+        // Auto-fill experiment name
+        const modelName = document.getElementById('ml-model-name').value || 'Untitled';
+        document.getElementById('experiment-name').value = `${modelName}_GridSearch`;
+
+        const params = getAlgorithmParams(algorithm);
+
+        params.forEach(param => {
+            const paramDiv = createModalExperimentParamControl(param);
+            modalContainer.appendChild(paramDiv);
+        });
+
+        updateModalCombinationsCount();
+    }
+
+    // Get parameters for each algorithm with min/max/step info
+    function getAlgorithmParams(algorithm) {
+        const paramMappings = {
+            'FedSVMOptMD': [
+                {id: 'fedsvm-kernel', label: 'Kernel', type: 'select', options: ['linear', 'rbf', 'poly']},
+                {id: 'fedsvm-c', label: 'C (Regularization)', type: 'number', min: 0.1, max: 100, step: 0.1},
+                {id: 'fedsvm-gamma', label: 'Gamma', type: 'number', min: 0.001, max: 10, step: 0.001},
+                {id: 'fedsvm-server-eps', label: 'Server Epsilon', type: 'number', min: 0.001, max: 0.1, step: 0.001},
+                {id: 'fedsvm-client-eps', label: 'Client Epsilon', type: 'number', min: 0.00001, max: 0.001, step: 0.00001}
+            ],
+            'RandomForestClassifier': [
+                {id: 'rfc-n-estimators', label: 'N Estimators', type: 'number', min: 1, max: 200, step: 1},
+                {id: 'rfc-criterion', label: 'Criterion', type: 'select', options: ['gini', 'entropy']},
+                {id: 'rfc-max-depth', label: 'Max Depth', type: 'number', min: 1, max: 50, step: 1}
+            ],
+            'DecisionTreeClassifier': [
+                {id: 'dt-criterion', label: 'Criterion', type: 'select', options: ['gini', 'entropy']},
+                {id: 'dt-max-depth', label: 'Max Depth', type: 'number', min: 1, max: 50, step: 1},
+                {id: 'dt-min-samples-split', label: 'Min Samples Split', type: 'number', min: 2, max: 100, step: 1}
+            ],
+            'KNeighborsClassifier': [
+                {id: 'knn-n-neighbors', label: 'N Neighbors', type: 'number', min: 1, max: 50, step: 1},
+                {id: 'knn-weights', label: 'Weights', type: 'select', options: ['uniform', 'distance']},
+                {id: 'knn-metric', label: 'Metric', type: 'select', options: ['euclidean', 'manhattan', 'minkowski']}
+            ],
+            'KMeans': [
+                {id: 'kmeans-n-clusters', label: 'N Clusters', type: 'number', min: 1, max: 20, step: 1},
+                {id: 'kmeans-init', label: 'Init Method', type: 'select', options: ['k-means++', 'random']},
+                {id: 'kmeans-n-init', label: 'N Init', type: 'number', min: 1, max: 50, step: 1}
+            ]
+        };
+
+        return paramMappings[algorithm] || [];
+    }
+
+    // Create experiment parameter control
+    function createExperimentParamControl(param) {
+        const div = document.createElement('div');
+        div.className = 'mb-3 p-3 border rounded';
+
+        const currentValue = document.getElementById(param.id)?.value || '';
+
+        if (param.type === 'select') {
+            // Categorical parameter - Tag selector interface
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input experiment-param-checkbox" type="checkbox" id="exp-enable-${param.id}" data-param-id="${param.id}">
+                        <label class="form-check-label fw-bold" for="exp-enable-${param.id}">
+                            ${param.label}
+                        </label>
+                    </div>
+                    <span class="badge bg-secondary">Current: ${currentValue}</span>
+                </div>
+                <div class="experiment-values-container d-none" id="exp-values-${param.id}">
+                    <div class="row mb-2">
+                        <div class="col-8">
+                            <select class="form-select form-select-sm" id="exp-select-${param.id}">
+                                <option value="">-- Select value --</option>
+                                ${param.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-sm btn-primary w-100" id="exp-add-${param.id}">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2" id="exp-tags-${param.id}" data-param-id="${param.id}">
+                        <!-- Tags will be added here -->
+                    </div>
+                </div>
+            `;
+        } else {
+            // Numeric parameter - Range selector interface
+            const minValue = param.min || 0;
+            const maxValue = param.max || 100;
+            const stepValue = param.step || 1;
+
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input experiment-param-checkbox" type="checkbox" id="exp-enable-${param.id}" data-param-id="${param.id}">
+                        <label class="form-check-label fw-bold" for="exp-enable-${param.id}">
+                            ${param.label}
+                        </label>
+                    </div>
+                    <span class="badge bg-secondary">Current: ${currentValue}</span>
+                </div>
+                <div class="experiment-values-container d-none" id="exp-values-${param.id}">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label class="form-label small mb-1">From</label>
+                            <input type="number" class="form-control form-control-sm" id="exp-from-${param.id}"
+                                   placeholder="${minValue}" min="${minValue}" max="${maxValue}" step="${stepValue}">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small mb-1">To</label>
+                            <input type="number" class="form-control form-control-sm" id="exp-to-${param.id}"
+                                   placeholder="${maxValue}" min="${minValue}" max="${maxValue}" step="${stepValue}">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small mb-1">Step</label>
+                            <input type="number" class="form-control form-control-sm" id="exp-step-${param.id}"
+                                   placeholder="${stepValue}" min="${stepValue}" step="${stepValue}" value="${stepValue}">
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        Range: [${minValue}, ${maxValue}].
+                        <span class="text-primary fw-bold" id="exp-preview-${param.id}">Enter values to preview</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        const checkbox = div.querySelector('.experiment-param-checkbox');
+        const valuesContainer = div.querySelector('.experiment-values-container');
+
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                valuesContainer.classList.remove('d-none');
+
+                // If it's a numeric param, trigger initial preview
+                if (param.type === 'number') {
+                    const previewSpan = div.querySelector(`#exp-preview-${param.id}`);
+                    if (previewSpan) {
+                        // Trigger the updatePreview function that was defined in the numeric block
+                        const fromInput = div.querySelector(`#exp-from-${param.id}`);
+                        if (fromInput) {
+                            fromInput.dispatchEvent(new Event('input'));
+                        }
+                    }
+                }
+            } else {
+                valuesContainer.classList.add('d-none');
+            }
+            updateCombinationsCount();
+        });
+
+        if (param.type === 'select') {
+            // Tag selector logic
+            const selectElement = div.querySelector(`#exp-select-${param.id}`);
+            const addButton = div.querySelector(`#exp-add-${param.id}`);
+            const tagsContainer = div.querySelector(`#exp-tags-${param.id}`);
+
+            addButton.addEventListener('click', function() {
+                const value = selectElement.value;
+                if (!value) return;
+
+                // Check if already added
+                const existing = tagsContainer.querySelector(`[data-value="${value}"]`);
+                if (existing) {
+                    selectElement.value = '';
+                    return;
+                }
+
+                // Create tag
+                const tag = document.createElement('span');
+                tag.className = 'badge bg-primary d-inline-flex align-items-center';
+                tag.dataset.value = value;
+                tag.innerHTML = `
+                    ${value}
+                    <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;" aria-label="Remove"></button>
+                `;
+
+                tag.querySelector('.btn-close').addEventListener('click', function() {
+                    tag.remove();
+                    updateCombinationsCount();
+                });
+
+                tagsContainer.appendChild(tag);
+                selectElement.value = '';
+                updateCombinationsCount();
+            });
+        } else {
+            // Range selector logic
+            const fromInput = div.querySelector(`#exp-from-${param.id}`);
+            const toInput = div.querySelector(`#exp-to-${param.id}`);
+            const stepInput = div.querySelector(`#exp-step-${param.id}`);
+            const previewSpan = div.querySelector(`#exp-preview-${param.id}`);
+
+            const updatePreview = () => {
+                // Use value if present, otherwise use placeholder (or empty string)
+                const from = parseFloat(fromInput.value || fromInput.placeholder);
+                const to = parseFloat(toInput.value || toInput.placeholder);
+                const step = parseFloat(stepInput.value || stepInput.placeholder);
+
+                if (isNaN(from) || isNaN(to) || isNaN(step) || step <= 0) {
+                    previewSpan.textContent = 'Enter valid values to preview';
+                    return;
+                }
+
+                if (from > to) {
+                    previewSpan.textContent = '"From" must be less than or equal to "To"';
+                    return;
+                }
+
+                // Calculate exact number of values: floor((to - from) / step) + 1
+                const totalCount = Math.floor((to - from) / step) + 1;
+
+                const values = [];
+                for (let i = from; i <= to && values.length < totalCount; i += step) {
+                    values.push(i.toFixed(4).replace(/\.?0+$/, ''));
+                    if (values.length >= 20) break; // Limit preview to 20
+                }
+
+                if (totalCount > 20) {
+                    previewSpan.textContent = `${values.slice(0, 20).join(', ')}... (${totalCount} values total)`;
+                } else {
+                    previewSpan.textContent = `Values: ${values.join(', ')} (${totalCount} total)`;
+                }
+
+                updateCombinationsCount();
+            };
+
+            fromInput.addEventListener('input', updatePreview);
+            toInput.addEventListener('input', updatePreview);
+            stepInput.addEventListener('input', updatePreview);
+        }
+
+        return div;
+    }
+
+    // Create modal experiment parameter control (similar but for modal)
+    function createModalExperimentParamControl(param) {
+        const div = document.createElement('div');
+        div.className = 'card mb-3';
+
+        const currentValue = document.getElementById(param.id)?.value || '';
+
+        div.innerHTML = `
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input modal-experiment-param-checkbox" type="checkbox" id="modal-exp-enable-${param.id}" data-param-id="${param.id}">
+                        <label class="form-check-label fw-bold" for="modal-exp-enable-${param.id}">
+                            ${param.label}
+                        </label>
+                    </div>
+                    <span class="badge bg-secondary">Current: ${currentValue}</span>
+                </div>
+                <div class="modal-experiment-values-container d-none" id="modal-exp-values-${param.id}">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label class="form-label small">Values to test:</label>
+                            <input type="text" class="form-control modal-experiment-values-input"
+                                   placeholder="${param.defaultValues ? param.defaultValues.join(', ') : 'value1, value2, value3'}"
+                                   data-param-id="${param.id}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Quick fill:</label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="fillDefaultValues('${param.id}', '${param.defaultValues ? param.defaultValues.join(',') : ''}')">
+                                Use defaults
+                            </button>
+                        </div>
+                    </div>
+                    ${param.defaultValues ? `<div class="form-text">Suggested: ${param.defaultValues.join(', ')}</div>` : ''}
+                </div>
+            </div>
+        `;
+
+        const checkbox = div.querySelector('.modal-experiment-param-checkbox');
+        const valuesContainer = div.querySelector('.modal-experiment-values-container');
+
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                valuesContainer.classList.remove('d-none');
+            } else {
+                valuesContainer.classList.add('d-none');
+            }
+            updateModalCombinationsCount();
+        });
+
+        const valuesInput = div.querySelector('.modal-experiment-values-input');
+        valuesInput.addEventListener('input', updateModalCombinationsCount);
+
+        return div;
+    }
+
+    // Fill default values
+    window.fillDefaultValues = function(paramId, defaultValues) {
+        const input = document.querySelector(`input[data-param-id="${paramId}"].modal-experiment-values-input`);
+        if (input && defaultValues) {
+            input.value = defaultValues.replace(/,/g, ', ');
+            updateModalCombinationsCount();
+        }
+    };
+
+    // Update combinations count
+    function updateCombinationsCount() {
+        const checkboxes = document.querySelectorAll('.experiment-param-checkbox:checked');
+        let totalCombinations = 1;
+
+        checkboxes.forEach(checkbox => {
+            const paramId = checkbox.dataset.paramId;
+
+            // Check if it's a tag-based selector (categorical)
+            const tagsContainer = document.querySelector(`#exp-tags-${paramId}`);
+            if (tagsContainer) {
+                const tags = tagsContainer.querySelectorAll('.badge');
+                if (tags.length > 0) {
+                    totalCombinations *= tags.length;
+                }
+            } else {
+                // It's a range-based selector (numeric)
+                const fromInput = document.querySelector(`#exp-from-${paramId}`);
+                const toInput = document.querySelector(`#exp-to-${paramId}`);
+                const stepInput = document.querySelector(`#exp-step-${paramId}`);
+
+                if (fromInput && toInput && stepInput) {
+                    // Use value if present, otherwise use placeholder
+                    const from = parseFloat(fromInput.value || fromInput.placeholder);
+                    const to = parseFloat(toInput.value || toInput.placeholder);
+                    const step = parseFloat(stepInput.value || stepInput.placeholder);
+
+                    if (!isNaN(from) && !isNaN(to) && !isNaN(step) && step > 0 && from <= to) {
+                        const count = Math.floor((to - from) / step) + 1;
+                        if (count > 0) {
+                            totalCombinations *= count;
+                        }
+                    }
+                }
+            }
+        });
+
+        if (totalCombinationsBadge) {
+            totalCombinationsBadge.textContent = totalCombinations;
+
+            if (totalCombinations > 50) {
+                totalCombinationsBadge.classList.remove('bg-primary');
+                totalCombinationsBadge.classList.add('bg-warning');
+            } else {
+                totalCombinationsBadge.classList.remove('bg-warning');
+                totalCombinationsBadge.classList.add('bg-primary');
+            }
+        }
+    }
+
+    // Update modal combinations count
+    function updateModalCombinationsCount() {
+        const checkboxes = document.querySelectorAll('.modal-experiment-param-checkbox:checked');
+        let totalCombinations = 1;
+        let variableParams = 0;
+
+        checkboxes.forEach(checkbox => {
+            const paramId = checkbox.dataset.paramId;
+            const valuesInput = document.querySelector(`input[data-param-id="${paramId}"].modal-experiment-values-input`);
+            if (valuesInput && valuesInput.value.trim()) {
+                const values = valuesInput.value.split(',').map(v => v.trim()).filter(v => v);
+                if (values.length > 0) {
+                    totalCombinations *= values.length;
+                    variableParams++;
+                }
+            }
+        });
+
+        document.getElementById('modal-total-combinations').textContent = totalCombinations;
+        document.getElementById('modal-variable-params').textContent = variableParams;
+
+        const badge = document.getElementById('modal-total-combinations');
+        if (totalCombinations > 50) {
+            badge.classList.remove('text-primary');
+            badge.classList.add('text-warning');
+        } else {
+            badge.classList.remove('text-warning');
+            badge.classList.add('text-primary');
+        }
+    }
+
+    // Save experiment configuration
+    const saveExperimentBtn = document.getElementById('save-experiment-btn');
+    if (saveExperimentBtn) {
+        saveExperimentBtn.addEventListener('click', function() {
+            const experimentName = document.getElementById('experiment-name').value;
+            const experimentDescription = document.getElementById('experiment-description').value;
+
+            if (!experimentName) {
+                showMessage('Please enter an experiment name', 'warning');
+                return;
+            }
+
+            // Collect experiment configuration
+            const checkboxes = document.querySelectorAll('.modal-experiment-param-checkbox:checked');
+            const experimentParams = {};
+
+            checkboxes.forEach(checkbox => {
+                const paramId = checkbox.dataset.paramId;
+                const valuesInput = document.querySelector(`input[data-param-id="${paramId}"].modal-experiment-values-input`);
+                if (valuesInput && valuesInput.value.trim()) {
+                    const values = valuesInput.value.split(',').map(v => v.trim()).filter(v => v);
+                    if (values.length > 0) {
+                        experimentParams[paramId] = values;
+                    }
+                }
+            });
+
+            if (Object.keys(experimentParams).length === 0) {
+                showMessage('Please select at least one parameter to vary', 'warning');
+                return;
+            }
+
+            // Create experiment object
+            const experimentConfig = {
+                name: experimentName,
+                description: experimentDescription,
+                algorithm: algorithmSelect.value,
+                base_config: getModelDataFromForm(),
+                variable_params: experimentParams
+            };
+
+            console.log('Experiment Configuration:', experimentConfig);
+            showMessage('Experiment configuration ready! (Backend integration pending)', 'info');
+
+            // TODO: Send to backend to create Experiment and ExperimentJobConfig entries
+            // fetch('/api/save-experiment/', { method: 'POST', body: JSON.stringify(experimentConfig) })
+        });
+    }
+
+    // Preview experiment jobs
+    const previewExperimentBtn = document.getElementById('preview-experiment-btn');
+    if (previewExperimentBtn) {
+        previewExperimentBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.modal-experiment-param-checkbox:checked');
+            const experimentParams = {};
+
+            checkboxes.forEach(checkbox => {
+                const paramId = checkbox.dataset.paramId;
+                const valuesInput = document.querySelector(`input[data-param-id="${paramId}"].modal-experiment-values-input`);
+                if (valuesInput && valuesInput.value.trim()) {
+                    const values = valuesInput.value.split(',').map(v => v.trim()).filter(v => v);
+                    if (values.length > 0) {
+                        experimentParams[paramId] = values;
+                    }
+                }
+            });
+
+            // Generate all combinations
+            const combinations = generateCombinations(experimentParams);
+
+            console.log('Preview - Total jobs:', combinations.length);
+            console.log('Job configurations:', combinations);
+
+            showMessage(`Preview: ${combinations.length} jobs will be created`, 'info');
+        });
+    }
+
+    // Generate all parameter combinations
+    function generateCombinations(params) {
+        const keys = Object.keys(params);
+        if (keys.length === 0) return [];
+
+        const combinations = [{}];
+
+        keys.forEach(key => {
+            const values = params[key];
+            const newCombinations = [];
+
+            combinations.forEach(combination => {
+                values.forEach(value => {
+                    newCombinations.push({...combination, [key]: value});
+                });
+            });
+
+            combinations.length = 0;
+            combinations.push(...newCombinations);
+        });
+
+        return combinations;
+    }
+
+});
+</script>
+
+{% endblock %} 

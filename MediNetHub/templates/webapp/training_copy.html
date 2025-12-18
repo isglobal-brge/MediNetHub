@@ -26,12 +26,34 @@
     .jobs-card .card-body {
         display: flex;
         flex-direction: column;
-        height: calc(90.5vh - 300px); /* Altura dinámica basada en viewport */
+        max-height: calc(90vh - 110px); /* Altura dinámica basada en viewport */
         min-height: 400px;
+        padding: 1rem;
+        overflow: hidden;
     }
-    
-    .job-table-container {
+
+    /* Tab content needs to take remaining space */
+    .tab-content {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .tab-pane {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
+    }
+
+    .job-table-container {
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    #experiments-container {
         overflow-y: auto;
         min-height: 0;
     }
@@ -47,6 +69,20 @@
         left: auto;
     }
     
+    /* Tabs occupy full width */
+    .nav-tabs {
+        width: 100%;
+    }
+
+    .nav-tabs .nav-item {
+        flex: 1;
+        text-align: center;
+    }
+
+    .nav-tabs .nav-link {
+        width: 100%;
+    }
+
     /* Millorar la visibilitat dels elements de la taula */
     .table td, .table th {
         vertical-align: middle;
@@ -175,6 +211,85 @@
         background-color: #fcfdff;
         padding: 1rem 1.25rem;
     }
+
+    /* Experiments Tab Styling */
+    .experiment-card {
+        border-left: 4px solid #6f42c1;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+
+    .experiment-card:hover {
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .experiment-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #8b5cf6 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .jobs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .job-mini-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        background: white;
+        transition: all 0.2s ease;
+    }
+
+    .job-mini-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+
+    .job-rank {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.875rem;
+    }
+
+    .job-rank.gold {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        color: #856404;
+    }
+
+    .job-rank.silver {
+        background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+        color: #495057;
+    }
+
+    .job-rank.bronze {
+        background: linear-gradient(135deg, #cd7f32 0%, #e9a362 100%);
+        color: #fff;
+    }
+
+    .experiment-progress {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+
+    .experiment-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #6f42c1 0%, #8b5cf6 100%);
+        transition: width 0.3s ease;
+    }
 </style>
 {% endblock %}
 
@@ -189,9 +304,6 @@
             <p class="text-muted">Configure and run distributed training jobs on multiple data sources</p>
         </div>
         <div class="col-auto">
-            <a href="/experiments-preview/" class="btn btn-warning me-2">
-                <i class="fas fa-flask me-2"></i>Experiments (Preview)
-            </a>
             <a href="{% url 'model_studio' %}" class="btn btn-outline-primary">
                 <i class="fas fa-edit me-2"></i>Design New Model
             </a>
@@ -554,12 +666,30 @@
         <div class="col-lg-7 mb-4">
             <div class="card h-90 jobs-card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Training Jobs</h5>
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Training Management</h5>
                     <button type="button" class="btn btn-sm btn-light" id="refresh-jobs-btn">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
                 <div class="card-body">
+                    <!-- Tabs Navigation -->
+                    <ul class="nav nav-tabs mb-3" id="trainingTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="jobs-tab" data-bs-toggle="tab" data-bs-target="#jobs-panel" type="button" role="tab" aria-controls="jobs-panel" aria-selected="true">
+                                <i class="fas fa-tasks me-2"></i>Training Jobs
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="experiments-tab" data-bs-toggle="tab" data-bs-target="#experiments-panel" type="button" role="tab" aria-controls="experiments-panel" aria-selected="false">
+                                <i class="fas fa-flask me-2"></i>Experiments
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tabs Content -->
+                    <div class="tab-content" id="trainingTabsContent">
+                        <!-- Training Jobs Tab -->
+                        <div class="tab-pane fade show active" id="jobs-panel" role="tabpanel" aria-labelledby="jobs-tab">
                     {% if training_jobs %}
                     <div class="table-responsive job-table-container">
                         <table class="table table-hover">
@@ -647,6 +777,18 @@
                         <p>There are no training jobs. Configure and start a new training.</p>
                     </div>
                     {% endif %}
+                        </div>
+                        <!-- End Training Jobs Tab -->
+
+                        <!-- Experiments Tab -->
+                        <div class="tab-pane fade" id="experiments-panel" role="tabpanel" aria-labelledby="experiments-tab">
+                            <div id="experiments-container">
+                                <!-- Experiments will be loaded here via JavaScript -->
+                            </div>
+                        </div>
+                        <!-- End Experiments Tab -->
+                    </div>
+                    <!-- End Tab Content -->
                 </div>
             </div>
         </div>
@@ -972,7 +1114,147 @@
         
         // Cargar datos al iniciar
         loadModelData();
-        
+
+        // Load experiments dummy data when tab is activated
+        document.getElementById('experiments-tab').addEventListener('click', function() {
+            loadExperimentsData();
+        });
+
+        // Function to load experiments with dummy data
+        function loadExperimentsData() {
+            const experimentsContainer = document.getElementById('experiments-container');
+
+            // Check if already loaded
+            if (experimentsContainer.children.length > 0) {
+                return;
+            }
+
+            // Dummy experiments data
+            const experimentsData = [
+                {
+                    id: 1,
+                    name: "FedSVM Kernel Grid Search",
+                    description: "Testing RBF kernel with gamma variations",
+                    status: "completed",
+                    progress: 100,
+                    created: "2024-01-15",
+                    total_jobs: 9,
+                    completed_jobs: 9,
+                    best_accuracy: 0.9234,
+                    jobs: [
+                        {id: 101, name: "rbf_gamma_0.001", accuracy: 0.9234, loss: 0.1245, params: {kernel: "rbf", gamma: 0.001, C: 1.0}, rank: 1},
+                        {id: 102, name: "rbf_gamma_0.01", accuracy: 0.9156, loss: 0.1389, params: {kernel: "rbf", gamma: 0.01, C: 1.0}, rank: 2},
+                        {id: 103, name: "rbf_gamma_0.1", accuracy: 0.9087, loss: 0.1523, params: {kernel: "rbf", gamma: 0.1, C: 1.0}, rank: 3},
+                        {id: 104, name: "rbf_gamma_1.0", accuracy: 0.8923, loss: 0.1876, params: {kernel: "rbf", gamma: 1.0, C: 1.0}, rank: 4},
+                        {id: 105, name: "linear_C_0.1", accuracy: 0.8845, loss: 0.1945, params: {kernel: "linear", C: 0.1}, rank: 5},
+                        {id: 106, name: "linear_C_1.0", accuracy: 0.8734, loss: 0.2123, params: {kernel: "linear", C: 1.0}, rank: 6},
+                        {id: 107, name: "poly_degree_2", accuracy: 0.8612, loss: 0.2289, params: {kernel: "poly", degree: 2, C: 1.0}, rank: 7},
+                        {id: 108, name: "poly_degree_3", accuracy: 0.8534, loss: 0.2456, params: {kernel: "poly", degree: 3, C: 1.0}, rank: 8},
+                        {id: 109, name: "sigmoid", accuracy: 0.8401, loss: 0.2678, params: {kernel: "sigmoid", C: 1.0}, rank: 9}
+                    ]
+                },
+                {
+                    id: 2,
+                    name: "FedSVM Regularization Tuning",
+                    description: "Optimizing C parameter for RBF kernel",
+                    status: "running",
+                    progress: 67,
+                    created: "2024-01-16",
+                    total_jobs: 6,
+                    completed_jobs: 4,
+                    best_accuracy: 0.9145,
+                    jobs: [
+                        {id: 201, name: "C_0.01", accuracy: 0.8923, loss: 0.1876, params: {kernel: "rbf", gamma: 0.001, C: 0.01}, rank: 3, status: "completed"},
+                        {id: 202, name: "C_0.1", accuracy: 0.9145, loss: 0.1423, params: {kernel: "rbf", gamma: 0.001, C: 0.1}, rank: 1, status: "completed"},
+                        {id: 203, name: "C_1.0", accuracy: 0.9098, loss: 0.1534, params: {kernel: "rbf", gamma: 0.001, C: 1.0}, rank: 2, status: "completed"},
+                        {id: 204, name: "C_10.0", accuracy: 0.8867, loss: 0.1912, params: {kernel: "rbf", gamma: 0.001, C: 10.0}, rank: 4, status: "completed"},
+                        {id: 205, name: "C_100.0", accuracy: null, loss: null, params: {kernel: "rbf", gamma: 0.001, C: 100.0}, rank: null, status: "running"},
+                        {id: 206, name: "C_1000.0", accuracy: null, loss: null, params: {kernel: "rbf", gamma: 0.001, C: 1000.0}, rank: null, status: "pending"}
+                    ]
+                },
+                {
+                    id: 3,
+                    name: "Multi-kernel Comparison",
+                    description: "Comparing different kernel types with optimal parameters",
+                    status: "pending",
+                    progress: 0,
+                    created: "2024-01-17",
+                    total_jobs: 4,
+                    completed_jobs: 0,
+                    best_accuracy: null,
+                    jobs: [
+                        {id: 301, name: "rbf_optimal", accuracy: null, loss: null, params: {kernel: "rbf", gamma: 0.001, C: 0.1}, rank: null, status: "pending"},
+                        {id: 302, name: "linear_optimal", accuracy: null, loss: null, params: {kernel: "linear", C: 1.0}, rank: null, status: "pending"},
+                        {id: 303, name: "poly_optimal", accuracy: null, loss: null, params: {kernel: "poly", degree: 2, C: 1.0}, rank: null, status: "pending"},
+                        {id: 304, name: "sigmoid_optimal", accuracy: null, loss: null, params: {kernel: "sigmoid", C: 1.0}, rank: null, status: "pending"}
+                    ]
+                }
+            ];
+
+            // Render experiments
+            let html = '';
+
+            if (experimentsData.length === 0) {
+                html = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-flask fa-3x text-muted mb-3"></i>
+                        <p>No experiments yet. Start an experiment to test different hyperparameters.</p>
+                        <button class="btn btn-primary" disabled>
+                            <i class="fas fa-plus me-2"></i>Create Experiment (Coming Soon)
+                        </button>
+                    </div>
+                `;
+            } else {
+                experimentsData.forEach(exp => {
+                    const statusClass = exp.status === 'completed' ? 'success' : exp.status === 'running' ? 'primary' : 'secondary';
+                    const statusIcon = exp.status === 'completed' ? 'check-circle' : exp.status === 'running' ? 'spinner fa-spin' : 'clock';
+
+                    html += `
+                        <div class="experiment-card card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h5 class="mb-1">
+                                            <i class="fas fa-flask me-2" style="color: #6f42c1;"></i>${exp.name}
+                                        </h5>
+                                        <p class="text-muted small mb-0">${exp.description}</p>
+                                    </div>
+                                    <span class="badge bg-${statusClass}">
+                                        <i class="fas fa-${statusIcon} me-1"></i>${exp.status.charAt(0).toUpperCase() + exp.status.slice(1)}
+                                    </span>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Progress</small>
+                                        <div class="experiment-progress mt-1">
+                                            <div class="experiment-progress-bar" style="width: ${exp.progress}%"></div>
+                                        </div>
+                                        <small class="text-muted">${exp.completed_jobs}/${exp.total_jobs} jobs</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Best Accuracy</small>
+                                        <strong>${exp.best_accuracy !== null ? (exp.best_accuracy * 100).toFixed(2) + '%' : 'N/A'}</strong>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block">Created</small>
+                                        <strong>${exp.created}</strong>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <a href="/experiment/${exp.id}/" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>View Jobs
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            experimentsContainer.innerHTML = html;
+        }
+
         // Preview config JSON button
         document.getElementById('preview-config-json-btn').addEventListener('click', function() {
             updateConfigJsonPreview();
