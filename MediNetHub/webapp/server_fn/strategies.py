@@ -462,6 +462,7 @@ class FedSVMStrategy(Strategy):
         # FedSVM specific attributes
         self.support_vectors_pool = {}  # Maps client_id -> list of (sha, sv, label)
         self.convergence_threshold = server_manager.model_config.get('algorithm', {}).get('ml_algorithm', {}).get('hyperparameters', {}).get('server_eps', 1e-2)
+        self.converged = False  # Flag to signal convergence
 
         print(f"FedSVMStrategy initialized with convergence threshold: {self.convergence_threshold}")
 
@@ -522,6 +523,7 @@ class FedSVMStrategy(Strategy):
             # Config only contains scalar metadata
             config = {
                 "server_round": server_round,
+                "converged": int(self.converged),  # 1 if converged, 0 otherwise
             }
 
             # Create FitIns object
@@ -532,7 +534,10 @@ class FedSVMStrategy(Strategy):
 
             fit_configurations.append((client, fit_ins))
 
-        print(f"📋 Configured {len(fit_configurations)} clients for round {server_round}")
+        if self.converged:
+            print(f"Configured {len(fit_configurations)} clients for round {server_round} (CONVERGED - no-op mode)")
+        else:
+            print(f"Configured {len(fit_configurations)} clients for round {server_round}")
         return fit_configurations
 
     def aggregate_fit(
@@ -644,8 +649,14 @@ class FedSVMStrategy(Strategy):
         )
 
         # Check convergence
-        if new_svs_count == 0:
+        if new_svs_count == 0 and not self.converged:
             print(f"🏁 Convergence achieved - no new support vectors")
+            print(f" Setting converged flag - remaining rounds will be no-ops")
+
+            # Set convergence flag (clients will skip training in next rounds)
+            self.converged = True
+
+            # Mark job as completed
             self.server_manager.job.status = 'completed'
             self.server_manager.job.completed_at = round_end_time
             self.server_manager.job.progress = 100
@@ -655,9 +666,9 @@ class FedSVMStrategy(Strategy):
                 self.server_manager.job.training_duration = total_duration
 
             self.server_manager.job.save()
-            self.server_manager.should_stop = True
 
-            return None, aggregated_metrics
+            # Note: Don't return None here - let Flower continue to complete remaining rounds
+            # Clients will receive converged=1 flag and skip training
 
         # Check if final round
         if server_round >= self.server_manager.job.total_rounds:
