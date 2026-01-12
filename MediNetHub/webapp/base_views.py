@@ -174,23 +174,59 @@ def user_dashboard(request):
         models_count = ModelConfig.objects.filter(user=request.user, project=selected_project).count()
     else:
         models_count = ModelConfig.objects.filter(user=request.user).count()
-    
+
     # Get connections count for the selected project or user
     if selected_project:
         connections_count = Connection.objects.filter(user=request.user, project=selected_project).count()
     else:
         connections_count = Connection.objects.filter(user=request.user).count()
-    
+
+    # Get total jobs count
+    if selected_project:
+        total_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project).count()
+    else:
+        total_jobs = TrainingJob.objects.filter(user=request.user).count()
+
+    # Calculate success rate
+    if total_jobs > 0:
+        if selected_project:
+            completed_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project, status='completed').count()
+        else:
+            completed_jobs = TrainingJob.objects.filter(user=request.user, status='completed').count()
+        success_rate = round((completed_jobs / total_jobs) * 100) if total_jobs > 0 else 0
+    else:
+        success_rate = 0
+
+    # Get active jobs (running or pending)
+    if selected_project:
+        active_jobs = TrainingJob.objects.filter(
+            user=request.user,
+            project=selected_project,
+            status__in=['running', 'pending', 'server_ready']
+        ).order_by('-created_at')[:3]
+    else:
+        active_jobs = TrainingJob.objects.filter(
+            user=request.user,
+            status__in=['running', 'pending', 'server_ready']
+        ).order_by('-created_at')[:3]
+
+    # Create stats dictionary
+    stats = {
+        'total_models': models_count,
+        'total_jobs': total_jobs,
+        'active_connections': connections_count,
+        'success_rate': success_rate
+    }
+
     context = {
         'projects': projects,
         'selected_project': selected_project,
         'recent_jobs': recent_jobs,
+        'active_jobs': active_jobs,
         'recent_notifications': recent_notifications,
-        'models_count': models_count,
-        'connections_count': connections_count,
-        'jobs_count': recent_jobs.count() if selected_project else TrainingJob.objects.filter(user=request.user).count()
+        'stats': stats
     }
-    
+
     return render(request, 'webapp/dashboard_home.html', context)
 
 

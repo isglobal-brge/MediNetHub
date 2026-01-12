@@ -124,6 +124,18 @@ body {
     background: linear-gradient(90deg, var(--success-color) 0%, #4caf50 100%);
 }
 
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
 .status-badge::before {
     content: '';
     width: 6px;
@@ -131,31 +143,32 @@ body {
     border-radius: 50%;
     background: currentColor;
     margin-right: 6px;
+    flex-shrink: 0;
 }
 
-.status-running { 
-    background: var(--info-light); 
-    color: var(--info-color); 
+.status-running {
+    background: var(--info-light);
+    color: var(--info-color);
     border: 1px solid var(--info-color);
 }
-.status-pending { 
-    background: var(--warning-light); 
-    color: var(--warning-color); 
+.status-pending {
+    background: var(--warning-light);
+    color: var(--warning-color);
     border: 1px solid var(--warning-color);
 }
-.status-server-ready { 
-    background: var(--primary-light); 
-    color: var(--primary-color); 
+.status-server-ready {
+    background: var(--primary-light);
+    color: var(--primary-color);
     border: 1px solid var(--primary-color);
 }
-.status-completed { 
-    background: var(--success-light); 
-    color: var(--success-color); 
+.status-completed {
+    background: var(--success-light);
+    color: var(--success-color);
     border: 1px solid var(--success-color);
 }
-.status-failed { 
-    background: var(--danger-light); 
-    color: var(--danger-color); 
+.status-failed {
+    background: var(--danger-light);
+    color: var(--danger-color);
     border: 1px solid var(--danger-color);
 }
 
@@ -163,7 +176,7 @@ body {
     background: transparent;
     border: 1px solid var(--gray-200);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1.25rem;
     margin-bottom: 1rem;
     transition: all 0.3s ease;
     position: relative;
@@ -173,6 +186,7 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 4px 15px rgba(0,0,0,0.07);
     transform: translateY(-2px);
+    background: rgba(25, 118, 210, 0.02);
 }
 
 .activity-item:last-child {
@@ -180,17 +194,21 @@ body {
 }
 
 .job-title {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--gray-800);
-    margin-bottom: 4px;
-    line-height: 1.3;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    padding-right: 0.5rem;
 }
 
 .job-meta {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--gray-600);
-    opacity: 0.8;
+    opacity: 0.85;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .status-text {
@@ -219,7 +237,7 @@ body {
     background: transparent;
     border: 1px solid var(--gray-200);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1.25rem;
     margin-bottom: 1rem;
     transition: all 0.3s ease;
     position: relative;
@@ -228,10 +246,21 @@ body {
 .notification-modern:hover {
     border-color: var(--primary-color);
     box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    background: rgba(25, 118, 210, 0.02);
 }
 
 .notification-modern:last-child {
     margin-bottom: 0;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 @keyframes fadeInUp {
@@ -555,10 +584,10 @@ body {
                         <div class="tab-pane fade show active" id="activity-pane" role="tabpanel" aria-labelledby="activity-tab">
                              {% if recent_jobs %}
                                 {% for job in recent_jobs %}
-                                <div class="activity-item {% if job.status == 'completed' %}success{% elif job.status == 'failed' %}danger{% elif job.status == 'running' %}primary{% else %}warning{% endif %} animate-item">
-                                    <div class="d-flex align-items-start justify-content-between">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center mb-2">
+                                <div class="activity-item animate-item">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="flex-grow-1 min-w-0">
+                                            <div class="d-flex align-items-center mb-2 flex-wrap gap-2">
                                                 {% if job.status == 'completed' %}
                                                     <span class="status-badge status-completed">Completed</span>
                                                 {% elif job.status == 'failed' %}
@@ -569,22 +598,23 @@ body {
                                                     <span class="status-badge status-pending">Pending</span>
                                                 {% endif %}
                                             </div>
-                                            
-                                            <h6 class="job-title">{{ job.name }}</h6>
-                                            
+
+                                            <h6 class="job-title text-truncate">{{ job.name }}</h6>
+
                                             <div class="job-meta">
-                                                <span class="material-icons" style="font-size: 1rem;">access_time</span>
-                                                {{ job.created_at|timesince }} ago
+                                                <span class="material-icons" style="font-size: 0.95rem;">access_time</span>
+                                                <span>{{ job.created_at|timesince }} ago</span>
                                                 {% if job.completed_at %}
-                                                    • Duration: {{ job.completed_at|timesince:job.started_at }}
+                                                    <span>•</span>
+                                                    <span>Duration: {{ job.completed_at|timesince:job.started_at }}</span>
                                                 {% endif %}
                                             </div>
                                         </div>
-                                        
+
                                         {% if job.status == 'running' %}
-                                        <div class="ms-3">
-                                            <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary">
-                                                <span class="material-icons">visibility</span>
+                                        <div class="flex-shrink-0">
+                                            <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                                <span class="material-icons" style="font-size: 1.1rem;">visibility</span>
                                             </a>
                                         </div>
                                         {% endif %}
