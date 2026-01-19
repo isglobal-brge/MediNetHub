@@ -184,7 +184,7 @@ def ml_model_designer(request, model_id=None):
         'edit_model_json': json.dumps(model.config_json) if model and model.config_json else 'null',
         'selected_datasets': request.session.get('selected_datasets', [])  # Add selected datasets
     }
-    return render(request, 'webapp/ml_model_designer_experiment.html', context)
+    return render(request, 'webapp/ml_model_designer.html', context)
 
 
 @login_required
