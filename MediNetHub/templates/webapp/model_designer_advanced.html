@@ -94,10 +94,21 @@
             background-size: 24px 24px;
             border-radius: 8px;
             flex: 1;
-            overflow: hidden;
+            overflow: visible;
             margin: 1rem;
-            transition: background-color 0.2s ease, transform 0.3s ease;
+            transition: background-color 0.2s ease;
             transform-origin: center center;
+            min-width: 2000px;
+            min-height: 1500px;
+        }
+
+        /* Wrapper to contain canvas and handle overflow */
+        .canvas-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            margin: 0;
+            border-radius: 8px;
         }
 
         /* Canvas zoom wrapper */
@@ -1431,6 +1442,7 @@
                 </div>
             </div>
 
+            <div class="canvas-container" id="canvasContainer">
             <div class="node-canvas" id="nodeCanvas">
                 <!-- COMPONENT: SVG Connection System -->
                 <svg id="connectionsSvg" style="position: absolute; width: 100%; height: 100%; z-index: 1; pointer-events: none;">
@@ -1448,7 +1460,7 @@
                 </div>
 
                 <!-- COMPONENT: Output Node -->
-                <div class="layer-node layer-output node-output" data-node-id="output" style="right: 72px; top: 168px; left: auto;">
+                <div class="layer-node layer-output node-output" data-node-id="output" style="left: 600px; top: 168px;">
                     <div class="connection-port smart-port left-side acting-as-input disconnected"
                          data-port-type="input" data-side="left" data-preferred="input"></div>
                     <div class="node-content">
@@ -1483,6 +1495,7 @@
                     Click connections to select • Double-click to edit curves • Drag control points to reshape
                 </div>
             </div>
+            </div> <!-- /canvas-container -->
         </div> <!-- /designer-panel (Canvas Center) -->
 
         <!-- Layer Parameters Panel (Right) -->
@@ -2013,19 +2026,21 @@
             
             updateConnection(e) {
                 if (!this.state.isConnecting || !this.state.connectingFrom) return;
-                
+
                 try {
                     const canvasRect = this.canvas.getBoundingClientRect();
                     const fromRect = this.state.connectingFrom.port.getBoundingClientRect();
-                    
-                    const fromX = fromRect.left - canvasRect.left + fromRect.width / 2;
-                    const fromY = fromRect.top - canvasRect.top + fromRect.height / 2;
-                    const toX = e.clientX - canvasRect.left;
-                    const toY = e.clientY - canvasRect.top;
-                    
+                    const zoom = this.state.zoomLevel;
+
+                    // Divide by zoom to get correct canvas coordinates
+                    const fromX = (fromRect.left - canvasRect.left + fromRect.width / 2) / zoom;
+                    const fromY = (fromRect.top - canvasRect.top + fromRect.height / 2) / zoom;
+                    const toX = (e.clientX - canvasRect.left) / zoom;
+                    const toY = (e.clientY - canvasRect.top) / zoom;
+
                     const midX = (fromX + toX) / 2;
                     const pathData = `M ${fromX} ${fromY} Q ${midX} ${fromY}, ${midX} ${(fromY + toY) / 2} Q ${midX} ${toY}, ${toX} ${toY}`;
-                    
+
                     this.helperPath.setAttribute('d', pathData);
                 } catch (error) {
                     console.error('❌ Error updating connection preview:', error);
@@ -2143,11 +2158,14 @@
                     const fromRect = fromPort.getBoundingClientRect();
                     const toRect = toPort.getBoundingClientRect();
                     const canvasRect = this.canvas.getBoundingClientRect();
+                    const zoom = this.state.zoomLevel;
 
-                    const fromX = fromRect.left - canvasRect.left + fromRect.width / 2;
-                    const fromY = fromRect.top - canvasRect.top + fromRect.height / 2;
-                    const toX = toRect.left - canvasRect.left + toRect.width / 2;
-                    const toY = toRect.top - canvasRect.top + toRect.height / 2;
+                    // Divide by zoom because getBoundingClientRect returns scaled coordinates
+                    // but the SVG is inside the scaled canvas, so coordinates are applied twice
+                    const fromX = (fromRect.left - canvasRect.left + fromRect.width / 2) / zoom;
+                    const fromY = (fromRect.top - canvasRect.top + fromRect.height / 2) / zoom;
+                    const toX = (toRect.left - canvasRect.left + toRect.width / 2) / zoom;
+                    const toY = (toRect.top - canvasRect.top + toRect.height / 2) / zoom;
 
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     const midX = (fromX + toX) / 2;
@@ -2310,25 +2328,28 @@
             // FIXED: Update control point dragging
             updateControlPointDrag(e) {
                 if (!this.state.isDraggingControlPoint || !this.state.dragControlPoint) return;
-                
+
                 try {
                     const canvasRect = this.canvas.getBoundingClientRect();
-                    const x = e.clientX - canvasRect.left;
-                    const y = e.clientY - canvasRect.top;
-                    
+                    const zoom = this.state.zoomLevel;
+
+                    // Divide by zoom to get correct canvas coordinates
+                    const x = (e.clientX - canvasRect.left) / zoom;
+                    const y = (e.clientY - canvasRect.top) / zoom;
+
                     const controlPoint = this.state.dragControlPoint;
-                    
+
                     // Update control point position
                     controlPoint.element.setAttribute('cx', x);
                     controlPoint.element.setAttribute('cy', y);
-                    
+
                     // Update control line
                     controlPoint.line.setAttribute('x2', x);
                     controlPoint.line.setAttribute('y2', y);
-                    
+
                     // Update the curve path in real-time
                     this.updateCurvePath();
-                    
+
                 } catch (error) {
                     console.error('❌ Error updating control point drag:', error);
                 }
@@ -2805,12 +2826,14 @@
             }
             
             calculateSmartPosition() {
-                const canvasRect = this.canvas.getBoundingClientRect();
+                // Use internal canvas dimensions (not affected by zoom transform)
+                const canvasWidth = this.canvas.offsetWidth;
+                const canvasHeight = this.canvas.offsetHeight;
                 const existingNodes = this.canvas.querySelectorAll('.layer-node[data-node-id]:not([data-node-id="input"]):not([data-node-id="output"])');
 
                 // Calculate center position aligned to grid
-                const centerX = this.snapToGrid(canvasRect.width / 2);
-                const centerY = this.snapToGrid(canvasRect.height / 2);
+                const centerX = this.snapToGrid(canvasWidth / 2);
+                const centerY = this.snapToGrid(canvasHeight / 2);
 
                 let x = centerX;
                 let y = centerY;
@@ -2833,8 +2856,8 @@
                             const testX = this.snapToGrid(centerX + radius * Math.cos(angle * Math.PI / 180));
                             const testY = this.snapToGrid(centerY + radius * Math.sin(angle * Math.PI / 180));
 
-                            if (testX >= this.GRID_SIZE && testX <= canvasRect.width - 150 &&
-                                testY >= this.GRID_SIZE && testY <= canvasRect.height - 80) {
+                            if (testX >= this.GRID_SIZE && testX <= canvasWidth - 150 &&
+                                testY >= this.GRID_SIZE && testY <= canvasHeight - 80) {
 
                                 if (!occupiedPositions.has(`${testX},${testY}`)) {
                                     return { x: testX, y: testY };
@@ -3068,23 +3091,26 @@
                 try {
                     this.state.isDragging = true;
                     this.state.dragNode = node;
-                    
-                    const nodeRect = node.getBoundingClientRect();
+
                     const canvasRect = this.canvas.getBoundingClientRect();
-                    
-                    const mouseCanvasX = e.clientX - canvasRect.left;
-                    const mouseCanvasY = e.clientY - canvasRect.top;
-                    const nodeCanvasX = nodeRect.left - canvasRect.left;
-                    const nodeCanvasY = nodeRect.top - canvasRect.top;
-                    
+                    const zoom = this.state.zoomLevel;
+
+                    // Convert screen coordinates to canvas coordinates accounting for zoom
+                    const mouseCanvasX = (e.clientX - canvasRect.left) / zoom;
+                    const mouseCanvasY = (e.clientY - canvasRect.top) / zoom;
+
+                    // Get node position from its style (already in canvas coordinates)
+                    const nodeX = parseFloat(node.style.left) || 0;
+                    const nodeY = parseFloat(node.style.top) || 0;
+
                     this.state.dragOffset = {
-                        x: mouseCanvasX - nodeCanvasX,
-                        y: mouseCanvasY - nodeCanvasY
+                        x: mouseCanvasX - nodeX,
+                        y: mouseCanvasY - nodeY
                     };
-                    
+
                     node.classList.add('dragging');
                     this.canvas.classList.add('dragging-active');
-                    
+
                     console.log('🖱️ Started dragging:', node.dataset.nodeId);
                 } catch (error) {
                     console.error('❌ Error starting drag:', error);
@@ -3094,32 +3120,35 @@
             
             updateDragging(e) {
                 if (!this.state.dragNode) return;
-                
+
                 try {
                     const canvasRect = this.canvas.getBoundingClientRect();
-                    const mouseCanvasX = e.clientX - canvasRect.left;
-                    const mouseCanvasY = e.clientY - canvasRect.top;
-                    
+                    const zoom = this.state.zoomLevel;
+
+                    // Convert screen coordinates to canvas coordinates accounting for zoom
+                    const mouseCanvasX = (e.clientX - canvasRect.left) / zoom;
+                    const mouseCanvasY = (e.clientY - canvasRect.top) / zoom;
+
                     let x = mouseCanvasX - this.state.dragOffset.x;
                     let y = mouseCanvasY - this.state.dragOffset.y;
-                    
+
                     x = this.snapToGrid(x);
                     y = this.snapToGrid(y);
-                    
-                    const nodeWidth = 150;
-                    const nodeHeight = 80;
-                    x = Math.max(0, Math.min(x, canvasRect.width - nodeWidth));
-                    y = Math.max(0, Math.min(y, canvasRect.height - nodeHeight));
-                    
+
+                    // Only enforce minimum bounds (no negative positions)
+                    // Canvas is large (2000x1500) so nodes can move freely
+                    x = Math.max(0, x);
+                    y = Math.max(0, y);
+
                     this.state.dragNode.style.left = x + 'px';
                     this.state.dragNode.style.top = y + 'px';
-                    
+
                     const nodeId = this.state.dragNode.dataset.nodeId;
                     if (this.state.nodes.has(nodeId)) {
                         this.state.nodes.get(nodeId).x = x;
                         this.state.nodes.get(nodeId).y = y;
                     }
-                    
+
                     this.connectionComponent.redrawAllConnections();
                 } catch (error) {
                     console.error('❌ Error updating drag:', error);
@@ -3496,10 +3525,11 @@
                             contextMenuModern.style.top = `${y}px`;
                             contextMenuModern.classList.add('show');
 
-                            // Store click position for node creation
+                            // Store click position for node creation (accounting for zoom)
                             const canvasRect = this.canvas.getBoundingClientRect();
-                            contextMenuModern.dataset.clickX = e.clientX - canvasRect.left;
-                            contextMenuModern.dataset.clickY = e.clientY - canvasRect.top;
+                            const zoom = this.state.zoomLevel;
+                            contextMenuModern.dataset.clickX = (e.clientX - canvasRect.left) / zoom;
+                            contextMenuModern.dataset.clickY = (e.clientY - canvasRect.top) / zoom;
 
                             console.log('🖱️ Context menu opened at:', { x, y });
                         });
@@ -3704,29 +3734,31 @@
             autoArrangeNodes() {
                 try {
                     const allNodes = this.canvas.querySelectorAll('.layer-node[data-node-id]:not([data-node-id="input"]):not([data-node-id="output"])');
-                    const canvasRect = this.canvas.getBoundingClientRect();
-                    
+                    // Use internal canvas dimensions (not affected by zoom)
+                    const canvasWidth = this.canvas.offsetWidth;
+                    const canvasHeight = this.canvas.offsetHeight;
+
                     if (allNodes.length === 0) return;
-                    
+
                     const startX = 200;
-                    const endX = canvasRect.width - 250;
+                    const endX = canvasWidth - 250;
                     const spacing = allNodes.length > 1 ? (endX - startX) / (allNodes.length - 1) : 0;
-                    const centerY = canvasRect.height / 2 - 40;
-                    
+                    const centerY = canvasHeight / 2 - 40;
+
                     allNodes.forEach((node, index) => {
                         const x = startX + (index * spacing);
                         node.style.left = x + 'px';
                         node.style.top = centerY + 'px';
-                        
+
                         const nodeId = node.dataset.nodeId;
                         if (this.state.nodes.has(nodeId)) {
                             this.state.nodes.get(nodeId).x = x;
                             this.state.nodes.get(nodeId).y = centerY;
                         }
                     });
-                    
+
                     this.connectionComponent.redrawAllConnections();
-                    
+
                     console.log('✨ Auto layout applied');
                 } catch (error) {
                     console.error('❌ Error in auto arrange:', error);
@@ -3769,24 +3801,19 @@
 
             applyZoom() {
                 try {
-                    // Apply scale transform
-                    this.canvas.style.transform = `scale(${this.state.zoomLevel})`;
-                    this.canvas.style.transformOrigin = 'center center';
+                    const zoom = this.state.zoomLevel;
 
-                    // Scale the background grid size inversely to the zoom level
-                    // When zooming out (scale < 1), grid should appear smaller in visual size
-                    // but cover the full area
-                    const baseGridSize = 24; // Base grid size in pixels
-                    const scaledGridSize = baseGridSize / this.state.zoomLevel;
-                    this.canvas.style.backgroundSize = `${scaledGridSize}px ${scaledGridSize}px`;
+                    // Apply scale transform - canvas has fixed large size, zoom scales it visually
+                    this.canvas.style.transform = `scale(${zoom})`;
+                    this.canvas.style.transformOrigin = '0 0';
 
                     // Update zoom level display
                     const zoomLevelDisplay = document.getElementById('zoomLevel');
                     if (zoomLevelDisplay) {
-                        zoomLevelDisplay.textContent = Math.round(this.state.zoomLevel * 100) + '%';
+                        zoomLevelDisplay.textContent = Math.round(zoom * 100) + '%';
                     }
 
-                    console.log(`🔍 Zoom applied: ${Math.round(this.state.zoomLevel * 100)}% | Grid size: ${scaledGridSize.toFixed(2)}px`);
+                    console.log(`🔍 Zoom applied: ${Math.round(zoom * 100)}%`);
 
                     // Redraw connections after zoom
                     setTimeout(() => {

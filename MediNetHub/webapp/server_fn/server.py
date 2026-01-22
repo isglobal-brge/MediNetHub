@@ -1,11 +1,91 @@
 import warnings
+import os
+from pathlib import Path
 from typing import List, Tuple, Union, Optional, Dict
 from flwr.server.client_manager import SimpleClientManager
 from collections import OrderedDict
 from django.utils import timezone
+from django.conf import settings
 import flwr as fl
-from .strategies import ServerManager, FedAvgModelStrategy, FedSVMStrategy
+from .strategies import ServerManager, FedAvgModelStrategy, FedSVMStrategy, FedDPRandomForestStrategy
 warnings.filterwarnings("ignore")
+
+# SSL/TLS certificate paths
+CERTS_DIR = Path(settings.BASE_DIR).parent / "config" / "certs"
+CA_CERT_PATH = CERTS_DIR / "ca.crt"
+SERVER_CERT_PATH = CERTS_DIR / "server.crt"
+SERVER_KEY_PATH = CERTS_DIR / "server.key"
+
+
+def load_ssl_certificates():
+    """Load SSL certificates for secure Flower server communication.
+
+    Returns:
+        tuple: (ca_cert, server_cert, server_key) as bytes, or None if SSL is disabled/unavailable
+    """
+    # Check if SSL is enabled via environment variable
+    ssl_enabled = os.environ.get('FLOWER_SSL_ENABLED', 'true').lower() == 'true'
+
+    if not ssl_enabled:
+        print("🔓 SSL disabled via FLOWER_SSL_ENABLED=false")
+        return None
+
+    # Check if all certificate files exist
+    if not all([CA_CERT_PATH.exists(), SERVER_CERT_PATH.exists(), SERVER_KEY_PATH.exists()]):
+        print(f"⚠️ SSL certificates not found in {CERTS_DIR}")
+        print(f"   CA cert exists: {CA_CERT_PATH.exists()}")
+        print(f"   Server cert exists: {SERVER_CERT_PATH.exists()}")
+        print(f"   Server key exists: {SERVER_KEY_PATH.exists()}")
+        print("🔓 Starting server without SSL (insecure mode)")
+        return None
+
+    try:
+        ca_cert = CA_CERT_PATH.read_bytes()
+        server_cert = SERVER_CERT_PATH.read_bytes()
+        server_key = SERVER_KEY_PATH.read_bytes()
+
+        print(f"🔐 SSL certificates loaded from {CERTS_DIR}")
+        return (ca_cert, server_cert, server_key)
+    except Exception as e:
+        print(f"❌ Error loading SSL certificates: {e}")
+        print("🔓 Starting server without SSL (insecure mode)")
+        return None
+
+
+def get_ca_certificate():
+    """Get the CA certificate content to send to clients.
+
+    Returns:
+        str: CA certificate content as string, or None if not available
+    """
+    ssl_enabled = os.environ.get('FLOWER_SSL_ENABLED', 'true').lower() == 'true'
+
+    if not ssl_enabled:
+        return None
+
+    if not CA_CERT_PATH.exists():
+        print(f"⚠️ CA certificate not found at {CA_CERT_PATH}")
+        return None
+
+    try:
+        return CA_CERT_PATH.read_text()
+    except Exception as e:
+        print(f"❌ Error reading CA certificate: {e}")
+        return None
+
+
+def is_ssl_enabled():
+    """Check if SSL is enabled and certificates are available.
+
+    Returns:
+        bool: True if SSL is enabled and all certificates exist
+    """
+    ssl_enabled = os.environ.get('FLOWER_SSL_ENABLED', 'true').lower() == 'true'
+
+    if not ssl_enabled:
+        return False
+
+    return all([CA_CERT_PATH.exists(), SERVER_CERT_PATH.exists(), SERVER_KEY_PATH.exists()])
 
 
 
@@ -156,11 +236,27 @@ def get_strategy(server_manager: ServerManager, config: Dict):
     model_type = model_config.get('metadata', {}).get('model_type', 'dl')
     framework = model_config.get('metadata', {}).get('framework', 'pytorch')
 
-    print(f"🔍 Detecting strategy: model_type='{model_type}', framework='{framework}'")
+    # Check for specific ML algorithm type
+    ml_algorithm = model_config.get('algorithm', {}).get('ml_algorithm', {}).get('type', '')
 
-    # Use FedSVM strategy for ML models with sklearn framework
-    if model_type == 'ml':
-        print(f"✅ Using FedSVMStrategy for ML/SVM model")
+    print(f"Detecting strategy: model_type='{model_type}', framework='{framework}', ml_algorithm='{ml_algorithm}'")
+
+    # Use FedDPRandomForestStrategy for DP Random Forest models
+    if model_type == 'ml' and ml_algorithm == 'dp_random_forest':
+        print(f"Using FedDPRandomForestStrategy for DP Random Forest model")
+        strategy = FedDPRandomForestStrategy(
+            server_manager=server_manager,
+            fraction_fit=config.get("fraction_fit", 1.0),
+            fraction_evaluate=config.get("fraction_evaluate", 0.3),
+            min_fit_clients=config.get("min_fit_clients", 1),
+            min_evaluate_clients=config.get("min_evaluate_clients", 1),
+            min_available_clients=config.get("min_available_clients", 1),
+        )
+        return strategy
+
+    # Use FedSVM strategy for SVM models
+    if model_type == 'ml' and ml_algorithm == 'svm':
+        print(f"Using FedSVMStrategy for ML/SVM model")
         strategy = FedSVMStrategy(
             server_manager=server_manager,
             fraction_fit=config.get("fraction_fit", 1.0),
@@ -173,7 +269,7 @@ def get_strategy(server_manager: ServerManager, config: Dict):
         return strategy
 
     # Default: Use FedAvg for Deep Learning models
-    print(f"✅ Using FedAvgModelStrategy for DL model")
+    print(f"Using FedAvgModelStrategy for DL model")
     strategy = FedAvgModelStrategy(
         server_manager=server_manager,
         fraction_fit=config.get("fraction_fit", 1.0),
@@ -222,20 +318,24 @@ def start_flower_server(training_job):
         
 
         print(f"🌸 Starting Flower server with manual control...")
-        
+
         # Create server components manually
         client_manager = SimpleClientManager()
         server = fl.server.Server(client_manager=client_manager, strategy=strategy)
-        
+
         # Start server in background thread with proper network binding
         print(f"🔧 Starting Flower server on {server_address}...")
-        
+
+        # Load SSL certificates
+        ssl_certificates = load_ssl_certificates()
+        ssl_mode = "SSL/TLS" if ssl_certificates else "insecure"
+
         # Update job status to indicate server is ready for client connections
         training_job.status = 'server_ready'
-        training_job.logs = f"Flower server starting on {server_address} - ready for client connections"
+        training_job.logs = f"Flower server starting on {server_address} ({ssl_mode}) - ready for client connections"
         training_job.save()
-        print(f"📡 Job status updated to 'server_ready' - clients can now connect")
-        
+        print(f"📡 Job status updated to 'server_ready' - clients can now connect ({ssl_mode})")
+
         # Simply start the server (blocking call)
         fl.server.start_server(
             server_address=server_address,
@@ -243,7 +343,8 @@ def start_flower_server(training_job):
                 num_rounds=training_job.total_rounds,
                 round_timeout=60.0
             ),
-            strategy=strategy
+            strategy=strategy,
+            certificates=ssl_certificates
         )
 
     except Exception as e:

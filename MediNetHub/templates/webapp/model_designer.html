@@ -2578,6 +2578,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 version: "1.0",
                 created_at: new Date().toISOString(),
                 model_type: "dl",
+                architecture_type: "sequential",
                 framework: document.getElementById('framework').value
             },
             basic_info: {
@@ -2728,6 +2729,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 version: "1.0",
                 created_at: new Date().toISOString(),
                 model_type: "dl_linear",
+                architecture_type: "sequential",
                 framework: document.getElementById('framework').value
             },
             basic_info: {
@@ -2761,10 +2763,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 selected_datasets: {% if selected_datasets %}{{ selected_datasets|default:'[]'|to_json }}{% else %}[]{% endif %}
             }
         }
-        
+
         // Show loading message
         showMessage('Saving model...', 'info');
         
+
         // Save the model and then redirect through go_to_training
         fetch('/api/save-model-config/', {
             method: 'POST',
@@ -2906,12 +2909,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+
         // Create unified structure model configuration
         const modelConfig = {
             metadata: {
                 version: "1.0",
                 created_at: new Date().toISOString(),
                 model_type: "dl",
+                architecture_type: "sequential",
                 framework: document.getElementById('framework').value
             },
             basic_info: {

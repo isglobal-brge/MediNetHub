@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from .models import ModelConfig, TrainingJob, Connection
 from webapp.server_process import run_flower_server_process
+from webapp.server_fn.server import get_ca_certificate, is_ssl_enabled
 import json
 import time
 import threading
@@ -1143,10 +1144,25 @@ def activate_clients_for_training(training_job, server_process=None):
                 "client_id": client_id,
                 "center_datasets": [ds['dataset_name'] for ds in center_datasets]  # All datasets for this center
             }
-            
+
+            # Add SSL/TLS CA certificate if SSL is enabled
+            if is_ssl_enabled():
+                ca_cert = get_ca_certificate()
+                if ca_cert:
+                    client_config["ca_cert"] = ca_cert
+                    client_config["ssl_enabled"] = True
+                    print(f"🔐 [SSL] Including CA certificate for secure connection")
+                else:
+                    client_config["ssl_enabled"] = False
+                    print(f"⚠️ [SSL] SSL enabled but CA certificate not available")
+            else:
+                client_config["ssl_enabled"] = False
+                print(f"🔓 [SSL] SSL disabled, client will connect without TLS")
+
             print(f"📋 [SECURE] Client will connect to: {client_server_address}")
             print(f"📋 [SECURE] Sending center-specific config with {len(center_datasets)} datasets")
             print(f"📋 [SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
+            print(f"📋 [SECURE] SSL enabled: {client_config.get('ssl_enabled', False)}")
 
             # Validate port in allowed range (8000-8099)
             if not (8000 <= int(conn['port']) <= 8099):
