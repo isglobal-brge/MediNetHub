@@ -1,0 +1,218 @@
+/* === Training Page Styles === */
+
+/* Tab Navigation */
+.training-tabs .nav-tabs {
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-1);
+}
+
+.training-tabs .nav-link {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: var(--space-3) var(--space-4);
+  transition: all 0.15s ease;
+}
+
+.training-tabs .nav-link:hover {
+  color: var(--color-accent);
+  background: transparent;
+  border-bottom-color: var(--color-border);
+}
+
+.training-tabs .nav-link.active {
+  color: var(--color-accent);
+  background: transparent;
+  border-bottom: 2px solid var(--color-accent);
+  font-weight: 600;
+}
+
+.training-tabs .nav-link .tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: rgba(8, 145, 178, 0.12);
+  color: var(--color-accent);
+  margin-left: var(--space-2);
+}
+
+/* Jobs Table */
+.job-table-wrapper {
+  overflow-x: auto;
+}
+
+.job-name-cell strong {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* Action buttons */
+.btn-job-dashboard {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  font-size: var(--text-xs);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.btn-job-dashboard:hover {
+  background: #1e293b;
+  color: white;
+}
+
+/* Progress bar in table */
+.progress-table {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+
+.progress-table .progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gradient-primary);
+  transition: width 0.3s ease;
+}
+
+.progress-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Advanced params panel */
+.advanced-params-panel {
+  display: none;
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-accent);
+}
+
+/* Accordion styling for metrics */
+.metric-cards .accordion-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md) !important;
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+
+.metric-cards .accordion-item:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.metric-cards .accordion-button {
+  background: var(--color-surface);
+  font-weight: 500;
+  color: var(--color-text);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.metric-cards .accordion-button:not(.collapsed) {
+  color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.metric-cards .accordion-button:focus {
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+}
+
+.metric-cards .accordion-button::after {
+  display: none;
+}
+
+.metric-cards .accordion-body {
+  background: var(--color-bg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.metric-cards .metric-counter {
+  min-width: 22px;
+  transition: opacity 0.2s ease;
+  background: rgba(8, 145, 178, 0.12) !important;
+  color: var(--color-accent) !important;
+  font-size: var(--text-xs);
+}
+
+/* Card section headers in New Training tab */
+.section-card-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-light);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Start training button gradient */
+.btn-start-training {
+  background: var(--gradient-primary);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  transition: opacity 0.15s ease;
+  width: 100%;
+}
+
+.btn-start-training:hover {
+  opacity: 0.9;
+  color: white;
+}
+
+/* Empty state for jobs tab */
+.jobs-empty-state {
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+}
+
+/* Refresh button */
+.btn-refresh-jobs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* Dropdown menu positioning fix */
+.table-custom .dropdown-menu {
+  z-index: 1030;
+}
+
+.table-custom .dropdown {
+  position: static;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table-custom thead th:nth-child(2) { display: none; }
+  .table-custom tbody td:nth-child(2) { display: none; }
+
+  .job-name-cell strong {
+    max-width: 130px;
+  }
+}
