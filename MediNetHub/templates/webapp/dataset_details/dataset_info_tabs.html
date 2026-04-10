@@ -1,30 +1,29 @@
 {% load humanize %}
 {% load webapp_filters %}
-<!-- Redesigned Tabbed Dataset Information - 2 Tabs with Real Tab Look -->
-<div class="card border-0 shadow-sm">
+<!-- Tabbed Dataset Information -->
+<div class="card-flat" style="border-radius:var(--radius-lg);overflow:hidden;">
     <!-- Card Header -->
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">
-            <i class="fas fa-database me-2"></i>Dataset Information
-        </h5>
+    <div class="card-header-custom d-flex align-items-center gap-2">
+        <i data-lucide="database" style="width:14px;height:14px;color:var(--color-accent);"></i>
+        Dataset Information
     </div>
 
-    <!-- Tabs Navigation with Real Tab Look -->
-    <div style="background-color: #f8f9fa; padding-top: 0.5rem; padding-left: 1rem; padding-right: 1rem; border-bottom: 2px solid #dee2e6;">
-        <ul class="nav nav-tabs" id="datasetTabs" role="tablist" style="border-bottom: none;">
+    <!-- Tabs Navigation -->
+    <div style="background:var(--color-surface-hover);padding:var(--space-2) var(--space-4) 0;border-bottom:1px solid var(--color-border);">
+        <ul class="nav nav-tabs" id="datasetTabs" role="tablist" style="border-bottom:none;">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="features-tab" data-bs-toggle="tab" data-bs-target="#features-content" type="button" role="tab" aria-controls="features-content" aria-selected="true">
-                    <i class="fas fa-columns me-2"></i>Features
+                    <i data-lucide="columns" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>Features
                     {% if dataset.features_info %}
-                        <span class="badge bg-primary rounded-pill ms-1">{{ dataset.features_info.input_features }}</span>
+                        <span class="badge-type ms-1">{{ dataset.features_info.input_features }}</span>
                     {% endif %}
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="target-tab" data-bs-toggle="tab" data-bs-target="#target-content" type="button" role="tab" aria-controls="target-content" aria-selected="false">
-                    <i class="fas fa-crosshairs me-2"></i>Target
+                    <i data-lucide="crosshair" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>Target
                     {% if dataset.target_info %}
-                        <span class="badge bg-warning text-dark rounded-pill ms-1">{{ dataset.target_info.num_classes }} cls</span>
+                        <span class="badge-type ms-1">{{ dataset.target_info.num_classes }} cls</span>
                     {% endif %}
                 </button>
             </li>
@@ -38,7 +37,7 @@
             <div class="tab-pane fade show active" id="features-content" role="tabpanel" aria-labelledby="features-tab">
                 {% if dataset.features_statistics %}
                     <h6 class="text-muted mb-3">
-                        <i class="fas fa-chart-bar me-2"></i>Statistical Summary
+                        <i data-lucide="bar-chart-2" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>Statistical Summary
                     </h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-hover">
@@ -64,9 +63,9 @@
                                                     {% with feature_type=column_types|get_item:feature_name %}
                                                         {% if feature_type %}
                                                             {% if feature_type == 'numeric' %}
-                                                                <span class="badge bg-success">numeric</span>
+                                                                <span class="status-badge status-running">numeric</span>
                                                             {% else %}
-                                                                <span class="badge bg-warning text-dark">{{ feature_type }}</span>
+                                                                <span class="badge-type">{{ feature_type }}</span>
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="text-muted small">N/A ({{ feature_name }})</span>
@@ -90,7 +89,7 @@
                     </div>
                 {% else %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
+                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>
                         No statistical summary available for features
                     </div>
                 {% endif %}
@@ -102,7 +101,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <h6 class="text-muted mb-3">
-                                <i class="fas fa-info-circle me-2"></i>Target Information
+                                <i data-lucide="info" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>Target Information
                             </h6>
                             <table class="table table-sm table-borderless">
                                 <tbody>
@@ -127,7 +126,7 @@
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-muted mb-3">
-                                <i class="fas fa-cogs me-2"></i>Model Configuration
+                                <i data-lucide="settings" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>Model Configuration
                             </h6>
                             <table class="table table-sm table-borderless">
                                 <tbody>
@@ -155,7 +154,7 @@
                     {% if dataset.target_info.classes %}
                     <div class="mt-4 pt-3 border-top">
                         <h6 class="text-muted mb-3">
-                            <i class="fas fa-tags me-2"></i>Classes ({{ dataset.target_info.classes|length }})
+                            <i data-lucide="tag" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>Classes ({{ dataset.target_info.classes|length }})
                         </h6>
                         <div class="d-flex flex-wrap gap-2">
                             {% for class in dataset.target_info.classes %}
@@ -166,7 +165,7 @@
                     {% endif %}
                 {% else %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
+                        <i data-lucide="info" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>
                         No target information available
                     </div>
                 {% endif %}
