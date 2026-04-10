@@ -15,9 +15,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  border-left: 4px solid transparent;
-  border-image: var(--gradient-primary) 1;
-  border-image-slice: 0 0 0 1;
   width: 100%;
   max-width: 480px;
   overflow: hidden;
