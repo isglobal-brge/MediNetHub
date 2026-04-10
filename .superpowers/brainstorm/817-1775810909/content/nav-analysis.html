@@ -1,0 +1,162 @@
+<h2>Sidebar vs Top Bar: Analisis por pagina</h2>
+<p class="subtitle">Cual conviene mas en cada pagina de MediNetHub segun su contenido real</p>
+
+<div class="section">
+  <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:13px;font-family:Inter,system-ui,sans-serif;">
+    <thead>
+      <tr style="background:#0f172a;color:#f1f5f9;">
+        <th style="padding:12px 16px;text-align:left;border-radius:8px 0 0 0;font-weight:600;">Pagina</th>
+        <th style="padding:12px 16px;text-align:left;font-weight:600;">Contenido principal</th>
+        <th style="padding:12px 16px;text-align:center;font-weight:600;">Necesidad de ancho</th>
+        <th style="padding:12px 16px;text-align:center;font-weight:600;">Ganador</th>
+        <th style="padding:12px 16px;text-align:left;border-radius:0 8px 0 0;font-weight:600;">Por que</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Model Designer -->
+      <tr style="background:#ecfdf5;">
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Model Designer</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Canvas drag-and-drop + panel de capas + config lateral</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">CRITICA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:rgba(8,145,178,0.12);color:#0891b2;padding:4px 12px;border-radius:6px;font-weight:700;">B Sidebar</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Se colapsa a 60px → canvas gana ~160px. Es la pagina que mas espacio necesita.</td>
+      </tr>
+
+      <!-- Dashboard Home -->
+      <tr>
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Dashboard Home</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">4 stat cards + activity feed + notifications</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#d97706;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">MEDIA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:rgba(8,145,178,0.12);color:#0891b2;padding:4px 12px;border-radius:6px;font-weight:700;">B Sidebar</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Grid de 4 cards cabe bien. Sidebar da contexto de "donde estoy" siempre visible.</td>
+      </tr>
+
+      <!-- Training -->
+      <tr style="background:#fff7ed;">
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Training (tabla)</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Tabla de jobs con 5 columnas + botones de accion</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#d97706;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">ALTA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:rgba(148,163,184,0.2);color:#64748b;padding:4px 12px;border-radius:6px;font-weight:700;">= Ambas</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Sidebar colapsada (60px) pierde poco ancho. Tabla de 5 cols cabe en 1200px-60px = 1140px.</td>
+      </tr>
+
+      <!-- Training Dashboard -->
+      <tr>
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Training Dashboard</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Metricas en tiempo real + clientes + logs + grafico</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#d97706;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">ALTA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:rgba(8,145,178,0.12);color:#0891b2;padding:4px 12px;border-radius:6px;font-weight:700;">B Sidebar</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Info densa pero vertical. Sidebar colapsada no molesta. Logs y metricas se benefician de scroll vertical.</td>
+      </tr>
+
+      <!-- Model Studio -->
+      <tr style="background:#fef3c7;">
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Model Studio</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Sidebar de filtros + grid de model cards + tabs</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#d97706;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">MEDIA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:6px;font-weight:700;">⚠ Atencion</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;"><strong>Ya tiene sidebar propia</strong> de filtros (col-md-3). Con sidebar nav → doble sidebar. Solucion: integrar filtros en la nav sidebar o moverlos a dropdown/tabs.</td>
+      </tr>
+
+      <!-- Datasets -->
+      <tr>
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Datasets</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Stepper + project selector + card list de datasets</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#059669;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">BAJA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:rgba(8,145,178,0.12);color:#0891b2;padding:4px 12px;border-radius:6px;font-weight:700;">B Sidebar</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Cards apiladas no necesitan mucho ancho. El stepper de workflow podria integrarse visualmente en la sidebar.</td>
+      </tr>
+
+      <!-- Experiment Detail -->
+      <tr>
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Experiment Detail</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Ranking de jobs + graficos de comparacion + metricas</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#d97706;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">ALTA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:rgba(148,163,184,0.2);color:#64748b;padding:4px 12px;border-radius:6px;font-weight:700;">= Ambas</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Graficos se adaptan al container. 60px menos no afecta significativamente.</td>
+      </tr>
+
+      <!-- Login/Register/Home -->
+      <tr style="background:#f1f5f9;">
+        <td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #e2e8f0;">Home / Login / Register</td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;">Landing publica, formularios centrados</td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <div style="background:#64748b;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">N/A</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;border-bottom:1px solid #e2e8f0;">
+          <span style="background:#f1f5f9;color:#475569;padding:4px 12px;border-radius:6px;font-weight:700;">Sin sidebar</span>
+        </td>
+        <td style="padding:10px 16px;border-bottom:1px solid #e2e8f0;color:#555;font-size:12px;">Pre-autenticacion. Sidebar no aparece. Solo top bar minima o layout limpio.</td>
+      </tr>
+
+      <!-- Profile / Notifications -->
+      <tr>
+        <td style="padding:10px 16px;font-weight:600;border-radius:0 0 0 8px;">Profile / Notifications</td>
+        <td style="padding:10px 16px;color:#555;">Formularios y listas simples</td>
+        <td style="padding:10px 16px;text-align:center;">
+          <div style="background:#059669;color:white;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;">BAJA</div>
+        </td>
+        <td style="padding:10px 16px;text-align:center;">
+          <span style="background:rgba(8,145,178,0.12);color:#0891b2;padding:4px 12px;border-radius:6px;font-weight:700;">B Sidebar</span>
+        </td>
+        <td style="padding:10px 16px;border-radius:0 0 8px 0;color:#555;font-size:12px;">No necesitan ancho. Sidebar da navegacion contextual util.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3 style="font-size:15px;">Veredicto</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:12px;">
+    <div style="background:rgba(8,145,178,0.08);padding:20px;border-radius:12px;text-align:center;border:2px solid #0891b2;">
+      <div style="font-size:32px;font-weight:700;color:#0891b2;">6</div>
+      <div style="font-size:12px;color:#555;">Sidebar gana o empata</div>
+    </div>
+    <div style="background:#fef3c7;padding:20px;border-radius:12px;text-align:center;border:2px solid #d97706;">
+      <div style="font-size:32px;font-weight:700;color:#d97706;">1</div>
+      <div style="font-size:12px;color:#555;">Requiere ajuste<br/>(Model Studio doble sidebar)</div>
+    </div>
+    <div style="background:#f1f5f9;padding:20px;border-radius:12px;text-align:center;border:2px solid #94a3b8;">
+      <div style="font-size:32px;font-weight:700;color:#64748b;">3</div>
+      <div style="font-size:12px;color:#555;">Sin sidebar<br/>(paginas pre-auth)</div>
+    </div>
+  </div>
+
+  <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-top:16px;">
+    <div style="font-weight:600;color:#0c4a6e;font-size:14px;margin-bottom:6px;">Recomendacion: Sidebar Colapsable (B)</div>
+    <ul style="font-size:12px;color:#555;margin:0;padding-left:18px;line-height:1.8;">
+      <li>Gana en la pagina mas critica (Model Designer = maximo canvas)</li>
+      <li>Solo 1 conflicto solucionable: Model Studio → mover filtros a toolbar/dropdown</li>
+      <li>Paginas pre-auth (Home, Login, Register) no muestran sidebar — layout independiente</li>
+      <li>Escalable si anadis mas secciones en v0.3+</li>
+    </ul>
+  </div>
+</div>

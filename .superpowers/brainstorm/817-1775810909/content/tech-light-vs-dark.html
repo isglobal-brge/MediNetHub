@@ -1,0 +1,188 @@
+<h2>Tech-Cientifico: Light vs Dark</h2>
+<p class="subtitle">Misma personalidad, diferente tono base. Ambos son igualmente "tech-cientifico".</p>
+
+<div class="split" style="gap:32px;">
+
+  <!-- OPTION A: Tech Light -->
+  <div class="mockup" data-choice="light" onclick="toggleSelect(this)" style="cursor:pointer;flex:1;">
+    <div class="mockup-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;">
+      B-Light) Tech Cientifico — Tono Claro
+    </div>
+    <div class="mockup-body" style="padding:0;background:#f8faff;">
+
+      <!-- Navbar -->
+      <div style="background:white;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e8ecf4;box-shadow:0 1px 3px rgba(102,126,234,0.08);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:28px;height:28px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">M</div>
+          <span style="font-family:'Inter',system-ui,sans-serif;font-weight:700;color:#1e293b;font-size:14px;">MediNet</span>
+        </div>
+        <div style="display:flex;gap:20px;font-size:12px;color:#64748b;font-family:'Inter',system-ui,sans-serif;">
+          <span style="color:#667eea;font-weight:600;background:rgba(102,126,234,0.08);padding:4px 10px;border-radius:6px;">Dashboard</span>
+          <span style="padding:4px 10px;">Datasets</span>
+          <span style="padding:4px 10px;">Models</span>
+          <span style="padding:4px 10px;">Training</span>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div style="padding:20px;">
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+          <div style="background:white;border:1px solid #e8ecf4;border-radius:14px;padding:16px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(102,126,234,0.06);">
+            <div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;background:linear-gradient(135deg,rgba(102,126,234,0.1),transparent);border-radius:50%;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">Active Jobs</div>
+            <div style="font-size:28px;font-weight:700;color:#1e293b;font-family:'Inter',system-ui,sans-serif;">12</div>
+            <div style="height:4px;background:#f1f5f9;border-radius:2px;margin-top:8px;">
+              <div style="height:100%;width:65%;background:linear-gradient(90deg,#667eea,#a78bfa);border-radius:2px;"></div>
+            </div>
+          </div>
+          <div style="background:white;border:1px solid #e8ecf4;border-radius:14px;padding:16px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(52,211,153,0.06);">
+            <div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;background:linear-gradient(135deg,rgba(52,211,153,0.1),transparent);border-radius:50%;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">Models</div>
+            <div style="font-size:28px;font-weight:700;color:#1e293b;font-family:'Inter',system-ui,sans-serif;">8</div>
+            <div style="height:4px;background:#f1f5f9;border-radius:2px;margin-top:8px;">
+              <div style="height:100%;width:40%;background:linear-gradient(90deg,#34d399,#6ee7b7);border-radius:2px;"></div>
+            </div>
+          </div>
+          <div style="background:white;border:1px solid #e8ecf4;border-radius:14px;padding:16px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(251,191,36,0.06);">
+            <div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;background:linear-gradient(135deg,rgba(251,191,36,0.1),transparent);border-radius:50%;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">Clients</div>
+            <div style="font-size:28px;font-weight:700;color:#1e293b;font-family:'Inter',system-ui,sans-serif;">5</div>
+            <div style="height:4px;background:#f1f5f9;border-radius:2px;margin-top:8px;">
+              <div style="height:100%;width:80%;background:linear-gradient(90deg,#fbbf24,#fcd34d);border-radius:2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div style="background:white;border:1px solid #e8ecf4;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+            <span style="font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:13px;color:#1e293b;">Recent Training Jobs</span>
+          </div>
+          <div style="font-size:11px;font-family:'Inter',system-ui,sans-serif;">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:8px 16px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;font-size:10px;font-weight:600;background:#fafbff;">
+              <span>Name</span><span>Model</span><span>Status</span><span>Progress</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#334155;">
+              <span style="font-weight:500;">Cardiac MRI Fed</span>
+              <span style="color:#64748b;">ResNet-50</span>
+              <span><span style="background:rgba(52,211,153,0.12);color:#059669;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">Running</span></span>
+              <span style="color:#64748b;">Round 8/20</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#334155;">
+              <span style="font-weight:500;">Lung X-Ray Class</span>
+              <span style="color:#64748b;">DenseNet</span>
+              <span><span style="background:rgba(102,126,234,0.12);color:#667eea;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">Pending</span></span>
+              <span style="color:#64748b;">Waiting</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:10px 16px;color:#334155;">
+              <span style="font-weight:500;">Retinal SVM</span>
+              <span style="color:#64748b;">FedSVM</span>
+              <span><span style="background:rgba(148,163,184,0.12);color:#64748b;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">Completed</span></span>
+              <span style="color:#64748b;">20/20</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B: Tech Dark -->
+  <div class="mockup" data-choice="dark" onclick="toggleSelect(this)" style="cursor:pointer;flex:1;">
+    <div class="mockup-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;">
+      B-Dark) Tech Cientifico — Tono Oscuro
+    </div>
+    <div class="mockup-body" style="padding:0;background:#0f172a;">
+
+      <!-- Navbar -->
+      <div style="background:#1e293b;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:28px;height:28px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;">M</div>
+          <span style="font-family:'Inter',system-ui,sans-serif;font-weight:700;color:#f1f5f9;font-size:14px;">MediNet</span>
+        </div>
+        <div style="display:flex;gap:20px;font-size:12px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">
+          <span style="color:#a78bfa;font-weight:600;background:rgba(167,139,250,0.1);padding:4px 10px;border-radius:6px;">Dashboard</span>
+          <span style="padding:4px 10px;">Datasets</span>
+          <span style="padding:4px 10px;">Models</span>
+          <span style="padding:4px 10px;">Training</span>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div style="padding:20px;">
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;background:linear-gradient(135deg,rgba(102,126,234,0.15),transparent);border-radius:50%;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">Active Jobs</div>
+            <div style="font-size:28px;font-weight:700;color:#f1f5f9;font-family:'Inter',system-ui,sans-serif;">12</div>
+            <div style="height:4px;background:#334155;border-radius:2px;margin-top:8px;">
+              <div style="height:100%;width:65%;background:linear-gradient(90deg,#667eea,#a78bfa);border-radius:2px;"></div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;background:linear-gradient(135deg,rgba(52,211,153,0.15),transparent);border-radius:50%;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">Models</div>
+            <div style="font-size:28px;font-weight:700;color:#f1f5f9;font-family:'Inter',system-ui,sans-serif;">8</div>
+            <div style="height:4px;background:#334155;border-radius:2px;margin-top:8px;">
+              <div style="height:100%;width:40%;background:linear-gradient(90deg,#34d399,#6ee7b7);border-radius:2px;"></div>
+            </div>
+          </div>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;background:linear-gradient(135deg,rgba(251,191,36,0.15),transparent);border-radius:50%;"></div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;font-family:'Inter',system-ui,sans-serif;">Clients</div>
+            <div style="font-size:28px;font-weight:700;color:#f1f5f9;font-family:'Inter',system-ui,sans-serif;">5</div>
+            <div style="height:4px;background:#334155;border-radius:2px;margin-top:8px;">
+              <div style="height:100%;width:80%;background:linear-gradient(90deg,#fbbf24,#fcd34d);border-radius:2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;overflow:hidden;">
+          <div style="padding:12px 16px;border-bottom:1px solid #334155;">
+            <span style="font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:13px;color:#f1f5f9;">Recent Training Jobs</span>
+          </div>
+          <div style="font-size:11px;font-family:'Inter',system-ui,sans-serif;">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:8px 16px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;font-size:10px;font-weight:600;border-bottom:1px solid #334155;">
+              <span>Name</span><span>Model</span><span>Status</span><span>Progress</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid rgba(51,65,85,0.5);color:#e2e8f0;">
+              <span style="font-weight:500;">Cardiac MRI Fed</span>
+              <span style="color:#94a3b8;">ResNet-50</span>
+              <span><span style="background:rgba(52,211,153,0.15);color:#34d399;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">Running</span></span>
+              <span style="color:#94a3b8;">Round 8/20</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid rgba(51,65,85,0.5);color:#e2e8f0;">
+              <span style="font-weight:500;">Lung X-Ray Class</span>
+              <span style="color:#94a3b8;">DenseNet</span>
+              <span><span style="background:rgba(167,139,250,0.15);color:#a78bfa;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">Pending</span></span>
+              <span style="color:#94a3b8;">Waiting</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:10px 16px;color:#e2e8f0;">
+              <span style="font-weight:500;">Retinal SVM</span>
+              <span style="color:#94a3b8;">FedSVM</span>
+              <span><span style="background:rgba(148,163,184,0.15);color:#94a3b8;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">Completed</span></span>
+              <span style="color:#94a3b8;">20/20</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3 style="font-size:15px;">Lo que comparten ambos (la "personalidad" Tech-Cientifico):</h3>
+  <ul style="font-size:13px;color:#666;line-height:2;padding-left:18px;">
+    <li><strong>Gradientes</strong> en logo, progress bars y acentos (purpura → azul, verde → esmeralda)</li>
+    <li><strong>Border-radius 14px</strong> en cards (mas redondeado que el clinico)</li>
+    <li><strong>Circulos decorativos</strong> sutiles en esquinas de stat cards</li>
+    <li><strong>Status badges</strong> con fondo translucido del color semantico</li>
+    <li><strong>Nav activa</strong> con background pill, no solo color</li>
+    <li><strong>Tipografia Inter</strong> con pesos bien diferenciados (700 numeros, 600 titulos, 400 body)</li>
+  </ul>
+  <p style="font-size:13px;color:#888;margin-top:8px;">El dark mode puede implementarse como <strong>opcion togglable</strong> despues, sin cambiar la personalidad. Light es el default seguro para entornos clinicos con pantallas de baja calidad.</p>
+</div>
+
+<p class="subtitle" style="margin-top:16px;text-align:center;">Click en el tono que prefieras como base, o dime si quieres light con opcion de dark toggle</p>
