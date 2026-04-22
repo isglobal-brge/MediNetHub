@@ -46,21 +46,24 @@
       </a>
 
       <a href="{% url 'datasets' %}"
-         class="sidebar-item {% if request.resolver_match.url_name == 'datasets' or request.resolver_match.url_name == 'dataset_details' %}active{% endif %}">
+         class="sidebar-item {% if request.resolver_match.url_name == 'datasets' or request.resolver_match.url_name == 'dataset_details' %}active{% endif %}{% if global_connections_count == 0 %} sidebar-item--locked{% endif %}">
         <i data-lucide="database"></i>
         <span class="sidebar-item-label">Datasets</span>
+        {% if global_connections_count == 0 %}<i data-lucide="lock" class="sidebar-lock-icon"></i>{% endif %}
       </a>
 
       <a href="{% url 'model_studio' %}"
-         class="sidebar-item {% if request.resolver_match.url_name == 'model_studio' or request.resolver_match.url_name == 'model_designer' or request.resolver_match.url_name == 'edit_model' or request.resolver_match.url_name == 'model_designer_advanced' or request.resolver_match.url_name == 'edit_model_advanced' or request.resolver_match.url_name == 'ml_model_designer' or request.resolver_match.url_name == 'edit_ml_model' or request.resolver_match.url_name == 'models_list' %}active{% endif %}">
+         class="sidebar-item {% if request.resolver_match.url_name == 'model_studio' or request.resolver_match.url_name == 'model_designer' or request.resolver_match.url_name == 'edit_model' or request.resolver_match.url_name == 'model_designer_advanced' or request.resolver_match.url_name == 'edit_model_advanced' or request.resolver_match.url_name == 'ml_model_designer' or request.resolver_match.url_name == 'edit_ml_model' or request.resolver_match.url_name == 'models_list' %}active{% endif %}{% if global_connections_count == 0 %} sidebar-item--locked{% endif %}">
         <i data-lucide="box"></i>
         <span class="sidebar-item-label">Model Studio</span>
+        {% if global_connections_count == 0 %}<i data-lucide="lock" class="sidebar-lock-icon"></i>{% endif %}
       </a>
 
       <a href="{% url 'training' %}"
-         class="sidebar-item {% if request.resolver_match.url_name == 'training' or request.resolver_match.url_name == 'experiment_detail' or request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'client_dashboard' or request.resolver_match.url_name == 'job_detail' or request.resolver_match.url_name == 'manage_job_artifacts' %}active{% endif %}">
+         class="sidebar-item {% if request.resolver_match.url_name == 'training' or request.resolver_match.url_name == 'experiment_detail' or request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'client_dashboard' or request.resolver_match.url_name == 'job_detail' or request.resolver_match.url_name == 'manage_job_artifacts' %}active{% endif %}{% if global_connections_count == 0 %} sidebar-item--locked{% endif %}">
         <i data-lucide="settings"></i>
         <span class="sidebar-item-label">Training</span>
+        {% if global_connections_count == 0 %}<i data-lucide="lock" class="sidebar-lock-icon"></i>{% endif %}
       </a>
 
       <div class="sidebar-separator"></div>
@@ -199,7 +202,6 @@
 
 <!-- Unauthenticated users: minimal full-width layout -->
 <div class="container mt-4">
-  {% block content %}{% endblock %}
 </div>
 
 {% endif %}
