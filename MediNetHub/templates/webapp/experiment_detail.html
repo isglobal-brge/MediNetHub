@@ -1,33 +1,25 @@
 {% extends 'base.html' %}
 
 {% block title %}MediNet - Experiment Detail{% endblock %}
+{% block page_title %}Experiment Detail{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Dashboard-inspired color scheme */
     .dashboard-card {
         border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-sm);
         transition: all 0.3s ease;
         height: 100%;
     }
 
     .dashboard-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-md);
     }
 
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: 700;
-    }
+    .metric-value { font-size: 2.2rem; font-weight: 700; }
+    .metric-label { font-size: 0.9rem; color: var(--color-text-secondary); }
 
-    .metric-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-    /* Job comparison cards */
     .job-comparison-card {
         border-radius: 10px;
         transition: all 0.2s ease;
@@ -38,137 +30,50 @@
 
     .job-comparison-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        border-color: #0d6efd;
+        box-shadow: var(--shadow-sm);
+        border-color: var(--color-primary);
     }
 
     .job-comparison-card.rank-1 {
-        border-left: 4px solid #ffd700;
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.05) 0%, #ffffff 100%);
+        background: linear-gradient(135deg, rgba(255,215,0,0.05) 0%, #ffffff 100%);
+        border-top: 3px solid #ffd700;
     }
 
     .job-comparison-card.rank-2 {
-        border-left: 4px solid #c0c0c0;
-        background: linear-gradient(135deg, rgba(192, 192, 192, 0.05) 0%, #ffffff 100%);
+        background: linear-gradient(135deg, rgba(192,192,192,0.05) 0%, #ffffff 100%);
+        border-top: 3px solid #c0c0c0;
     }
 
     .job-comparison-card.rank-3 {
-        border-left: 4px solid #cd7f32;
-        background: linear-gradient(135deg, rgba(205, 127, 50, 0.05) 0%, #ffffff 100%);
+        background: linear-gradient(135deg, rgba(205,127,50,0.05) 0%, #ffffff 100%);
+        border-top: 3px solid #cd7f32;
     }
 
     .rank-badge {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 1.2rem;
+        width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-size: 1.2rem;
     }
 
-    .rank-badge.gold {
-        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-        color: #000;
-        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
-    }
+    .rank-badge.gold { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #000; box-shadow: 0 2px 8px rgba(255,215,0,0.4); }
+    .rank-badge.silver { background: linear-gradient(135deg, #c0c0c0 0%, #e0e0e0 100%); color: #000; box-shadow: 0 2px 8px rgba(192,192,192,0.4); }
+    .rank-badge.bronze { background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%); color: #fff; box-shadow: 0 2px 8px rgba(205,127,50,0.4); }
 
-    .rank-badge.silver {
-        background: linear-gradient(135deg, #c0c0c0 0%, #e0e0e0 100%);
-        color: #000;
-        box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4);
-    }
+    .comparison-table { background: white; border-radius: 10px; overflow: hidden; }
+    .comparison-table th { background-color: #f8f9fa; font-weight: 600; border-bottom: 2px solid var(--color-border); }
+    .comparison-table tr:hover { background-color: rgba(30,64,175,0.04); }
 
-    .rank-badge.bronze {
-        background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
-        color: #fff;
-        box-shadow: 0 2px 8px rgba(205, 127, 50, 0.4);
-    }
+    .param-pill { display: inline-block; padding: 4px 12px; border-radius: 20px; background-color: var(--color-border); font-size: 0.875rem; margin: 2px; }
 
-    /* Comparison table */
-    .comparison-table {
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-    }
+    .progress { height: 8px; border-radius: 4px; margin-top: 8px; }
 
-    .comparison-table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        border-bottom: 2px solid #dee2e6;
-    }
+    .status-completed { color: var(--color-success); }
+    .status-running { color: var(--color-primary); }
+    .status-pending { color: var(--color-warning); }
+    .status-failed { color: var(--color-danger); }
 
-    .comparison-table tr:hover {
-        background-color: rgba(13, 110, 253, 0.05);
-    }
-
-    /* Parameter pills */
-    .param-pill {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        background-color: #e9ecef;
-        font-size: 0.875rem;
-        margin: 2px;
-    }
-
-    /* Progress indicator */
-    .progress {
-        height: 8px;
-        border-radius: 4px;
-        margin-top: 8px;
-    }
-
-    /* Status colors matching dashboard */
-    .status-completed { color: #28a745; }
-    .status-running { color: #007bff; }
-    .status-pending { color: #ffc107; }
-    .status-failed { color: #dc3545; }
-
-    /* Enhanced Button Styles matching dashboard */
-    .btn-outline-primary, .btn-outline-secondary {
-        border-radius: 8px;
-        font-weight: 600;
-        border-width: 1px;
-        transition: all 0.2s ease-in-out;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .btn-outline-primary:hover, .btn-outline-secondary:hover {
-        color: #fff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .btn-outline-secondary {
-        color: #64748B;
-        border-color: #64748B;
-    }
-
-    .btn-outline-secondary:hover {
-        background-color: #64748B;
-        border-color: #64748B;
-        color: #fff;
-    }
-
-    .btn-primary {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
-        color: #fff;
-    }
-
-    /* Metric comparison chart area */
-    .chart-container {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+    .chart-container { background: white; border-radius: 10px; padding: 20px; box-shadow: var(--shadow-sm); }
 </style>
-
-<!-- Chart.js for comparison charts -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
 {% endblock %}
 
 {% block content %}
@@ -176,15 +81,15 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="fas fa-flask me-2"></i>Experiment: {{ experiment.name }}</h2>
+            <h2><i data-lucide="bar-chart-2" style="width:20px;height:20px;color:var(--color-primary);vertical-align:middle;" class="me-2"></i>Experiment: {{ experiment.name }}</h2>
             <p class="text-muted">{{ experiment.description }}</p>
         </div>
         <div>
             <a href="{% url 'training' %}" class="btn btn-outline-secondary me-2">
-                <i class="fas fa-arrow-left me-2"></i>Back to Training
+                <i data-lucide="arrow-left" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Back to Training
             </a>
             <button class="btn btn-primary" id="compare-selected-btn" style="border-radius: 8px;">
-                <i class="fas fa-chart-bar me-2"></i>Compare Selected
+                <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Compare Selected
             </button>
         </div>
     </div>
@@ -240,14 +145,14 @@
             <div class="card dashboard-card">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background-color: white; border-bottom: 1px solid #e9ecef; font-weight: 600;">
                     <div>
-                        <i class="fas fa-list me-2"></i>Jobs Comparison
+                        <i data-lucide="list" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Jobs Comparison
                     </div>
                     <div class="btn-group" role="group">
                         <button class="btn btn-sm btn-outline-secondary active" id="view-table-btn">
-                            <i class="fas fa-table me-1"></i>Table
+                            <i data-lucide="table" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Table
                         </button>
                         <button class="btn btn-sm btn-outline-secondary" id="view-cards-btn">
-                            <i class="fas fa-th-large me-1"></i>Cards
+                            <i data-lucide="layout-grid" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Cards
                         </button>
                     </div>
                 </div>
@@ -300,10 +205,10 @@
 
                                         <div class="d-flex gap-2">
                                             <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary flex-fill">
-                                                <i class="fas fa-chart-line me-1"></i>Dashboard
+                                                <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Dashboard
                                             </a>
                                             <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary flex-fill">
-                                                <i class="fas fa-satellite-dish me-1"></i>Clients
+                                                <i data-lucide="radio" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Clients
                                             </a>
                                         </div>
                                     </div>
@@ -357,10 +262,10 @@
                                         <td>
                                             <div class="btn-group" role="group">
                                                 <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary" title="View detailed metrics">
-                                                    <i class="fas fa-chart-line"></i>
+                                                    <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;"></i>
                                                 </a>
                                                 <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary" title="View client details">
-                                                    <i class="fas fa-satellite-dish"></i>
+                                                    <i data-lucide="radio" style="width:16px;height:16px;vertical-align:middle;"></i>
                                                 </a>
                                             </div>
                                         </td>
@@ -379,7 +284,7 @@
     <div class="row mt-4" id="comparison-chart-section" style="display: none;">
         <div class="col-12">
             <div class="chart-container">
-                <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Selected Jobs Comparison</h5>
+                <h5 class="mb-3"><i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Selected Jobs Comparison</h5>
                 <canvas id="comparison-chart" style="height: 300px;"></canvas>
             </div>
         </div>

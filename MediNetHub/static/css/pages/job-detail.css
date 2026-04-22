@@ -1,0 +1,134 @@
+.dashboard-card {
+    background-color: var(--color-surface);
+    border: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.kpi-card {
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.kpi-card .kpi-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.kpi-card .kpi-label {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.kpi-card.accuracy {
+    background-color: rgba(8, 145, 178, 0.1);
+    color: var(--color-accent);
+}
+
+.kpi-card.loss {
+    background-color: rgba(217, 119, 6, 0.1);
+    color: var(--color-warning);
+}
+
+.kpi-card.f1 {
+    background-color: rgba(5, 150, 105, 0.1);
+    color: var(--color-success);
+}
+
+.metric-card {
+    padding: 1rem;
+    border-radius: 12px;
+    background-color: var(--color-border);
+    border: 1px solid var(--color-border);
+    text-align: center;
+}
+
+.metric-card .metric-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.metric-card .metric-label {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+}
+
+.metric-card.precision {
+    background-color: rgba(124, 58, 237, 0.08);
+    color: #7c3aed;
+}
+
+.metric-card.recall {
+    background-color: rgba(8, 145, 178, 0.08);
+    color: var(--color-accent);
+}
+
+.metric-card.clients {
+    background-color: rgba(217, 119, 6, 0.08);
+    color: var(--color-warning);
+}
+
+.metric-card.round_elapsed {
+    background-color: rgba(5, 150, 105, 0.08);
+    color: var(--color-success);
+}
+
+.metric-card.precision .metric-value,
+.metric-card.recall .metric-value,
+.metric-card.clients .metric-value,
+.metric-card.round_elapsed .metric-value {
+    color: inherit;
+}
+
+.nav-tabs-custom .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.nav-tabs-custom .nav-link.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.param-table dt {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.param-table dd {
+    color: var(--color-text-secondary);
+}
+
+.layer-box {
+    position: relative;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.layer-box.input-layer { background-color: #e3f2fd; border-color: #c0d8f3; }
+.layer-box.output-layer { background-color: #ffe8e8; border-color: #f5d1d1; }
+.layer-box.hidden-layer { background-color: #e9f7f0; border-color: #c7e6d7; }
+.layer-box.conv-layer { background-color: #e6e6fa; border-color: #d8d8f3; }
+.layer-box.norm-layer { background-color: #fff0f5; border-color: #f3d8e3; }
+.layer-box.pool-layer { background-color: #f0fff0; border-color: #d8f3d8; }
+.layer-box.dropout-layer { background-color: #fffacd; border-color: #f3edb3; }
+.layer-box.activation-layer { background-color: #ffdead; border-color: #f3d8b3; }
+.layer-box.flatten-layer { background-color: #e0ffff; border-color: #b3f3f3; }
+.layer-box.recurrent-layer { background-color: #dda0dd; border-color: #d8b3f3; }
+.layer-box.operation-layer { background-color: #e3f2fd; border-color: #0d6efd; }
+
+.layer-connector { width: 2px; height: 30px; background-color: #adb5bd; margin: 0 auto; }
+.layer-content { font-weight: 600; margin-bottom: 5px; }
+.layer-features { font-size: 0.85em; color: var(--color-text-secondary); }

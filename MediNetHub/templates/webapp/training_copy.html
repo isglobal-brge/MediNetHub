@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load webapp_filters %}
 
-{% block title %}MediNet - Entrenamiento Federado{% endblock %}
+{% block title %}MediNet - Federated Training{% endblock %}
+{% block page_title %}New Training Job{% endblock %}
 
 {% block extra_css %}
 {{ block.super }}
@@ -12,27 +13,21 @@
         padding: 15px;
         background-color: #f8f9fa;
         border-radius: 8px;
-        border-left: 3px solid #0d6efd;
     }
-    
 
-    
-    /* Assegurar que els menus desplegables es mostren correctament */
     .dropdown-menu {
-        z-index: 1030;    /* Valor alt per assegurar que està per sobre de tot */
+        z-index: 1030;
     }
-    
-    /* Contenedor de tabla adaptativo */
+
     .jobs-card .card-body {
         display: flex;
         flex-direction: column;
-        max-height: calc(90vh - 110px); /* Altura dinámica basada en viewport */
+        max-height: calc(90vh - 110px);
         min-height: 400px;
         padding: 1rem;
         overflow: hidden;
     }
 
-    /* Tab content needs to take remaining space */
     .tab-content {
         flex: 1;
         display: flex;
@@ -57,19 +52,17 @@
         overflow-y: auto;
         min-height: 0;
     }
-    
-    /* Important: Fer que els elements desplegables surtin del contenidor */
+
     .dropdown {
         position: static;
     }
-    
+
     .dropdown-menu {
         position: absolute;
         right: 0;
         left: auto;
     }
-    
-    /* Tabs occupy full width */
+
     .nav-tabs {
         width: 100%;
     }
@@ -83,24 +76,20 @@
         width: 100%;
     }
 
-    /* Millorar la visibilitat dels elements de la taula */
     .table td, .table th {
         vertical-align: middle;
     }
 
-    /* Centrar encabezados de columnas */
     .table thead th {
         text-align: center;
     }
 
-    /* Optimizar anchos de columnas */
-    .table thead th:nth-child(1) { width: 25%; } /* Name */
-    .table thead th:nth-child(2) { width: 15%; } /* Model */
-    .table thead th:nth-child(3) { width: 12%; } /* Status */
-    .table thead th:nth-child(4) { width: 18%; } /* Progress */
-    .table thead th:nth-child(5) { width: 30%; } /* Actions */
+    .table thead th:nth-child(1) { width: 25%; }
+    .table thead th:nth-child(2) { width: 15%; }
+    .table thead th:nth-child(3) { width: 12%; }
+    .table thead th:nth-child(4) { width: 18%; }
+    .table thead th:nth-child(5) { width: 30%; }
 
-    /* Truncate long names with ellipsis */
     .job-name {
         max-width: 200px;
         overflow: hidden;
@@ -109,7 +98,6 @@
         display: inline-block;
     }
 
-    /* Action buttons styling */
     .action-buttons .btn-group {
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
@@ -135,43 +123,27 @@
         box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.5) !important;
     }
 
-    /* Responsive adjustments */
     @media (max-width: 768px) {
         .table thead th:nth-child(1) { width: 30%; }
-        .table thead th:nth-child(2) { display: none; } /* Hide Model column on mobile */
+        .table thead th:nth-child(2) { display: none; }
         .table thead th:nth-child(3) { width: 20%; }
         .table thead th:nth-child(4) { width: 20%; }
         .table thead th:nth-child(5) { width: 30%; }
-
-        .table tbody td:nth-child(2) { display: none; } /* Hide Model column on mobile */
-
-        .action-buttons .btn-dashboard {
-            min-width: 80px;
-            font-size: 0.75rem;
-        }
-
-        .action-buttons .btn-dashboard .me-1 {
-            display: none; /* Hide icon text on very small screens */
-        }
+        .table tbody td:nth-child(2) { display: none; }
+        .action-buttons .btn-dashboard { min-width: 80px; font-size: 0.75rem; }
+        .action-buttons .btn-dashboard .me-1 { display: none; }
     }
 
     @media (max-width: 576px) {
-        .action-buttons .btn-dashboard {
-            min-width: auto;
-            padding: 0.25rem 0.5rem;
-        }
-
-        .job-name {
-            max-width: 120px;
-        }
+        .action-buttons .btn-dashboard { min-width: auto; padding: 0.25rem 0.5rem; }
+        .job-name { max-width: 120px; }
     }
 
-    /* Custom styles for Metric Cards Accordion */
     .metric-cards .accordion-item {
         border: 1px solid #dee2e6;
         border-radius: .5rem;
         margin-bottom: .75rem;
-        overflow: hidden; /* Ensures rounded corners are respected */
+        overflow: hidden;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         transition: box-shadow 0.2s ease-in-out;
     }
@@ -192,13 +164,12 @@
         background-color: #f8f9fa;
         box-shadow: none;
     }
-    
+
     .metric-cards .accordion-button:focus {
         box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
     }
 
     .metric-cards .accordion-button::after {
-        /* Hides the default Bootstrap chevron icon */
         display: none;
     }
 
@@ -212,24 +183,14 @@
         padding: 1rem 1.25rem;
     }
 
-    /* Experiments Tab Styling */
     .experiment-card {
-        border-left: 4px solid #6f42c1;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
         transition: all 0.3s ease;
         margin-bottom: 1rem;
     }
 
     .experiment-card:hover {
-        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.2);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transform: translateY(-2px);
-    }
-
-    .experiment-header {
-        background: linear-gradient(135deg, #6f42c1 0%, #8b5cf6 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 0.5rem 0.5rem 0 0;
     }
 
     .jobs-grid {
@@ -263,20 +224,9 @@
         font-size: 0.875rem;
     }
 
-    .job-rank.gold {
-        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-        color: #856404;
-    }
-
-    .job-rank.silver {
-        background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-        color: #495057;
-    }
-
-    .job-rank.bronze {
-        background: linear-gradient(135deg, #cd7f32 0%, #e9a362 100%);
-        color: #fff;
-    }
+    .job-rank.gold { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #856404; }
+    .job-rank.silver { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); color: #495057; }
+    .job-rank.bronze { background: linear-gradient(135deg, #cd7f32 0%, #e9a362 100%); color: #fff; }
 
     .experiment-progress {
         height: 8px;
@@ -287,7 +237,7 @@
 
     .experiment-progress-bar {
         height: 100%;
-        background: linear-gradient(90deg, #6f42c1 0%, #8b5cf6 100%);
+        background: var(--color-accent);
         transition: width 0.3s ease;
     }
 </style>
@@ -300,12 +250,12 @@
     
     <div class="row mb-4 align-items-center">
         <div class="col">
-            <h2 class="mb-0"><i class="fas fa-network-wired me-2"></i>Federated Training</h2>
+            <h2 class="mb-0"><i data-lucide="layers" style="width:20px;height:20px;color:var(--color-primary);vertical-align:middle;" class="me-2"></i>Federated Training</h2>
             <p class="text-muted">Configure and run distributed training jobs on multiple data sources</p>
         </div>
         <div class="col-auto">
             <a href="{% url 'model_studio' %}" class="btn btn-outline-primary">
-                <i class="fas fa-edit me-2"></i>Design New Model
+                <i data-lucide="edit" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Design New Model
             </a>
         </div>
     </div>
@@ -314,8 +264,8 @@
         <!-- Panel izquierdo: configuración de entrenamiento -->
         <div class="col-lg-5 mb-4">
             <div class="card h-90">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Training Configuration</h5>
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-lucide="settings" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Configuration</h5>
                 </div>
                 <div class="card-body">
                     <form id="trainingConfigForm">
@@ -349,7 +299,7 @@
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrainingParams">
                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                             <div>
-                                                <i class="fas fa-cogs me-2 text-secondary"></i>
+                                                <i data-lucide="settings" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-secondary"></i>
                                                 <strong>Core Training Parameters</strong>
                                                 <div class="d-block text-muted fw-normal small" id="training-summary">
                                                     Epochs: <strong id="epochs-summary" class="text-dark">5</strong> |
@@ -367,7 +317,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label for="train-epochs" class="form-label d-flex align-items-center">
                                                     Epochs
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="train-epochs" name="epochs" min="1" value="5" required>
                                             </div>
@@ -375,7 +325,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label for="train-batch-size" class="form-label d-flex align-items-center">
                                                     Batch Size
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of samples processed before updating the model"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of samples processed before updating the model"></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="train-batch-size" name="batch_size" min="1" value="32" required>
                                             </div>
@@ -383,7 +333,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label class="form-label d-flex align-items-center">
                                                     Federated Rounds
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ NUM_ROUNDS_HELPER }}"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ NUM_ROUNDS_HELPER }}"></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="train-rounds" name="rounds" min="1" value="10" required>
                                             </div>
@@ -391,7 +341,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label for="save-frequency" class="form-label d-flex align-items-center">
                                                     Save Checkpoint Every
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Saves a model every X rounds. Set 0 to save only the final model."></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Saves a model every X rounds. Set 0 to save only the final model."></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="save-frequency" name="save_frequency" min="0" value="0" required>
                                             </div>
@@ -399,7 +349,7 @@
                                             <div class="col-md-12 param-container">
                                                 <label for="fed-strategy" class="form-label d-flex align-items-center">
                                                     Federated Strategy
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ STRATEGY_HELPER }}"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ STRATEGY_HELPER }}"></i>
                                                 </label>
                                                 <select class="form-select" id="fed-strategy" name="fed_strategy">
                                                     <option value="FedAvg" selected>Federated Averaging</option>
@@ -427,7 +377,7 @@
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetrics">
                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                             <div>
-                                                <i class="fas fa-flask me-2 text-primary"></i>
+                                                <i data-lucide="filter" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-primary"></i>
                                                 <strong>Additional Specialized Metrics</strong>
                                                 <small class="d-block text-muted fw-normal">Select metrics specific to your task.</small>
                                             </div>
@@ -445,7 +395,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSegmentation">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-vector-square me-2 text-primary"></i>
+                                                                <i data-lucide="layers" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-primary"></i>
                                                                 <strong>Segmentation</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for pixel-level tasks like organ or tumor segmentation.</small>
                                                             </div>
@@ -477,7 +427,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMedical">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-heartbeat me-2 text-success"></i>
+                                                                <i data-lucide="activity" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>
                                                                 <strong>Medical Diagnostics</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for evaluating diagnostic test performance.</small>
                                                             </div>
@@ -509,7 +459,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDetection">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-search-plus me-2 text-warning"></i>
+                                                                <i data-lucide="search" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-warning"></i>
                                                                 <strong>Detection & Classification</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for object detection and classification tasks.</small>
                                                             </div>
@@ -541,7 +491,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-chart-line me-2 text-info"></i>
+                                                                <i data-lucide="trending-up" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-info"></i>
                                                                 <strong>Regression & Time Series</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for regression and time series tasks.</small>
                                                             </div>
@@ -575,7 +525,7 @@
                         <!-- Botón para mostrar/ocultar parámetros avanzados -->
                         <div class="d-grid mt-3">
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-advanced-params">
-                                <i class="fas fa-sliders-h me-2"></i>Advanced Parameters
+                                <i data-lucide="sliders" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Advanced Parameters
                             </button>
                         </div>
                         
@@ -587,9 +537,7 @@
                                 <div class="col-md-6 param-container">
                                     <label for="fraction-fit" class="form-label d-flex align-items-center">
                                         Fraction Fit
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ FRACTION_FIT_HELPER }}">
                                         </i>
                                     </label>
@@ -599,9 +547,7 @@
                                 <div class="col-md-6 param-container">
                                     <label for="fraction-eval" class="form-label d-flex align-items-center">
                                         Fraction Eval
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ FRACTION_EVALUATE_HELPER }}">
                                         </i>
                                     </label>
@@ -611,9 +557,7 @@
                                 <div class="col-md-4 param-container">
                                     <label for="min-fit-clients" class="form-label d-flex align-items-center">
                                         Min Fit Clients
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ MIN_FIT_CLIENTS_HELPER }}">
                                         </i>
                                     </label>
@@ -623,9 +567,7 @@
                                 <div class="col-md-4 param-container">
                                     <label for="min-eval-clients" class="form-label d-flex align-items-center">
                                         Min Eval Clients
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ MIN_EVALUATE_CLIENTS_HELPER }}">
                                         </i>
                                     </label>
@@ -635,9 +577,7 @@
                                 <div class="col-md-4 param-container">
                                     <label for="min-available-clients" class="form-label d-flex align-items-center">
                                         Min Clients
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ MIN_AVAILABLE_CLIENTS_HELPER }}">
                                         </i>
                                     </label>
@@ -651,10 +591,10 @@
                         <!-- Botones de acción -->
                         <div class="d-grid gap-2 mt-4">
                             <button type="button" class="btn btn-primary" id="start-training-btn">
-                                <i class="fas fa-play me-2"></i>Start Training
+                                <i data-lucide="play" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Start Training
                             </button>
                             <button type="button" class="btn btn-outline-secondary" id="preview-config-json-btn">
-                                <i class="fas fa-code me-2"></i>Preview JSON
+                                <i data-lucide="code" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Preview JSON
                             </button>
                         </div>
                     </form>
@@ -665,10 +605,10 @@
         <!-- Panel derecho: trabajos de entrenamiento y estado -->
         <div class="col-lg-7 mb-4">
             <div class="card h-90 jobs-card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Training Management</h5>
-                    <button type="button" class="btn btn-sm btn-light" id="refresh-jobs-btn">
-                        <i class="fas fa-sync-alt"></i>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-lucide="list-checks" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Management</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-jobs-btn">
+                        <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;"></i>
                     </button>
                 </div>
                 <div class="card-body">
@@ -676,12 +616,12 @@
                     <ul class="nav nav-tabs mb-3" id="trainingTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="jobs-tab" data-bs-toggle="tab" data-bs-target="#jobs-panel" type="button" role="tab" aria-controls="jobs-panel" aria-selected="true">
-                                <i class="fas fa-tasks me-2"></i>Training Jobs
+                                <i data-lucide="list-checks" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Jobs
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="experiments-tab" data-bs-toggle="tab" data-bs-target="#experiments-panel" type="button" role="tab" aria-controls="experiments-panel" aria-selected="false">
-                                <i class="fas fa-flask me-2"></i>Experiments
+                                <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Experiments
                             </button>
                         </li>
                     </ul>
@@ -737,29 +677,29 @@
                                         <div class="action-buttons">
                                             <div class="btn-group" role="group">
                                                 <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-dashboard" title="View detailed metrics and analytics">
-                                                    <i class="fas fa-chart-line me-1"></i>Dashboard
+                                                    <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Dashboard
                                                 </a>
                                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" id="job{{ job.id }}More" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
-                                                    <i class="fas fa-ellipsis-v"></i>
+                                                    <i data-lucide="more-vertical" style="width:16px;height:16px;vertical-align:middle;"></i>
                                                     <span class="visually-hidden">More options</span>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="job{{ job.id }}More">
                                                     <li>
                                                         <a class="dropdown-item" href="{% url 'job_detail' job.id %}">
-                                                            <i class="fas fa-info-circle me-2 text-info"></i>Details
+                                                            <i data-lucide="info" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-info"></i>Details
                                                         </a>
                                                     </li>
                                                     {% if job.status == 'completed' %}
                                                     <li>
                                                         <a class="dropdown-item" href="{% url 'download_model' job.id %}">
-                                                            <i class="fas fa-download me-2 text-success"></i>Download model
+                                                            <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>Download model
                                                         </a>
                                                     </li>
                                                     {% endif %}
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li>
                                                         <button class="dropdown-item text-danger delete-job" data-delete-url="{% url 'delete_job' job.id %}" data-job-name="{{ job.name }}">
-                                                            <i class="fas fa-trash-alt me-2"></i>Delete
+                                                            <i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Delete
                                                         </button>
                                                     </li>
                                                 </ul>
@@ -773,7 +713,7 @@
                     </div>
                     {% else %}
                     <div class="text-center py-5">
-                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <i data-lucide="list-checks" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                         <p>There are no training jobs. Configure and start a new training.</p>
                     </div>
                     {% endif %}
@@ -799,9 +739,9 @@
 <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="jobDetailsModalLabel"><i class="fas fa-info-circle me-2"></i>Job Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobDetailsModalLabel"><i data-lucide="info" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Job Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="text-center py-3" id="jobDetailsLoading">
@@ -868,7 +808,7 @@
                 </div>
                 
                 <div class="alert alert-danger" id="jobDetailsError" style="display: none;">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>
                     <span id="jobDetailsErrorMessage">Error loading job details</span>
                 </div>
             </div>
@@ -883,9 +823,9 @@
 <div class="modal fade" id="exportModelModal" tabindex="-1" aria-labelledby="exportModelModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="exportModelModalLabel"><i class="fas fa-file-export me-2"></i>Export Model</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModelModalLabel"><i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Export Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>You can export the trained model in different formats for use in production.</p>
@@ -909,7 +849,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="download-model-btn">
-                    <i class="fas fa-download me-2"></i>Download
+                    <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Download
                 </button>
             </div>
         </div>
@@ -920,17 +860,17 @@
 <div class="modal fade" id="configJsonModal" tabindex="-1" aria-labelledby="configJsonModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="configJsonModalLabel"><i class="fas fa-code me-2"></i>Training JSON Configuration</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="configJsonModalLabel"><i data-lucide="code" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training JSON Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <pre class="bg-light p-3 rounded" id="config-json-preview"></pre>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" id="copy-config-json-btn">
-                    <i class="fas fa-copy me-1"></i>Copy
+                    <i data-lucide="copy" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Copy
                 </button>
             </div>
         </div>
@@ -941,9 +881,9 @@
 <div class="modal fade" id="deleteJobModal" tabindex="-1" aria-labelledby="deleteJobModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteJobModalLabel"><i class="fas fa-trash me-2"></i>Delete Training Job</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteJobModalLabel"><i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Delete Training Job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this training job?</p>
@@ -971,10 +911,10 @@
             const advancedParams = document.getElementById('advanced-fed-params');
             if (advancedParams.style.display === 'none' || advancedParams.style.display === '') {
                 advancedParams.style.display = 'block';
-                this.innerHTML = '<i class="fas fa-minus me-2"></i>Hide Advanced Parameters';
+                this.textContent = 'Hide Advanced Parameters';
             } else {
                 advancedParams.style.display = 'none';
-                this.innerHTML = '<i class="fas fa-sliders-h me-2"></i>Show Advanced Parameters';
+                this.textContent = 'Show Advanced Parameters';
             }
         });
         
@@ -1058,7 +998,7 @@
 
                 // Change epochs label to "Iterations" for ML
                 const epochsLabel = epochsContainer.querySelector('label');
-                epochsLabel.innerHTML = `Iterations <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of training iterations for the ML algorithm"></i>`;
+                epochsLabel.innerHTML = `Iterations <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of training iterations for the ML algorithm"></i>`;
 
                 // Update summary - hide batch size and save frequency
                 const trainingSummary = document.querySelector('#training-summary');
@@ -1086,7 +1026,7 @@
 
                 // Reset epochs label
                 const epochsLabel = epochsContainer.querySelector('label');
-                epochsLabel.innerHTML = `Epochs <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>`;
+                epochsLabel.innerHTML = `Epochs <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>`;
 
                 // Reset summary
                 const trainingSummary = document.querySelector('#training-summary');
@@ -1734,7 +1674,7 @@
 
         function showButtonFeedback(button, message) {
             const originalText = button.innerHTML;
-            button.innerHTML = `<i class="fas fa-check me-2 text-success"></i>${message}`;
+            button.textContent = message;
             button.classList.add('btn-outline-success');
             button.classList.remove('btn-primary');
             
