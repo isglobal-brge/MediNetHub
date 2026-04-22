@@ -2,17 +2,11 @@
 {% load static %}
 {% load webapp_filters %}
 
-{% block title %}ML Model Designer - MediNet{% endblock %}
+{% block title %}ML Model Designer (Experiment) - MediNet{% endblock %}
+{% block page_title %}ML Model Designer{% endblock %}
 
 {% block extra_css %}
-<style>
-    .param-card {
-        transition: all 0.3s ease;
-    }
-    .param-card.d-none {
-        display: none !important;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/pages/ml-model-designer.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,21 +14,24 @@
     <!-- Header -->
     <div class="row mb-4 align-items-center">
         <div class="col">
-            <h2 class="mb-0"><i class="fas fa-cogs me-2"></i>Machine Learning Model Designer</h2>
+            <h2 class="mb-0 d-flex align-items-center gap-2">
+                <i data-lucide="cpu" style="width:22px;height:22px;color:var(--color-primary);"></i>
+                Machine Learning Model Designer
+            </h2>
             <p class="text-muted">Configure classic Scikit-learn models for training</p>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-outline-info me-2" id="load-model-btn">
-                <i class="fas fa-folder-open me-1"></i>Load Model
+            <button type="button" class="btn btn-outline-secondary me-2" id="load-model-btn">
+                <i data-lucide="folder-open" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Load Model
             </button>
             <button type="button" class="btn btn-outline-secondary me-2" id="preview-json-btn">
-                <i class="fas fa-code me-1"></i>Preview JSON
+                <i data-lucide="code" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Preview JSON
             </button>
             <button type="button" class="btn btn-primary me-2" id="save-ml-model-btn">
-                <i class="fas fa-save me-1"></i>Save Model
+                <i data-lucide="save" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Save Model
             </button>
             <button type="button" class="btn btn-success" id="go-to-training-btn" disabled>
-                <i class="fas fa-play me-1"></i>Go to Training
+                <i data-lucide="play" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Go to Training
             </button>
         </div>
     </div>
@@ -43,8 +40,10 @@
         <!-- Main Configuration Panel -->
         <div class="col-lg-8">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Algorithm Configuration</h5>
+                <div class="card-header">
+                    <h5 class="mb-0 d-flex align-items-center gap-2">
+                        <i data-lucide="sliders" style="width:16px;height:16px;"></i>Algorithm Configuration
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form id="ml-model-form">
@@ -81,7 +80,7 @@
                                     <div class="col-md-6">
                                         <label for="rfc-n-estimators" class="form-label">
                                             Number of Estimators
-                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="rfc-n-estimators-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
+                                            <i data-lucide="alert-triangle" class="text-warning d-none ms-1" style="width:13px;height:13px;" id="rfc-n-estimators-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
                                         </label>
                                         <input type="number" class="form-control" id="rfc-n-estimators" value="3" min="1">
                                         <div class="form-text">The number of trees in the forest.</div>
@@ -200,7 +199,7 @@
                                     <div class="col-md-6">
                                         <label for="knn-n-neighbors" class="form-label">
                                             Number of Neighbors (k)
-                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="knn-k-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting. Odd numbers are recommended."></i>
+                                            <i data-lucide="alert-triangle" class="text-warning d-none ms-1" style="width:13px;height:13px;" id="knn-k-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting. Odd numbers are recommended."></i>
                                         </label>
                                         <input type="number" class="form-control" id="knn-n-neighbors" value="5" min="1">
                                         <div class="form-text">Number of neighbors to use.</div>
@@ -278,7 +277,7 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <h5 class="mb-0">
-                                            <i class="fas fa-flask me-2 text-warning"></i>Grid Search Experiment (Optional)
+                                            <i data-lucide="flask-conical" class="me-2 text-warning" style="width:16px;height:16px;vertical-align:middle;"></i>Grid Search Experiment (Optional)
                                         </h5>
                                         <small class="text-muted">Configure multiple hyperparameter values to test</small>
                                     </div>
@@ -290,7 +289,7 @@
                             </div>
                             <div class="card-body d-none" id="experiment-config-panel">
                                 <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
+                                    <i data-lucide="info" class="me-2" style="width:14px;height:14px;vertical-align:middle;"></i>
                                     <strong>How it works:</strong> For each hyperparameter below, you can specify multiple values. The system will create training jobs testing all combinations.
                                 </div>
 
@@ -312,12 +311,12 @@
         <!-- Visualization Panel -->
         <div class="col-lg-4">
             <div class="card shadow-sm sticky-top" style="top: 20px;">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Hyperparameter Visualization</h5>
+                <div class="card-header">
+                    <h5 class="mb-0 d-flex align-items-center gap-2"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i>Hyperparameter Visualization</h5>
                 </div>
                 <div class="card-body text-center" style="min-height: 400px;" id="visualization-panel">
                     <div class="d-flex flex-column justify-content-center align-items-center h-100">
-                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <i data-lucide="bar-chart-2" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                         <h6 class="text-muted">Interactive visualizations will appear here.</h6>
                         <p class="text-muted small">Select a hyperparameter to see its effect.</p>
                     </div>
@@ -332,7 +331,7 @@
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Load Machine Learning Model</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="folder-open" style="width:16px;height:16px;"></i>Load Machine Learning Model</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -362,7 +361,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-code me-2"></i>Model Configuration JSON</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="code" style="width:16px;height:16px;"></i>Model Configuration JSON</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -377,7 +376,7 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-warning bg-opacity-10">
-                <h5 class="modal-title"><i class="fas fa-flask me-2"></i>Advanced Grid Search Experiment Configuration</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="flask-conical" style="width:16px;height:16px;"></i>Advanced Grid Search Experiment Configuration</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -398,7 +397,7 @@
 
                 <hr>
 
-                <h6 class="mb-3"><i class="fas fa-sliders-h me-2"></i>Hyperparameter Ranges</h6>
+                <h6 class="mb-3 d-flex align-items-center gap-2"><i data-lucide="sliders" style="width:14px;height:14px;"></i>Hyperparameter Ranges</h6>
                 <p class="text-muted small">Select which hyperparameters to vary and configure their values</p>
 
                 <div id="modal-experiment-params-container">
@@ -411,7 +410,7 @@
                     <div class="col-md-6">
                         <div class="card bg-light">
                             <div class="card-body">
-                                <h6><i class="fas fa-info-circle me-2 text-info"></i>Experiment Summary</h6>
+                                <h6 class="d-flex align-items-center gap-2"><i data-lucide="info" class="text-info" style="width:14px;height:14px;"></i>Experiment Summary</h6>
                                 <p class="mb-1"><strong>Total Jobs:</strong> <span id="modal-total-combinations" class="text-primary">1</span></p>
                                 <p class="mb-0"><strong>Variable Parameters:</strong> <span id="modal-variable-params">0</span></p>
                             </div>
@@ -420,7 +419,7 @@
                     <div class="col-md-6">
                         <div class="card bg-light">
                             <div class="card-body">
-                                <h6><i class="fas fa-clock me-2 text-warning"></i>Estimated Time</h6>
+                                <h6 class="d-flex align-items-center gap-2"><i data-lucide="clock" class="text-warning" style="width:14px;height:14px;"></i>Estimated Time</h6>
                                 <p class="mb-0 small text-muted">Time per job × total jobs = total experiment time</p>
                             </div>
                         </div>
@@ -430,10 +429,10 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="preview-experiment-btn">
-                    <i class="fas fa-eye me-1"></i>Preview Jobs
+                    <i data-lucide="eye" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Preview Jobs
                 </button>
                 <button type="button" class="btn btn-warning" id="save-experiment-btn">
-                    <i class="fas fa-save me-1"></i>Save Experiment
+                    <i data-lucide="save" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Save Experiment
                 </button>
             </div>
         </div>
@@ -1010,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', function() {
             default: {
                 vizContent = document.createElement('div');
                 vizContent.className = 'd-flex flex-column justify-content-center align-items-center h-100';
-                vizContent.innerHTML = `<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                vizContent.innerHTML = `<i data-lucide="bar-chart-2" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                            <h6 class="text-muted">Interactive visualizations will appear here.</h6>
                            <p class="text-muted small">Select an algorithm to see its effect.</p>`;
                 break;
@@ -1501,7 +1500,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="col-4">
                             <button type="button" class="btn btn-sm btn-primary w-100" id="exp-add-${param.id}">
-                                <i class="fas fa-plus me-1"></i>Add
+                                <i data-lucide="plus" class="me-1" style="width:13px;height:13px;vertical-align:middle;"></i>Add
                             </button>
                         </div>
                     </div>
@@ -1906,6 +1905,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         return combinations;
     }
+
+    // Render Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
 });
 </script>

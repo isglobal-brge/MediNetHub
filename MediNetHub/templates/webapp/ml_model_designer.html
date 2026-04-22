@@ -3,16 +3,10 @@
 {% load webapp_filters %}
 
 {% block title %}ML Model Designer - MediNet{% endblock %}
+{% block page_title %}ML Model Designer{% endblock %}
 
 {% block extra_css %}
-<style>
-    .param-card {
-        transition: all 0.3s ease;
-    }
-    .param-card.d-none {
-        display: none !important;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/pages/ml-model-designer.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,21 +14,24 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="fas fa-cogs me-2"></i>Machine Learning Model Designer</h2>
+            <h2 class="d-flex align-items-center gap-2">
+                <i data-lucide="cpu" style="width:22px;height:22px;color:var(--color-primary);"></i>
+                Machine Learning Model Designer
+            </h2>
             <p class="text-muted">Configure classic Scikit-learn models for training</p>
         </div>
         <div>
-            <button type="button" class="btn btn-outline-info me-2" id="load-model-btn">
-                <i class="fas fa-folder-open me-1"></i>Load Model
+            <button type="button" class="btn btn-outline-secondary me-2" id="load-model-btn">
+                <i data-lucide="folder-open" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Load Model
             </button>
             <button type="button" class="btn btn-outline-secondary me-2" id="preview-json-btn">
-                <i class="fas fa-code me-1"></i>Preview JSON
+                <i data-lucide="code" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Preview JSON
             </button>
             <button type="button" class="btn btn-primary me-2" id="save-ml-model-btn">
-                <i class="fas fa-save me-1"></i>Save Model
+                <i data-lucide="save" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Save Model
             </button>
             <button type="button" class="btn btn-success" id="go-to-training-btn" disabled>
-                <i class="fas fa-play me-1"></i>Go to Training
+                <i data-lucide="play" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Go to Training
             </button>
         </div>
     </div>
@@ -43,8 +40,10 @@
         <!-- Main Configuration Panel -->
         <div class="col-lg-8">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Algorithm Configuration</h5>
+                <div class="card-header">
+                    <h5 class="mb-0 d-flex align-items-center gap-2">
+                        <i data-lucide="sliders" style="width:16px;height:16px;"></i>Algorithm Configuration
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form id="ml-model-form">
@@ -78,7 +77,7 @@
                                     <div class="col-md-6">
                                         <label for="rfc-n-estimators" class="form-label">
                                             Number of Estimators
-                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="rfc-n-estimators-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
+                                            <i data-lucide="alert-triangle" class="text-warning d-none ms-1 d-none ms-1" id="rfc-n-estimators-warning" style="width:13px;height:13px;" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
                                         </label>
                                         <input type="number" class="form-control" id="rfc-n-estimators" value="3" min="1">
                                         <div class="form-text">The number of trees in the forest.</div>
@@ -169,8 +168,8 @@
                                     <div class="col-md-6">
                                         <label for="feddprf-epsilon" class="form-label">
                                             Epsilon Total (Privacy Budget)
-                                            <i class="fas fa-exclamation-triangle text-danger d-none ms-1" id="feddprf-epsilon-error" data-bs-toggle="tooltip" title="Epsilon must be at least 0.1 for meaningful privacy guarantees"></i>
-                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="feddprf-epsilon-warning" data-bs-toggle="tooltip" title="High epsilon values (>= 5.0) provide limited privacy protection"></i>
+                                            <i data-lucide="alert-triangle" class="text-danger d-none ms-1 d-none ms-1" id="feddprf-epsilon-error" style="width:13px;height:13px;" data-bs-toggle="tooltip" title="Epsilon must be at least 0.1 for meaningful privacy guarantees"></i>
+                                            <i data-lucide="alert-triangle" class="text-warning d-none ms-1" id="feddprf-epsilon-warning" style="width:13px;height:13px;" data-bs-toggle="tooltip" title="High epsilon values (>= 5.0) provide limited privacy protection"></i>
                                         </label>
                                         <input type="number" class="form-control" id="feddprf-epsilon" value="1.0" min="0.1" max="10.0" step="0.1">
                                         <div class="form-text" id="feddprf-epsilon-help">
@@ -209,12 +208,12 @@
         <!-- Visualization Panel -->
         <div class="col-lg-4">
             <div class="card shadow-sm sticky-top" style="top: 20px;">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Hyperparameter Visualization</h5>
+                <div class="card-header">
+                    <h5 class="mb-0 d-flex align-items-center gap-2"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i>Hyperparameter Visualization</h5>
                 </div>
                 <div class="card-body text-center" style="min-height: 400px;" id="visualization-panel">
                     <div class="d-flex flex-column justify-content-center align-items-center h-100">
-                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <i data-lucide="bar-chart-2" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                         <h6 class="text-muted">Interactive visualizations will appear here.</h6>
                         <p class="text-muted small">Select a hyperparameter to see its effect.</p>
                     </div>
@@ -229,7 +228,7 @@
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Load Machine Learning Model</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="folder-open" style="width:16px;height:16px;"></i>Load Machine Learning Model</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -259,7 +258,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-code me-2"></i>Model Configuration JSON</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="code" style="width:16px;height:16px;"></i>Model Configuration JSON</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -1035,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', function() {
             default: {
                 vizContent = document.createElement('div');
                 vizContent.className = 'd-flex flex-column justify-content-center align-items-center h-100';
-                vizContent.innerHTML = `<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                vizContent.innerHTML = `<i data-lucide="bar-chart-2" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                            <h6 class="text-muted">Interactive visualizations will appear here.</h6>
                            <p class="text-muted small">Select an algorithm to see its effect.</p>`;
                 break;
@@ -1389,6 +1388,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Also trigger the initial visualization render on page load
     updateVisualization(algorithmSelect.value);
+
+    // Render Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 </script>
 
