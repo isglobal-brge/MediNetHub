@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update title
         const modelName = config.name || 'Unknown Model';
-        previewTitle.innerHTML = `<i class="fas fa-eye me-2"></i>${modelName}`;
+        previewTitle.textContent = modelName;
         
         // Show expand button
         expandBtn.style.display = 'block';
@@ -392,23 +392,24 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             html += `
                 <div class="text-center py-5">
-                    <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                    <i data-lucide="layers" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                     <h5 class="text-muted">No layers defined</h5>
                     <p class="text-muted">This model doesn't have any layers configured yet.</p>
                 </div>
             `;
         }
-        
+
         html += `</div>`;
-        
+
         previewContent.innerHTML = html;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
     
     function showErrorPreview(message) {
         const previewContent = document.getElementById('modelPreviewContent');
         previewContent.innerHTML = `
             <div class="text-center py-5">
-                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <i data-lucide="alert-triangle" style="width:48px;height:48px;" class="text-danger mb-3"></i>
                 <h5 class="text-danger">Error</h5>
                 <p class="text-muted">${message}</p>
             </div>
@@ -496,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             html += `
                 <div class="text-center py-5">
-                    <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                    <i data-lucide="layers" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                     <h5 class="text-muted">No layers defined</h5>
                     <p class="text-muted">This model doesn't have any layers configured yet.</p>
                 </div>
