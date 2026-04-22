@@ -249,3 +249,75 @@
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
   animation: shimmer 2s infinite;
 }
+
+/* ============================================================
+   Dashboard page overrides (from dashboard.html)
+   ============================================================ */
+
+.metric-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+
+.metric-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.client-status-card .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.client-status-footer {
+    text-align: right;
+    margin-top: var(--space-4);
+    border-top: 1px solid var(--color-border-light);
+    padding-top: var(--space-3);
+}
+
+.chart-legend-custom {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-weight: 600;
+    font-size: var(--text-sm);
+}
+
+.legend-item:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.debug-tab-hidden { display: none; }
+.debug-content-hidden { display: none; }
+
+.metric-value.text-slate { color: var(--color-text-secondary); }
+.metric-value.text-brand-blue { color: var(--color-secondary); }
+.metric-value.text-primary { color: var(--color-secondary) !important; }
+.metric-value.text-danger { color: var(--color-danger) !important; }
+.metric-value.text-success { color: var(--color-success) !important; }

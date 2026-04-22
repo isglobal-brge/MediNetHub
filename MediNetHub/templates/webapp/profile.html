@@ -5,31 +5,7 @@
 {% block page_title %}Profile{% endblock %}
 
 {% block extra_css %}
-<style>
-.profile-card, .management-card {
-    background-color: var(--color-surface);
-    border: none;
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
-}
-
-.profile-avatar {
-    width: 120px;
-    height: 120px;
-    font-size: 3rem;
-    background-color: var(--color-primary);
-}
-
-.danger-zone {
-    border: 2px solid rgba(220,38,38,0.2);
-    background-color: rgba(220,38,38,0.05);
-    border-radius: 12px;
-}
-
-.danger-zone h5 {
-    color: var(--color-danger);
-}
-</style>
+<link rel="stylesheet" href="/static/css/pages/profile.css">
 {% endblock %}
 
 {% block content %}

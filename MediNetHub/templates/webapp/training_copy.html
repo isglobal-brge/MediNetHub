@@ -5,242 +5,7 @@
 {% block page_title %}New Training Job{% endblock %}
 
 {% block extra_css %}
-{{ block.super }}
-<style>
-    .advanced-params {
-        display: none;
-        margin-top: 15px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-    }
-
-    .dropdown-menu {
-        z-index: 1030;
-    }
-
-    .jobs-card .card-body {
-        display: flex;
-        flex-direction: column;
-        max-height: calc(90vh - 110px);
-        min-height: 400px;
-        padding: 1rem;
-        overflow: hidden;
-    }
-
-    .tab-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .tab-pane {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: hidden;
-        min-height: 0;
-    }
-
-    .job-table-container {
-        overflow-y: auto;
-        min-height: 0;
-    }
-
-    #experiments-container {
-        overflow-y: auto;
-        min-height: 0;
-    }
-
-    .dropdown {
-        position: static;
-    }
-
-    .dropdown-menu {
-        position: absolute;
-        right: 0;
-        left: auto;
-    }
-
-    .nav-tabs {
-        width: 100%;
-    }
-
-    .nav-tabs .nav-item {
-        flex: 1;
-        text-align: center;
-    }
-
-    .nav-tabs .nav-link {
-        width: 100%;
-    }
-
-    .table td, .table th {
-        vertical-align: middle;
-    }
-
-    .table thead th {
-        text-align: center;
-    }
-
-    .table thead th:nth-child(1) { width: 25%; }
-    .table thead th:nth-child(2) { width: 15%; }
-    .table thead th:nth-child(3) { width: 12%; }
-    .table thead th:nth-child(4) { width: 18%; }
-    .table thead th:nth-child(5) { width: 30%; }
-
-    .job-name {
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-    }
-
-    .action-buttons .btn-group {
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .action-buttons .btn-dashboard {
-        min-width: 100px;
-        background-color: #2c3e50 !important;
-        border-color: #2c3e50 !important;
-        color: white !important;
-    }
-
-    .action-buttons .btn-dashboard:hover {
-        background-color: #34495e !important;
-        border-color: #34495e !important;
-        color: white !important;
-    }
-
-    .action-buttons .btn-dashboard:active,
-    .action-buttons .btn-dashboard:focus {
-        background-color: #1a252f !important;
-        border-color: #1a252f !important;
-        color: white !important;
-        box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.5) !important;
-    }
-
-    @media (max-width: 768px) {
-        .table thead th:nth-child(1) { width: 30%; }
-        .table thead th:nth-child(2) { display: none; }
-        .table thead th:nth-child(3) { width: 20%; }
-        .table thead th:nth-child(4) { width: 20%; }
-        .table thead th:nth-child(5) { width: 30%; }
-        .table tbody td:nth-child(2) { display: none; }
-        .action-buttons .btn-dashboard { min-width: 80px; font-size: 0.75rem; }
-        .action-buttons .btn-dashboard .me-1 { display: none; }
-    }
-
-    @media (max-width: 576px) {
-        .action-buttons .btn-dashboard { min-width: auto; padding: 0.25rem 0.5rem; }
-        .job-name { max-width: 120px; }
-    }
-
-    .metric-cards .accordion-item {
-        border: 1px solid #dee2e6;
-        border-radius: .5rem;
-        margin-bottom: .75rem;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        transition: box-shadow 0.2s ease-in-out;
-    }
-
-    .metric-cards .accordion-item:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    .metric-cards .accordion-button {
-        background-color: #fff;
-        font-weight: 500;
-        color: #212529;
-        padding: 1rem 1.25rem;
-    }
-
-    .metric-cards .accordion-button:not(.collapsed) {
-        color: #0d6efd;
-        background-color: #f8f9fa;
-        box-shadow: none;
-    }
-
-    .metric-cards .accordion-button:focus {
-        box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
-    }
-
-    .metric-cards .accordion-button::after {
-        display: none;
-    }
-
-    .metric-cards .metric-counter {
-        min-width: 22px;
-        transition: opacity 0.2s ease;
-    }
-
-    .metric-cards .accordion-body {
-        background-color: #fcfdff;
-        padding: 1rem 1.25rem;
-    }
-
-    .experiment-card {
-        transition: all 0.3s ease;
-        margin-bottom: 1rem;
-    }
-
-    .experiment-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-    }
-
-    .jobs-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 0.75rem;
-        margin-top: 1rem;
-    }
-
-    .job-mini-card {
-        border: 1px solid #dee2e6;
-        border-radius: 0.5rem;
-        padding: 0.75rem;
-        background: white;
-        transition: all 0.2s ease;
-    }
-
-    .job-mini-card:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transform: translateY(-1px);
-    }
-
-    .job-rank {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 0.875rem;
-    }
-
-    .job-rank.gold { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #856404; }
-    .job-rank.silver { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); color: #495057; }
-    .job-rank.bronze { background: linear-gradient(135deg, #cd7f32 0%, #e9a362 100%); color: #fff; }
-
-    .experiment-progress {
-        height: 8px;
-        border-radius: 4px;
-        background: #e9ecef;
-        overflow: hidden;
-    }
-
-    .experiment-progress-bar {
-        height: 100%;
-        background: var(--color-accent);
-        transition: width 0.3s ease;
-    }
-</style>
+<link rel="stylesheet" href="/static/css/pages/training.css">
 {% endblock %}
 
 {% block content %}
@@ -261,7 +26,7 @@
     </div>
     
     <div class="row">
-        <!-- Panel izquierdo: configuración de entrenamiento -->
+        <!-- Left panel: training configuration -->
         <div class="col-lg-5 mb-4">
             <div class="card h-90">
                 <div class="card-header">
@@ -602,7 +367,7 @@
             </div>
         </div>
         
-        <!-- Panel derecho: trabajos de entrenamiento y estado -->
+        <!-- Right panel: training jobs and status -->
         <div class="col-lg-7 mb-4">
             <div class="card h-90 jobs-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -796,7 +561,7 @@
                         </div>
                     </div>
                     
-                    <!-- Configuración del entrenamiento -->
+                    <!-- Training configuration -->
                     <div class="card">
                         <div class="card-header">
                             <h6 class="mb-0">Training Configuration</h6>
@@ -856,7 +621,7 @@
     </div>
 </div>
 
-<!-- Modal para Vista Previa JSON de Configuración -->
+<!-- Modal: Configuration JSON Preview -->
 <div class="modal fade" id="configJsonModal" tabindex="-1" aria-labelledby="configJsonModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -1227,7 +992,7 @@
             startTraining(formData);
         });
         
-        // Función para generar el JSON de configuración
+        // Generate configuration JSON
         function generateTrainingConfig() {
             // Recoger métricas seleccionadas
             const selectedMetrics = [];
@@ -1239,7 +1004,7 @@
             const modelId = document.getElementById('model-id').value;
             let modelConfig = null;
             
-            // Crear objeto de configuración base
+            // Build base configuration object
             const formData = {
                 model_id: modelId,
                 job_name: document.getElementById('job-name').value,
@@ -1301,7 +1066,7 @@
             return formData;
         }
         
-        // Función para actualizar la vista previa del JSON
+        // Update JSON preview
         function updateConfigJsonPreview() {
             const config = generateTrainingConfig();
             

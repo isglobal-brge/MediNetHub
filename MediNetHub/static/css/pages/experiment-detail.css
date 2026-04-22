@@ -1,0 +1,72 @@
+/* ============================================================
+   Experiment Detail page styles
+   ============================================================ */
+
+.dashboard-card {
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.metric-value { font-size: 2.2rem; font-weight: 700; }
+.metric-label { font-size: 0.9rem; color: var(--color-text-secondary); }
+
+.job-comparison-card {
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    margin-bottom: 15px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.job-comparison-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--color-primary);
+}
+
+.job-comparison-card.rank-1 {
+    background: linear-gradient(135deg, rgba(255,215,0,0.05) 0%, #ffffff 100%);
+    border-top: 3px solid #ffd700;
+}
+
+.job-comparison-card.rank-2 {
+    background: linear-gradient(135deg, rgba(192,192,192,0.05) 0%, #ffffff 100%);
+    border-top: 3px solid #c0c0c0;
+}
+
+.job-comparison-card.rank-3 {
+    background: linear-gradient(135deg, rgba(205,127,50,0.05) 0%, #ffffff 100%);
+    border-top: 3px solid #cd7f32;
+}
+
+.rank-badge {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 1.2rem;
+}
+
+.rank-badge.gold   { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #000; box-shadow: 0 2px 8px rgba(255,215,0,0.4); }
+.rank-badge.silver { background: linear-gradient(135deg, #c0c0c0 0%, #e0e0e0 100%); color: #000; box-shadow: 0 2px 8px rgba(192,192,192,0.4); }
+.rank-badge.bronze { background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%); color: #fff; box-shadow: 0 2px 8px rgba(205,127,50,0.4); }
+
+.comparison-table { background: white; border-radius: 10px; overflow: hidden; }
+.comparison-table th { background-color: #f8f9fa; font-weight: 600; border-bottom: 2px solid var(--color-border); }
+.comparison-table tr:hover { background-color: rgba(30,64,175,0.04); }
+
+.param-pill { display: inline-block; padding: 4px 12px; border-radius: 20px; background-color: var(--color-border); font-size: 0.875rem; margin: 2px; }
+
+.progress { height: 8px; border-radius: 4px; margin-top: 8px; }
+
+.status-completed { color: var(--color-success); }
+.status-running   { color: var(--color-primary); }
+.status-pending   { color: var(--color-warning); }
+.status-failed    { color: var(--color-danger); }
+
+.chart-container { background: white; border-radius: 10px; padding: 20px; box-shadow: var(--shadow-sm); }
