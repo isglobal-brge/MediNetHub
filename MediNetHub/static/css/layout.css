@@ -303,3 +303,17 @@
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
+
+/* ===== Sidebar locked item (no connections) ===== */
+.sidebar-item--locked {
+  opacity: 0.38;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.sidebar-item--locked .sidebar-lock-icon {
+  width: 10px;
+  height: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
