@@ -11,13 +11,68 @@
 {% block content %}
 <div class="container-fluid py-4">
 
-  <!-- ===== Page Header ===== -->
-  <div class="dashboard-page-header">
-    <div>
-      <h2 class="page-title">Dashboard</h2>
-      <p class="page-subtitle">Welcome back, {{ user.first_name|default:user.username }}</p>
+  <!-- ===== Setup Banner ===== -->
+  {% if active_jobs|length == 0 %}
+  <div class="setup-banner">
+    <div class="setup-banner__row">
+      <div>
+        {% if stats.active_connections == 0 %}
+          <p class="setup-banner__title">Welcome back, {{ user.first_name|default:user.username }} — start by adding your first data connection</p>
+          <p class="setup-banner__sub">Step 1 of 4 to launch your first federated training</p>
+        {% elif stats.datasets_count == 0 %}
+          <p class="setup-banner__title">Connection added — now choose a dataset from your nodes</p>
+          <p class="setup-banner__sub">Step 2 of 4 — browse available datasets</p>
+        {% elif stats.total_models == 0 %}
+          <p class="setup-banner__title">Dataset ready — design or pick a model in Model Studio</p>
+          <p class="setup-banner__sub">Step 3 of 4 — build your federated model architecture</p>
+        {% else %}
+          <p class="setup-banner__title">All set — launch your first federated training</p>
+          <p class="setup-banner__sub">Step 4 of 4 — configure and start training</p>
+        {% endif %}
+      </div>
+      {% if stats.active_connections == 0 %}
+        <a href="{% url 'datasets' %}" class="setup-banner__btn">Add Connection →</a>
+      {% elif stats.datasets_count == 0 %}
+        <a href="{% url 'datasets' %}" class="setup-banner__btn">Go to Datasets →</a>
+      {% elif stats.total_models == 0 %}
+        <a href="{% url 'model_studio' %}" class="setup-banner__btn">Open Model Studio →</a>
+      {% else %}
+        <a href="{% url 'training' %}" class="setup-banner__btn">Start Training →</a>
+      {% endif %}
     </div>
-    <div class="header-actions">
+    <!-- Progress dots -->
+    <div class="setup-banner__progress">
+      <div class="setup-banner__dot {% if stats.active_connections > 0 %}setup-banner__dot--done{% else %}setup-banner__dot--active{% endif %}"></div>
+      <div class="setup-banner__dot {% if stats.active_connections > 0 and stats.datasets_count > 0 %}setup-banner__dot--done{% elif stats.active_connections > 0 and stats.datasets_count == 0 %}setup-banner__dot--active{% endif %}"></div>
+      <div class="setup-banner__dot {% if stats.total_models > 0 %}setup-banner__dot--done{% elif stats.active_connections > 0 and stats.datasets_count > 0 and stats.total_models == 0 %}setup-banner__dot--active{% endif %}"></div>
+      <div class="setup-banner__dot {% if stats.total_models > 0 and active_jobs|length == 0 %}setup-banner__dot--active{% endif %}"></div>
+      <span class="setup-banner__step-label">
+        Step
+        {% if stats.active_connections == 0 %}<span>1</span>
+        {% elif stats.datasets_count == 0 %}<span>2</span>
+        {% elif stats.total_models == 0 %}<span>3</span>
+        {% else %}<span>4</span>{% endif %}
+        of 4 —
+        {% if stats.active_connections == 0 %}Connections
+        {% elif stats.datasets_count == 0 %}Datasets
+        {% elif stats.total_models == 0 %}Model Studio
+        {% else %}Training{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Ghost action buttons shown below banner when locked -->
+  <div class="d-flex gap-2 px-4 py-2" style="background:#fff; border-bottom: 1px solid var(--border);">
+    {% if stats.active_connections == 0 %}
+      <span class="btn-ghost-locked">
+        <i data-lucide="lock" style="width:13px;height:13px;"></i>
+        New Training
+      </span>
+      <span class="btn-ghost-locked">
+        <i data-lucide="lock" style="width:13px;height:13px;"></i>
+        Create Model
+      </span>
+    {% else %}
       <a href="{% url 'training' %}" class="btn btn-gradient px-4">
         <i data-lucide="play" style="width:15px;height:15px;margin-right:6px;vertical-align:middle;"></i>
         New Training
@@ -26,8 +81,9 @@
         <i data-lucide="boxes" style="width:15px;height:15px;margin-right:6px;vertical-align:middle;"></i>
         Create Model
       </a>
-    </div>
+    {% endif %}
   </div>
+  {% endif %}
 
   <!-- ===== Stat Cards Row ===== -->
   <div class="row g-4 mb-4">
@@ -61,11 +117,17 @@
       </div>
     </div>
 
-    <!-- Datasets / Connections -->
+    <!-- Connections -->
     <div class="col-6 col-lg-3">
-      <div class="stat-card stat-card--warning animate-in">
+      <div class="stat-card stat-card--warning animate-in{% if stats.active_connections == 0 %} stat-card--connections-empty{% endif %}">
         <p class="stat-label">Connections</p>
         <a href="{% url 'datasets' %}" class="stat-value text-decoration-none">{{ stats.active_connections }}</a>
+        {% if stats.active_connections == 0 %}
+          <a href="{% url 'datasets' %}" class="stat-cta">
+            <i data-lucide="plus-circle" style="width:11px;height:11px;"></i>
+            Add a connection
+          </a>
+        {% endif %}
         <div class="progress-custom stat-bar">
           <div class="progress-bar progress-bar--warning"
                role="progressbar"
@@ -92,13 +154,12 @@
 
   </div><!-- /Stat Cards Row -->
 
-  <!-- ===== Main Content Row ===== -->
-  <div class="row g-4">
+  <!-- ===== Main Content — Layout Y ===== -->
+  <div class="dashboard-layout-y mt-4">
 
-    <!-- Left Column: Active Trainings + Pro Tip -->
-    <div class="col-lg-7">
+    <!-- Featured left: Active Trainings + Pro Tip -->
+    <div class="dashboard-layout-y__featured">
 
-      <!-- Active Trainings Card -->
       <div class="card-raised mb-4">
         <div class="card-header-custom d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center gap-2">
@@ -114,8 +175,6 @@
             <div class="activity-item animate-in">
               <div class="d-flex align-items-start justify-content-between">
                 <div class="flex-grow-1">
-
-                  <!-- Status badge -->
                   <div class="mb-2">
                     {% if job.status == 'running' %}
                       <span class="status-badge status-running">Running</span>
@@ -125,19 +184,14 @@
                       <span class="status-badge status-server-ready">Ready</span>
                     {% endif %}
                   </div>
-
                   <h6 class="job-title">{{ job.name }}</h6>
-
-                  <!-- Progress bar -->
                   <div class="progress-custom mb-2">
                     <div class="progress-bar progress-bar--success"
                          role="progressbar"
                          style="width: {{ job.progress }}%; min-width: 2px;"
                          aria-valuenow="{{ job.progress }}"
-                         aria-valuemin="0"
-                         aria-valuemax="100"></div>
+                         aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
-
                   <div class="job-meta">
                     <i data-lucide="bar-chart-3"></i>
                     <span>Round {{ job.current_round }}/{{ job.total_rounds }}</span>
@@ -146,10 +200,7 @@
                       <span>{{ job.progress }}% complete</span>
                     {% endif %}
                   </div>
-
                 </div>
-
-                <!-- View button -->
                 <div class="ms-3 flex-shrink-0">
                   <a href="{% url 'dashboard' job.id %}"
                      class="btn btn-sm btn-outline-secondary-custom"
@@ -162,23 +213,43 @@
             {% endfor %}
 
           {% else %}
-            <!-- Empty state -->
-            <div class="empty-state">
-              <i data-lucide="flask-conical" style="width:48px;height:48px;"></i>
-              <h5 class="mt-3 mb-2">Awaiting Your Next Discovery</h5>
-              <p class="text-muted mb-4" style="font-size:var(--text-sm);">
-                Active trainings will appear here, ready for you to monitor their progress.
+            <!-- Empty state with ghost chart -->
+            <div style="padding: 4px 0;">
+              <p style="font-size:var(--text-sm);color:#94A3B8;margin:0 0 4px;">
+                Real-time accuracy &amp; loss curves from your federated training jobs will appear here
               </p>
-              <a href="{% url 'datasets' %}" class="btn btn-gradient px-4">
-                <i data-lucide="play" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"></i>
-                Start a New Training
-              </a>
+              <div class="ghost-chart">
+                <div class="ghost-chart__bars">
+                  <div class="ghost-chart__bar" style="height:28%"></div>
+                  <div class="ghost-chart__bar" style="height:42%"></div>
+                  <div class="ghost-chart__bar" style="height:38%"></div>
+                  <div class="ghost-chart__bar" style="height:58%"></div>
+                  <div class="ghost-chart__bar" style="height:52%"></div>
+                  <div class="ghost-chart__bar" style="height:68%"></div>
+                  <div class="ghost-chart__bar" style="height:63%"></div>
+                  <div class="ghost-chart__bar" style="height:78%"></div>
+                  <div class="ghost-chart__bar" style="height:73%"></div>
+                  <div class="ghost-chart__bar" style="height:84%"></div>
+                  <div class="ghost-chart__bar" style="height:88%"></div>
+                  <div class="ghost-chart__bar" style="height:85%"></div>
+                </div>
+                <div class="ghost-chart__legend">
+                  <div class="ghost-chart__legend-item">
+                    <div class="ghost-chart__legend-dot"></div>
+                    Accuracy
+                  </div>
+                  <div class="ghost-chart__legend-item">
+                    <div class="ghost-chart__legend-dot"></div>
+                    Loss
+                  </div>
+                </div>
+              </div>
             </div>
           {% endif %}
         </div>
-      </div><!-- /Active Trainings Card -->
+      </div><!-- /Active Trainings -->
 
-      <!-- Pro Tip (only when fewer than 3 active jobs) -->
+      <!-- Pro Tip -->
       {% if active_jobs|length < 3 %}
       <div class="pro-tip-card animate-in">
         <div class="tip-header">
@@ -194,56 +265,19 @@
       <script>
       document.addEventListener('DOMContentLoaded', function() {
         var tips = [
-          {
-            quote: "Naming your training jobs descriptively (e.g., `architecture-dataset-date`) will save you hours of searching in the future. Clean metadata is key!",
-            caption: "Tip for good practices"
-          },
-          {
-            quote: "For image classification, data augmentation like random rotations and flips can drastically improve your model's robustness and prevent overfitting.",
-            caption: "Tip for model performance"
-          },
-          {
-            quote: "Use a smaller learning rate when your model's loss plateaus. This 'fine-tuning' can help the model find a more precise minimum.",
-            caption: "Tip for optimization"
-          },
-          {
-            quote: "Did you know? You can compare multiple training results side-by-side in the 'Model Comparison' section. It's great for analyzing experiments.",
-            caption: "Tip for using MediNet"
-          },
-          {
-            quote: "A `batch size` that is too large can sometimes lead to poor generalization. Experiment with smaller batches to see if it improves your validation accuracy.",
-            caption: "Tip for experimentation"
-          },
-          {
-            quote: "If training accuracy is high but validation accuracy is low, your model is likely overfitting. Try adding dropout layers or more regularization.",
-            caption: "Tip for debugging"
-          },
-          {
-            quote: "Don't just guess hyperparameters! Use techniques like Grid Search or Randomized Search to systematically find the best combination for your model.",
-            caption: "Tip for hyperparameter tuning"
-          },
-          {
-            quote: "Normalizing your input data (scaling it to a range like 0-1 or using standardization) is crucial. It helps your model converge faster and more reliably.",
-            caption: "Tip for data preprocessing"
-          },
-          {
-            quote: "Why train from scratch? Using a pre-trained model (Transfer Learning) and fine-tuning it on your data can yield amazing results with less data and time.",
-            caption: "Tip for efficient training"
-          },
-          {
-            quote: "Accuracy isn't always the best metric, especially with imbalanced datasets. Look at Precision, Recall, and the F1-score for a more complete picture.",
-            caption: "Tip for model evaluation"
-          },
-          {
-            quote: "Always log your experiments, including hyperparameters and results. This discipline is essential for reproducibility and learning from your work.",
-            caption: "Tip for experiment tracking"
-          },
-          {
-            quote: "A fixed learning rate isn't always optimal. Using a scheduler (like `StepLR` or `ReduceLROnPlateau`) can significantly improve training performance.",
-            caption: "Tip for optimization"
-          }
+          { quote: "Naming your training jobs descriptively (e.g., `architecture-dataset-date`) will save you hours of searching in the future. Clean metadata is key!", caption: "Tip for good practices" },
+          { quote: "For image classification, data augmentation like random rotations and flips can drastically improve your model's robustness and prevent overfitting.", caption: "Tip for model performance" },
+          { quote: "Use a smaller learning rate when your model's loss plateaus. This 'fine-tuning' can help the model find a more precise minimum.", caption: "Tip for optimization" },
+          { quote: "Did you know? You can compare multiple training results side-by-side in the 'Model Comparison' section. It's great for analyzing experiments.", caption: "Tip for using MediNet" },
+          { quote: "A `batch size` that is too large can sometimes lead to poor generalization. Experiment with smaller batches to see if it improves your validation accuracy.", caption: "Tip for experimentation" },
+          { quote: "If training accuracy is high but validation accuracy is low, your model is likely overfitting. Try adding dropout layers or more regularization.", caption: "Tip for debugging" },
+          { quote: "Don't just guess hyperparameters! Use techniques like Grid Search or Randomized Search to systematically find the best combination for your model.", caption: "Tip for hyperparameter tuning" },
+          { quote: "Normalizing your input data (scaling it to a range like 0-1 or using standardization) is crucial. It helps your model converge faster and more reliably.", caption: "Tip for data preprocessing" },
+          { quote: "Why train from scratch? Using a pre-trained model (Transfer Learning) and fine-tuning it on your data can yield amazing results with less data and time.", caption: "Tip for efficient training" },
+          { quote: "Accuracy isn't always the best metric, especially with imbalanced datasets. Look at Precision, Recall, and the F1-score for a more complete picture.", caption: "Tip for model evaluation" },
+          { quote: "Always log your experiments, including hyperparameters and results. This discipline is essential for reproducibility and learning from your work.", caption: "Tip for experiment tracking" },
+          { quote: "A fixed learning rate isn't always optimal. Using a scheduler (like `StepLR` or `ReduceLROnPlateau`) can significantly improve training performance.", caption: "Tip for optimization" }
         ];
-
         var randomTip = tips[Math.floor(Math.random() * tips.length)];
         document.getElementById('tip-quote').textContent = randomTip.quote;
         document.getElementById('tip-caption').textContent = randomTip.caption;
@@ -251,144 +285,89 @@
       </script>
       {% endif %}
 
-    </div><!-- /Left Column -->
+    </div><!-- /Featured left -->
 
-    <!-- Right Column: Recent Activity -->
-    <div class="col-lg-5">
-      <div class="card-raised h-100">
+    <!-- Right column stack: Recent Activity → Results → Client Status -->
+    <div class="dashboard-layout-y__stack">
 
-        <!-- Tab header -->
-        <div class="tabs-custom">
-          <button class="tab-btn active" id="tab-activity" onclick="switchTab('activity')">
-            <i data-lucide="clock"></i>
-            Recent Activity
-          </button>
-          <button class="tab-btn" id="tab-notifications" onclick="switchTab('notifications')">
-            <i data-lucide="bell"></i>
-            Notifications
-          </button>
+      <!-- 1. Recent Activity -->
+      <div class="preview-card">
+        <div class="preview-card__icon">
+          <i data-lucide="clock" style="width:16px;height:16px;"></i>
         </div>
-
-        <div class="p-4">
-
-          <!-- Recent Activity Pane -->
-          <div id="pane-activity">
-            {% if recent_jobs %}
-              {% for job in recent_jobs %}
-              <div class="activity-item animate-in">
-                <div class="d-flex align-items-start gap-3">
-                  <div class="flex-grow-1 min-w-0" style="min-width:0;">
-
-                    <div class="mb-2">
-                      {% if job.status == 'completed' %}
-                        <span class="status-badge status-completed">Completed</span>
-                      {% elif job.status == 'failed' %}
-                        <span class="status-badge status-failed">Failed</span>
-                      {% elif job.status == 'running' %}
-                        <span class="status-badge status-running">Running</span>
-                      {% else %}
-                        <span class="status-badge status-pending">Pending</span>
-                      {% endif %}
-                    </div>
-
-                    <h6 class="job-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ job.name }}</h6>
-
-                    <div class="job-meta">
-                      <i data-lucide="clock"></i>
-                      <span>{{ job.created_at|timesince }} ago</span>
-                      {% if job.completed_at %}
-                        <span>&bull;</span>
-                        <span>Duration: {{ job.completed_at|timesince:job.started_at }}</span>
-                      {% endif %}
-                    </div>
-
-                  </div>
-
-                  {% if job.status == 'running' %}
-                  <div class="flex-shrink-0">
-                    <a href="{% url 'dashboard' job.id %}"
-                       class="btn btn-sm btn-outline-secondary-custom"
-                       style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;"
-                       title="View training">
-                      <i data-lucide="eye" style="width:13px;height:13px;"></i>
-                    </a>
-                  </div>
-                  {% endif %}
-
-                </div>
+        <div class="flex-grow-1 min-w-0" style="min-width:0;">
+          <p class="preview-card__title">Recent Activity</p>
+          {% if recent_jobs %}
+            {% for job in recent_jobs|slice:":3" %}
+            <div style="border-top: 1px solid var(--border); padding: 7px 0; margin-top: 4px;">
+              <div class="mb-1">
+                {% if job.status == 'completed' %}
+                  <span class="status-badge status-completed">Completed</span>
+                {% elif job.status == 'failed' %}
+                  <span class="status-badge status-failed">Failed</span>
+                {% elif job.status == 'running' %}
+                  <span class="status-badge status-running">Running</span>
+                {% else %}
+                  <span class="status-badge status-pending">Pending</span>
+                {% endif %}
               </div>
-              {% endfor %}
-            {% else %}
-              <div class="empty-state">
-                <i data-lucide="clock" style="width:36px;height:36px;"></i>
-                <h6 class="mt-3 mb-1">No recent activity</h6>
-                <p class="text-muted" style="font-size:var(--text-sm);margin:0;">Your trainings will appear here once you start</p>
+              <p class="job-title mb-0" style="font-size:var(--text-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ job.name }}</p>
+              <div class="job-meta" style="font-size:10px;">
+                <i data-lucide="clock" style="width:10px;height:10px;"></i>
+                <span>{{ job.created_at|timesince }} ago</span>
               </div>
-            {% endif %}
-          </div><!-- /Recent Activity Pane -->
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="preview-card__desc">Events from jobs, clients and models will appear here as a live log</p>
+            <span class="preview-card__badge">No activity yet</span>
+          {% endif %}
+        </div>
+      </div>
 
-          <!-- Notifications Pane -->
-          <div id="pane-notifications" style="display:none;">
-            {% if recent_notifications %}
-              {% for notification in recent_notifications %}
-              <div class="notification-item animate-in">
-                <div class="d-flex align-items-start gap-3">
-                  <div class="notification-icon">
-                    <i data-lucide="bell"></i>
-                  </div>
-                  <div class="flex-grow-1">
-                    <h6 class="job-title mb-1">{{ notification.title }}</h6>
-                    <p class="job-meta mb-2" style="display:block;">{{ notification.message|truncatechars:100 }}</p>
-                    <div class="d-flex align-items-center justify-content-between">
-                      <small class="text-muted d-flex align-items-center gap-1">
-                        <i data-lucide="clock" style="width:11px;height:11px;"></i>
-                        {{ notification.created_at|timesince }} ago
-                      </small>
-                      {% if notification.link %}
-                      <a href="{{ notification.link }}"
-                         class="btn btn-sm btn-outline-secondary-custom"
-                         style="padding:3px 8px;"
-                         title="Open link">
-                        <i data-lucide="external-link" style="width:12px;height:12px;"></i>
-                      </a>
-                      {% endif %}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {% endfor %}
-            {% else %}
-              <div class="empty-state">
-                <i data-lucide="check-circle" style="width:36px;height:36px;color:var(--color-success);"></i>
-                <h6 class="mt-3 mb-1" style="color:var(--color-success);">All up to date!</h6>
-                <p class="text-muted" style="font-size:var(--text-sm);margin:0;">You have no pending notifications</p>
-              </div>
-            {% endif %}
-          </div><!-- /Notifications Pane -->
+      <!-- 2. Results & Models -->
+      <div class="preview-card">
+        <div class="preview-card__icon">
+          <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+        </div>
+        <div>
+          <p class="preview-card__title">Results &amp; Models</p>
+          {% if stats.total_models > 0 %}
+            <p class="preview-card__desc">
+              <a href="{% url 'models_list' %}" style="color:var(--color-accent);font-weight:600;">
+                {{ stats.total_models }} model{{ stats.total_models|pluralize }} ready
+              </a>
+            </p>
+          {% else %}
+            <p class="preview-card__desc">Completed models ready to download and deploy</p>
+            <span class="preview-card__badge">No models yet</span>
+          {% endif %}
+        </div>
+      </div>
 
-        </div><!-- /p-4 -->
-      </div><!-- /card-raised -->
-    </div><!-- /Right Column -->
+      <!-- 3. Client Status -->
+      <div class="preview-card">
+        <div class="preview-card__icon">
+          <i data-lucide="users" style="width:16px;height:16px;"></i>
+        </div>
+        <div>
+          <p class="preview-card__title">Client Status</p>
+          {% if stats.active_connections > 0 %}
+            <p class="preview-card__desc">
+              <a href="{% url 'datasets' %}" style="color:var(--color-accent);font-weight:600;">
+                {{ stats.active_connections }} node{{ stats.active_connections|pluralize }} connected
+              </a>
+            </p>
+          {% else %}
+            <p class="preview-card__desc">Connected nodes and their health indicators</p>
+            <span class="preview-card__badge">No connections</span>
+          {% endif %}
+        </div>
+      </div>
 
-  </div><!-- /Main Content Row -->
+    </div><!-- /Right column stack -->
+
+  </div><!-- /Layout Y -->
 
 </div><!-- /container-fluid -->
-
-<script>
-function switchTab(tab) {
-  var tabs = ['activity', 'notifications'];
-  tabs.forEach(function(t) {
-    var btn  = document.getElementById('tab-' + t);
-    var pane = document.getElementById('pane-' + t);
-    if (t === tab) {
-      btn.classList.add('active');
-      pane.style.display = '';
-    } else {
-      btn.classList.remove('active');
-      pane.style.display = 'none';
-    }
-  });
-  lucide.createIcons();
-}
-</script>
 {% endblock %}
