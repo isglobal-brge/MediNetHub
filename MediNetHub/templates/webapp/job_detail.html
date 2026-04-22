@@ -152,12 +152,44 @@
                                     <dt class="col-sm-4">Created</dt><dd class="col-sm-8">{{ job.created_at|naturaltime }}</dd>
                                     <dt class="col-sm-4">Duration</dt><dd class="col-sm-8">{{ job.training_duration|default:"N/A" }}</dd>
                                 </dl>
-                                <hr class="my-3">
-                                <div class="d-grid">
-                                    <a href="{% url 'manage_job_artifacts' job.id %}" class="btn btn-outline-primary btn-lg">
-                                        <i data-lucide="list-checks" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Manage & Download Models
+                            </div>
+                        </div>
+
+                        <!-- Model Download -->
+                        <div class="dashboard-card card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i data-lucide="download-cloud" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Download Model</h5>
+                                {% if job.status == 'completed' or job.status == 'Completed' %}
+                                <span class="badge bg-success">Ready</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ job.status|capfirst }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                {% if job.status == 'completed' or job.status == 'Completed' %}
+                                <p class="text-muted small mb-2">Export format</p>
+                                <div class="d-flex gap-2 mb-3 flex-wrap">
+                                    <span class="badge bg-primary py-2 px-3" style="font-size:0.8rem;">JSON</span>
+                                    <span class="badge bg-light text-muted py-2 px-3" style="font-size:0.8rem;" title="Coming soon">ONNX</span>
+                                    <span class="badge bg-light text-muted py-2 px-3" style="font-size:0.8rem;" title="Coming soon">PyTorch</span>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'download_model' job.id %}" class="btn btn-primary">
+                                        <i data-lucide="download" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>Download Model
+                                    </a>
+                                    <a href="{% url 'download_metrics' job.id %}" class="btn btn-outline-secondary">
+                                        <i data-lucide="file-text" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>Export Metrics
+                                    </a>
+                                    <a href="{% url 'manage_job_artifacts' job.id %}" class="btn btn-outline-primary">
+                                        <i data-lucide="list-checks" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>Manage All Artifacts
                                     </a>
                                 </div>
+                                {% else %}
+                                <div class="text-center py-2">
+                                    <i data-lucide="clock" style="width:28px;height:28px;" class="text-muted mb-2"></i>
+                                    <p class="text-muted small mb-0">Available when training completes.</p>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 
