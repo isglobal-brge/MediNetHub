@@ -181,6 +181,9 @@ def user_dashboard(request):
     else:
         connections_count = Connection.objects.filter(user=request.user).count()
 
+    # Get datasets count
+    datasets_count = Dataset.objects.filter(user=request.user).count()
+
     # Get total jobs count
     if selected_project:
         total_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project).count()
@@ -215,7 +218,8 @@ def user_dashboard(request):
         'total_models': models_count,
         'total_jobs': total_jobs,
         'active_connections': connections_count,
-        'success_rate': success_rate
+        'success_rate': success_rate,
+        'datasets_count': datasets_count,
     }
 
     context = {
