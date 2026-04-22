@@ -10,7 +10,7 @@ from flwr.server.strategy import FedAvg, Strategy
 from flwr.server.client_proxy import ClientProxy
 from collections import OrderedDict
 from django.utils import timezone
-from .model_builder import DynamicModel, SequentialModel, create_model
+from .model_builder import DynamicModel, SequentialModel
 from sklearn.svm import SVC
 from sklearn.kernel_approximation import RBFSampler
 import logging

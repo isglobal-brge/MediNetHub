@@ -61,7 +61,9 @@
     </div>
   </div>
 
-  <!-- Ghost action buttons shown below banner when locked -->
+  {% endif %}
+
+  <!-- Action buttons row — ghost when no connections, active once setup complete -->
   <div class="d-flex gap-2 px-4 py-2" style="background:#fff; border-bottom: 1px solid var(--border);">
     {% if stats.active_connections == 0 %}
       <span class="btn-ghost-locked">
@@ -83,7 +85,6 @@
       </a>
     {% endif %}
   </div>
-  {% endif %}
 
   <!-- ===== Stat Cards Row ===== -->
   <div class="row g-4 mb-4">
