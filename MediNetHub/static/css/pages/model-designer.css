@@ -138,15 +138,204 @@
 
 .md-layout {
   display: grid;
-  grid-template-columns: 7fr 5fr;
+  grid-template-columns: 17% 1fr 27%;
   gap: var(--space-5);
   align-items: start;
+}
+
+@media (max-width: 1280px) {
+  .md-layout {
+    grid-template-columns: 19% 1fr 29%;
+  }
 }
 
 @media (max-width: 1024px) {
   .md-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   Layer Picker Sidebar (left column)
+   ============================================================ */
+
+.md-layers-col {
+  min-width: 0;
+  position: sticky;
+  top: var(--space-5);
+}
+
+.md-layer-picker {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.md-lp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.md-lp-title {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  flex: 1;
+}
+
+/* Search bar */
+.md-lp-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-muted);
+}
+
+.md-lp-search {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.md-lp-search::placeholder { color: var(--color-text-muted); }
+
+/* Scrollable body */
+.md-lp-body {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-bottom: 6px;
+}
+
+.md-lp-body::-webkit-scrollbar { width: 3px; }
+.md-lp-body::-webkit-scrollbar-track { background: transparent; }
+.md-lp-body::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+/* Accordion section */
+.md-lp-acc {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.md-lp-acc:last-of-type { border-bottom: none; }
+
+.md-lp-acc-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.md-lp-acc-header:hover { background: var(--color-surface-hover); }
+
+.md-lp-acc-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.md-lp-acc-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.md-lp-acc.is-open .md-lp-acc-chevron { transform: rotate(180deg); }
+
+/* Accordion body */
+.md-lp-acc-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.22s ease;
+}
+
+.md-lp-acc.is-open .md-lp-acc-body { max-height: 300px; }
+
+/* Chips grid */
+.md-lp-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 2px 10px 10px;
+}
+
+.md-lp-chip {
+  text-align: center;
+  padding: 5px 6px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.md-lp-chip:hover {
+  background: rgba(8, 145, 178, 0.08);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Category-colored dot in header */
+.md-lp-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.md-lp-section--dense   .md-lp-chip-dot { background: #3B82F6; }
+.md-lp-section--conv    .md-lp-chip-dot { background: #0891B2; }
+.md-lp-section--pooling .md-lp-chip-dot { background: #8B5CF6; }
+.md-lp-section--act     .md-lp-chip-dot { background: #F59E0B; }
+.md-lp-section--reg     .md-lp-chip-dot { background: #D97706; }
+.md-lp-section--struct  .md-lp-chip-dot { background: #64748B; }
+
+/* Category hover tint */
+.md-lp-section--dense   .md-lp-chip:hover { background: rgba(59,130,246,0.08);  border-color: rgba(59,130,246,0.3);  color: #3B82F6; }
+.md-lp-section--conv    .md-lp-chip:hover { background: rgba(8,145,178,0.08);   border-color: rgba(8,145,178,0.3);   color: #0891B2; }
+.md-lp-section--pooling .md-lp-chip:hover { background: rgba(139,92,246,0.08);  border-color: rgba(139,92,246,0.3);  color: #8B5CF6; }
+.md-lp-section--act     .md-lp-chip:hover { background: rgba(245,158,11,0.08);  border-color: rgba(245,158,11,0.3);  color: #F59E0B; }
+.md-lp-section--reg     .md-lp-chip:hover { background: rgba(217,119,6,0.08);   border-color: rgba(217,119,6,0.3);   color: #D97706; }
+.md-lp-section--struct  .md-lp-chip:hover { background: rgba(100,116,139,0.08); border-color: rgba(100,116,139,0.3); color: #64748B; }
+
+/* Chips that span both columns (long names) */
+.md-lp-chip.full-width { grid-column: span 2; }
+
+/* Search empty state */
+.md-lp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 12px;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
 /* ============================================================
@@ -213,7 +402,8 @@
 }
 
 .md-canvas-body {
-  padding: 20px;
+  padding: 16px;
+  min-height: 300px;
 }
 
 /* Layer list — flex column, centered */
@@ -270,13 +460,13 @@
 
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: 380px;
+  gap: 10px;
+  width: 300px;
   max-width: 100%;
-  padding: 14px 18px;
+  padding: 9px 14px;
   background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(var(--cat-rgb), 0.06) 100%);
   border: 1px solid rgba(var(--cat-rgb), 0.16);
-  border-radius: 18px;
+  border-radius: 12px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset,
               0 0 0 1px rgba(var(--cat-rgb), 0.08),
               0 6px 20px -10px rgba(var(--cat-rgb), 0.14);
@@ -441,7 +631,7 @@
 
 .md-layer-connector {
   width: 2px;
-  height: 14px;
+  height: 24px;
   background: rgba(15, 23, 42, 0.10);
   border-radius: 1px;
   margin: 0 auto;
@@ -2265,15 +2455,15 @@ details[open] .md-collapsible-chevron {
 .md-layer-card-body {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 
 .md-layer-card-icon-wrap {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2308,13 +2498,13 @@ details[open] .md-collapsible-chevron {
 }
 
 .md-layer-card-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--color-text);
 }
 
 .md-layer-card-type {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-muted);
 }
 
@@ -2403,3 +2593,69 @@ details[open] .md-collapsible-chevron {
   background: rgba(8, 145, 178, 0.12);
   color: var(--color-accent);
 }
+
+/* ============================================================
+   Text input used in config panel (Learning Rate, Epochs, etc.)
+   ============================================================ */
+
+.md-text-input {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.md-text-input::-webkit-inner-spin-button,
+.md-text-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+.md-text-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+}
+
+/* Two-col row inside panel (e.g. Epochs + Batch Size) */
+.md-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Metrics toggle chips */
+.md-metric-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.md-metric-chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.md-metric-chip.active {
+  background: rgba(8, 145, 178, 0.10);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.md-metric-chip:hover:not(.active) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Layer picker category color accent */

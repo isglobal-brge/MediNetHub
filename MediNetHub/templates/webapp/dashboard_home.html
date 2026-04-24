@@ -30,15 +30,32 @@
           <p class="setup-banner__sub">Step 4 of 4 — configure and start training</p>
         {% endif %}
       </div>
-      {% if stats.active_connections == 0 %}
-        <a href="{% url 'datasets' %}" class="setup-banner__btn">Add Connection →</a>
-      {% elif stats.datasets_count == 0 %}
-        <a href="{% url 'datasets' %}" class="setup-banner__btn">Go to Datasets →</a>
-      {% elif stats.total_models == 0 %}
-        <a href="{% url 'model_studio' %}" class="setup-banner__btn">Open Model Studio →</a>
-      {% else %}
-        <a href="{% url 'training' %}" class="setup-banner__btn">Start Training →</a>
-      {% endif %}
+      <div class="setup-banner__right">
+        {% if stats.active_connections == 0 %}
+          <span class="setup-banner__ghost-btn">
+            <i data-lucide="lock" style="width:11px;height:11px;"></i>New Training
+          </span>
+          <span class="setup-banner__ghost-btn">
+            <i data-lucide="lock" style="width:11px;height:11px;"></i>Create Model
+          </span>
+        {% else %}
+          <a href="{% url 'training' %}" class="setup-banner__ghost-btn setup-banner__ghost-btn--active">
+            <i data-lucide="play" style="width:11px;height:11px;"></i>New Training
+          </a>
+          <a href="{% url 'model_studio' %}" class="setup-banner__ghost-btn setup-banner__ghost-btn--active">
+            <i data-lucide="boxes" style="width:11px;height:11px;"></i>Create Model
+          </a>
+        {% endif %}
+        {% if stats.active_connections == 0 %}
+          <a href="{% url 'datasets' %}" class="setup-banner__btn">Add Connection →</a>
+        {% elif stats.datasets_count == 0 %}
+          <a href="{% url 'datasets' %}" class="setup-banner__btn">Go to Datasets →</a>
+        {% elif stats.total_models == 0 %}
+          <a href="{% url 'model_studio' %}" class="setup-banner__btn">Open Model Studio →</a>
+        {% else %}
+          <a href="{% url 'training' %}" class="setup-banner__btn">Start Training →</a>
+        {% endif %}
+      </div>
     </div>
     <!-- Progress dots -->
     <div class="setup-banner__progress">
@@ -63,28 +80,6 @@
 
   {% endif %}
 
-  <!-- Action buttons row — ghost when no connections, active once setup complete -->
-  <div class="d-flex gap-2 px-4 py-2" style="background:#fff; border-bottom: 1px solid var(--border);">
-    {% if stats.active_connections == 0 %}
-      <span class="btn-ghost-locked">
-        <i data-lucide="lock" style="width:13px;height:13px;"></i>
-        New Training
-      </span>
-      <span class="btn-ghost-locked">
-        <i data-lucide="lock" style="width:13px;height:13px;"></i>
-        Create Model
-      </span>
-    {% else %}
-      <a href="{% url 'training' %}" class="btn btn-gradient px-4">
-        <i data-lucide="play" style="width:15px;height:15px;margin-right:6px;vertical-align:middle;"></i>
-        New Training
-      </a>
-      <a href="{% url 'model_studio' %}" class="btn btn-outline-secondary-custom px-4">
-        <i data-lucide="boxes" style="width:15px;height:15px;margin-right:6px;vertical-align:middle;"></i>
-        Create Model
-      </a>
-    {% endif %}
-  </div>
 
   <!-- ===== Stat Cards Row ===== -->
   <div class="row g-4 mb-4">
@@ -92,15 +87,24 @@
     <!-- Active Jobs -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--accent animate-in">
-        <p class="stat-label">Active Jobs</p>
-        <p class="stat-value">{{ active_jobs|length }}</p>
-        <div class="progress-custom stat-bar">
-          <div class="progress-bar progress-bar--accent"
-               role="progressbar"
-               style="width: {% if active_jobs|length > 0 %}{{ active_jobs|length }}0{% else %}0{% endif %}%; min-width: 8px;"
-               aria-valuenow="{{ active_jobs|length }}"
-               aria-valuemin="0"
-               aria-valuemax="10"></div>
+        <div class="stat-card__top">
+          <div class="stat-card__icon stat-card__icon--cyan">
+            <i data-lucide="activity"></i>
+          </div>
+          {% if active_jobs %}
+            <div class="stat-card__delta stat-card__delta--up">
+              <i data-lucide="zap"></i> Live
+            </div>
+          {% else %}
+            <div class="stat-card__delta stat-card__delta--neu">—</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="stat-card__value">{{ active_jobs|length }}</div>
+          <div class="stat-card__label">Active Jobs</div>
+        </div>
+        <div class="stat-card__footer">
+          {% if stats.total_jobs > 0 %}{{ stats.total_jobs }} total job{{ stats.total_jobs|pluralize }}{% else %}No jobs yet{% endif %}
         </div>
       </div>
     </div>
@@ -108,31 +112,41 @@
     <!-- Models -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--primary animate-in">
-        <p class="stat-label">Models</p>
-        <a href="{% url 'models_list' %}" class="stat-value text-decoration-none">{{ stats.total_models }}</a>
-        <div class="progress-custom stat-bar">
-          <div class="progress-bar progress-bar--primary"
-               role="progressbar"
-               style="width: 60%; min-width: 8px;"></div>
+        <div class="stat-card__top">
+          <div class="stat-card__icon stat-card__icon--blue">
+            <i data-lucide="layers"></i>
+          </div>
+          <div class="stat-card__delta stat-card__delta--neu">—</div>
+        </div>
+        <div>
+          <a href="{% url 'models_list' %}" class="stat-card__value text-decoration-none">{{ stats.total_models }}</a>
+          <div class="stat-card__label">Models</div>
+        </div>
+        <div class="stat-card__footer">
+          {% if stats.total_models > 0 %}<a href="{% url 'models_list' %}" style="color:#3B82F6;text-decoration:none;">View all →</a>{% else %}No models yet{% endif %}
         </div>
       </div>
     </div>
 
     <!-- Connections -->
     <div class="col-6 col-lg-3">
-      <div class="stat-card stat-card--warning animate-in{% if stats.active_connections == 0 %} stat-card--connections-empty{% endif %}">
-        <p class="stat-label">Connections</p>
-        <a href="{% url 'datasets' %}" class="stat-value text-decoration-none">{{ stats.active_connections }}</a>
-        {% if stats.active_connections == 0 %}
-          <a href="{% url 'datasets' %}" class="stat-cta">
-            <i data-lucide="plus-circle" style="width:11px;height:11px;"></i>
-            Add a connection
-          </a>
-        {% endif %}
-        <div class="progress-custom stat-bar">
-          <div class="progress-bar progress-bar--warning"
-               role="progressbar"
-               style="width: 45%; min-width: 8px;"></div>
+      <div class="stat-card stat-card--warning animate-in">
+        <div class="stat-card__top">
+          <div class="stat-card__icon stat-card__icon--amber">
+            <i data-lucide="database"></i>
+          </div>
+          {% if stats.active_connections > 0 %}
+            <div class="stat-card__delta stat-card__delta--up">Active</div>
+          {% else %}
+            <div class="stat-card__delta stat-card__delta--neu">—</div>
+          {% endif %}
+        </div>
+        <div>
+          <a href="{% url 'datasets' %}" class="stat-card__value text-decoration-none">{{ stats.active_connections }}</a>
+          <div class="stat-card__label">Connections</div>
+        </div>
+        <div class="stat-card__footer">
+          {% if stats.active_connections == 0 %}<a href="{% url 'datasets' %}" style="color:#D97706;text-decoration:none;">Add a connection →</a>{% else %}{{ stats.active_connections }} node{{ stats.active_connections|pluralize }} connected{% endif %}
         </div>
       </div>
     </div>
@@ -140,15 +154,24 @@
     <!-- Success Rate -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--success animate-in">
-        <p class="stat-label">Success Rate</p>
-        <p class="stat-value">{{ stats.success_rate }}<span style="font-size:var(--text-lg);font-weight:600;">%</span></p>
-        <div class="progress-custom stat-bar">
-          <div class="progress-bar progress-bar--success"
-               role="progressbar"
-               style="width: {{ stats.success_rate }}%; min-width: 8px;"
-               aria-valuenow="{{ stats.success_rate }}"
-               aria-valuemin="0"
-               aria-valuemax="100"></div>
+        <div class="stat-card__top">
+          <div class="stat-card__icon stat-card__icon--green">
+            <i data-lucide="check-circle-2"></i>
+          </div>
+          {% if stats.success_rate > 0 %}
+            <div class="stat-card__delta stat-card__delta--up">
+              <i data-lucide="trending-up"></i>
+            </div>
+          {% else %}
+            <div class="stat-card__delta stat-card__delta--neu">—</div>
+          {% endif %}
+        </div>
+        <div>
+          <div class="stat-card__value">{{ stats.success_rate }}<span style="font-size:var(--text-lg);font-weight:600;letter-spacing:0;">%</span></div>
+          <div class="stat-card__label">Success Rate</div>
+        </div>
+        <div class="stat-card__footer">
+          {% if stats.total_jobs > 0 %}{{ stats.total_jobs }} job{{ stats.total_jobs|pluralize }} total{% else %}No jobs yet{% endif %}
         </div>
       </div>
     </div>
@@ -161,7 +184,7 @@
     <!-- Featured left: Active Trainings + Pro Tip -->
     <div class="dashboard-layout-y__featured">
 
-      <div class="card-raised mb-4">
+      <div class="card-raised mb-4" style="flex:1;">
         <div class="card-header-custom d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center gap-2">
             <i data-lucide="play-circle" style="width:16px;height:16px;color:var(--color-accent);"></i>
@@ -293,7 +316,7 @@
 
       <!-- 1. Recent Activity -->
       <div class="preview-card">
-        <div class="preview-card__icon">
+        <div class="preview-card__icon preview-card__icon--cyan">
           <i data-lucide="clock" style="width:16px;height:16px;"></i>
         </div>
         <div class="flex-grow-1 min-w-0" style="min-width:0;">
@@ -328,7 +351,7 @@
 
       <!-- 2. Results & Models -->
       <div class="preview-card">
-        <div class="preview-card__icon">
+        <div class="preview-card__icon preview-card__icon--green">
           <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
         </div>
         <div>
@@ -348,7 +371,7 @@
 
       <!-- 3. Client Status -->
       <div class="preview-card">
-        <div class="preview-card__icon">
+        <div class="preview-card__icon preview-card__icon--indigo">
           <i data-lucide="users" style="width:16px;height:16px;"></i>
         </div>
         <div>

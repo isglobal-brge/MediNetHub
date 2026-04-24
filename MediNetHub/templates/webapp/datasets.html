@@ -100,7 +100,7 @@
     </div>
 
     <!-- Connections Panel (collapsed by default) -->
-    <div class="connections-panel" id="connections-panel" style="display:none;">
+    <div class="connections-panel" id="connections-panel">
         <div class="connections-panel-header">
             <span class="connections-panel-title">
                 <i data-lucide="server" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
@@ -570,8 +570,19 @@
         var btn = document.getElementById('connections-toggle-btn');
 
         function toggle() {
-            var isOpen = panel.style.display !== 'none';
-            panel.style.display = isOpen ? 'none' : 'block';
+            var isOpen = panel.classList.contains('is-open');
+            if (!isOpen) {
+                panel.classList.add('is-open');
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+            } else {
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        panel.classList.remove('is-open');
+                        panel.style.maxHeight = '0';
+                    });
+                });
+            }
             bar.setAttribute('aria-expanded', String(!isOpen));
             btn.classList.toggle('expanded', !isOpen);
             document.getElementById('connections-toggle-text').textContent = isOpen ? 'Manage' : 'Close';

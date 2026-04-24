@@ -33,8 +33,8 @@
 .ds-stepper {
   display: flex;
   align-items: center;
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-6);
+  padding: var(--space-4) 0;
+  margin-bottom: var(--space-5);
   position: relative;
 }
 
@@ -178,15 +178,19 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  margin-top: calc(-1 * var(--space-3));
-  margin-bottom: var(--space-5);
   overflow: hidden;
-  animation: slideDown 0.2s ease;
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  transition: max-height 0.32s ease, opacity 0.22s ease, margin 0.32s ease;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+.connections-panel.is-open {
+  opacity: 1;
+  margin-top: calc(-1 * var(--space-3));
+  margin-bottom: var(--space-5);
+  /* max-height set by JS to exact scrollHeight */
 }
 
 .connections-panel-header {

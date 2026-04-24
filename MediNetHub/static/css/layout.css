@@ -70,6 +70,11 @@
   flex-direction: column;
   gap: var(--space-1);
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebar-item {

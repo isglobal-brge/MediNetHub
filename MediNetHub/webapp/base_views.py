@@ -182,7 +182,7 @@ def user_dashboard(request):
         connections_count = Connection.objects.filter(user=request.user).count()
 
     # Get datasets count
-    datasets_count = Dataset.objects.filter(user=request.user).count()
+    datasets_count = Dataset.objects.filter(connection__user=request.user).count()
 
     # Get total jobs count
     if selected_project:

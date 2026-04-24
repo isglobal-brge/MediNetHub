@@ -43,10 +43,133 @@
   </div>
 </div>
 
-<!-- ===== Two-Column Layout ===== -->
+<!-- ===== Three-Column Layout ===== -->
 <div class="md-layout">
 
-  <!-- ===== LEFT: Network Canvas ===== -->
+  <!-- ===== LEFT: Layer Picker ===== -->
+  <div class="md-layers-col">
+    <div class="md-layer-picker">
+      <div class="md-lp-header">
+        <i data-lucide="layers" style="width:14px;height:14px;color:var(--color-accent);"></i>
+        <span class="md-lp-title">Layers</span>
+      </div>
+
+      <!-- Search -->
+      <div class="md-lp-search-wrap">
+        <i data-lucide="search" style="width:13px;height:13px;"></i>
+        <input type="text" class="md-lp-search" id="lp-search" placeholder="Search..." autocomplete="off">
+      </div>
+
+      <div class="md-lp-body" id="lp-body">
+
+        <!-- Dense -->
+        <div class="md-lp-acc md-lp-section--dense is-open" data-acc>
+          <button class="md-lp-acc-header" data-acc-toggle>
+            <span class="md-lp-chip-dot"></span>
+            <span class="md-lp-acc-title">Dense</span>
+            <i data-lucide="chevron-down" class="md-lp-acc-chevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div class="md-lp-acc-body">
+            <div class="md-lp-chips">
+              <button class="md-lp-chip" data-layer-type="linear">Linear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Convolutional -->
+        <div class="md-lp-acc md-lp-section--conv is-open" data-acc>
+          <button class="md-lp-acc-header" data-acc-toggle>
+            <span class="md-lp-chip-dot"></span>
+            <span class="md-lp-acc-title">Convolutional</span>
+            <i data-lucide="chevron-down" class="md-lp-acc-chevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div class="md-lp-acc-body">
+            <div class="md-lp-chips">
+              <button class="md-lp-chip" data-layer-type="conv1d">Conv1D</button>
+              <button class="md-lp-chip" data-layer-type="conv2d">Conv2D</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pooling -->
+        <div class="md-lp-acc md-lp-section--pooling is-open" data-acc>
+          <button class="md-lp-acc-header" data-acc-toggle>
+            <span class="md-lp-chip-dot"></span>
+            <span class="md-lp-acc-title">Pooling</span>
+            <i data-lucide="chevron-down" class="md-lp-acc-chevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div class="md-lp-acc-body">
+            <div class="md-lp-chips">
+              <button class="md-lp-chip" data-layer-type="maxpool1d">MaxPool1D</button>
+              <button class="md-lp-chip" data-layer-type="maxpool2d">MaxPool2D</button>
+              <button class="md-lp-chip" data-layer-type="avgpool1d">AvgPool1D</button>
+              <button class="md-lp-chip" data-layer-type="avgpool2d">AvgPool2D</button>
+              <button class="md-lp-chip full-width" data-layer-type="adaptive_avg_pool1d">AdaptAvgPool1D</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activation -->
+        <div class="md-lp-acc md-lp-section--act is-open" data-acc>
+          <button class="md-lp-acc-header" data-acc-toggle>
+            <span class="md-lp-chip-dot"></span>
+            <span class="md-lp-acc-title">Activation</span>
+            <i data-lucide="chevron-down" class="md-lp-acc-chevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div class="md-lp-acc-body">
+            <div class="md-lp-chips">
+              <button class="md-lp-chip" data-layer-type="activation_relu">ReLU</button>
+              <button class="md-lp-chip" data-layer-type="activation_sigmoid">Sigmoid</button>
+              <button class="md-lp-chip" data-layer-type="activation_softmax">Softmax</button>
+              <button class="md-lp-chip" data-layer-type="activation_tanh">Tanh</button>
+              <button class="md-lp-chip" data-layer-type="activation_leakyrelu">LeakyReLU</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Regularization -->
+        <div class="md-lp-acc md-lp-section--reg is-open" data-acc>
+          <button class="md-lp-acc-header" data-acc-toggle>
+            <span class="md-lp-chip-dot"></span>
+            <span class="md-lp-acc-title">Regularization</span>
+            <i data-lucide="chevron-down" class="md-lp-acc-chevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div class="md-lp-acc-body">
+            <div class="md-lp-chips">
+              <button class="md-lp-chip" data-layer-type="dropout">Dropout</button>
+              <button class="md-lp-chip" data-layer-type="batch_norm1d">BatchNorm1D</button>
+              <button class="md-lp-chip" data-layer-type="batch_norm2d">BatchNorm2D</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Structural -->
+        <div class="md-lp-acc md-lp-section--struct is-open" data-acc>
+          <button class="md-lp-acc-header" data-acc-toggle>
+            <span class="md-lp-chip-dot"></span>
+            <span class="md-lp-acc-title">Structural</span>
+            <i data-lucide="chevron-down" class="md-lp-acc-chevron" style="width:12px;height:12px;"></i>
+          </button>
+          <div class="md-lp-acc-body">
+            <div class="md-lp-chips">
+              <button class="md-lp-chip" data-layer-type="flatten">Flatten</button>
+              <button class="md-lp-chip" data-layer-type="lstm">LSTM</button>
+              <button class="md-lp-chip" data-layer-type="gru">GRU</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search empty state -->
+        <div class="md-lp-empty" id="lp-empty" style="display:none;">
+          <i data-lucide="search-x" style="width:20px;height:20px;color:var(--color-text-muted);"></i>
+          <span>No results</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CENTER: Network Canvas ===== -->
   <div class="md-canvas-col">
     <div class="md-canvas card-flat">
 
@@ -76,7 +199,7 @@
           <div class="md-layer-card md-layer-card--io" id="input-layer-card" data-layer-id="input">
             <div class="md-layer-card-body">
               <div class="md-layer-card-icon-wrap md-layer-card-icon-wrap--input">
-                <i data-lucide="log-in" style="width:16px;height:16px;"></i>
+                <i data-lucide="log-in" style="width:13px;height:13px;"></i>
               </div>
               <div class="md-layer-card-info">
                 <span class="md-layer-card-name">Input</span>
@@ -88,22 +211,14 @@
           <!-- Dynamic layers will be inserted here -->
           <div id="dynamic-layers-container"></div>
 
-          <!-- Insert button above output -->
-          <div class="md-insert-row" id="insert-row">
-            <button class="md-insert-btn" id="main-add-layer-btn">
-              <i data-lucide="plus" style="width:14px;height:14px;"></i>
-              Add Layer
-            </button>
-          </div>
-
-          <!-- Connector before output -->
-          <div class="md-layer-connector" id="pre-output-connector" style="display:none;"></div>
+          <!-- Connector to output -->
+          <div class="md-layer-connector" id="pre-output-connector"></div>
 
           <!-- Output layer (always present) -->
           <div class="md-layer-card md-layer-card--io" id="output-layer-card" data-layer-id="output">
             <div class="md-layer-card-body">
               <div class="md-layer-card-icon-wrap md-layer-card-icon-wrap--output">
-                <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+                <i data-lucide="log-out" style="width:13px;height:13px;"></i>
               </div>
               <div class="md-layer-card-info">
                 <span class="md-layer-card-name">Output</span>
@@ -186,16 +301,10 @@
 
         <!-- Learning Rate -->
         <div class="md-field-group">
-          <label class="md-field-label" for="learning-rate-input">
-            Learning Rate
-            <span class="md-field-meta" id="lr-display">0.001</span>
-          </label>
-          <div class="md-slider-row">
-            <span class="md-slider-bound">1e-5</span>
-            <input type="range" class="md-slider" id="learning-rate-input"
-                   min="-5" max="-1" step="0.1" value="-3">
-            <span class="md-slider-bound">0.1</span>
-          </div>
+          <label class="md-field-label" for="learning-rate-input">Learning Rate</label>
+          <input type="number" class="md-text-input" id="learning-rate-input"
+                 min="0.00001" max="0.1" step="any" value="0.001"
+                 placeholder="e.g. 0.001">
         </div>
 
         <!-- Loss Function -->
@@ -290,80 +399,6 @@
 </div><!-- /md-layout -->
 
 <!-- ===== Add Layer Popover ===== -->
-<div class="md-add-layer-popover-overlay" id="add-layer-overlay" style="display:none;">
-  <div class="md-add-layer-popover" id="add-layer-popover">
-    <div class="md-alp-header">
-      <span class="md-alp-title">Add Layer</span>
-      <button class="md-alp-close" id="add-layer-close">
-        <i data-lucide="x" style="width:16px;height:16px;"></i>
-      </button>
-    </div>
-    <div class="md-alp-body">
-
-      <!-- Dense -->
-      <div class="md-alp-section">
-        <div class="md-alp-section-label">Dense</div>
-        <div class="md-alp-chips">
-          <button class="md-alp-chip" data-layer-type="linear">Linear</button>
-        </div>
-      </div>
-
-      <!-- Convolutional -->
-      <div class="md-alp-section">
-        <div class="md-alp-section-label">Convolutional</div>
-        <div class="md-alp-chips">
-          <button class="md-alp-chip" data-layer-type="conv1d">Conv1D</button>
-          <button class="md-alp-chip" data-layer-type="conv2d">Conv2D</button>
-        </div>
-      </div>
-
-      <!-- Pooling -->
-      <div class="md-alp-section">
-        <div class="md-alp-section-label">Pooling</div>
-        <div class="md-alp-chips">
-          <button class="md-alp-chip" data-layer-type="maxpool1d">MaxPool1D</button>
-          <button class="md-alp-chip" data-layer-type="maxpool2d">MaxPool2D</button>
-          <button class="md-alp-chip" data-layer-type="avgpool1d">AvgPool1D</button>
-          <button class="md-alp-chip" data-layer-type="avgpool2d">AvgPool2D</button>
-          <button class="md-alp-chip" data-layer-type="adaptive_avg_pool1d">AdaptAvgPool1D</button>
-        </div>
-      </div>
-
-      <!-- Activation -->
-      <div class="md-alp-section">
-        <div class="md-alp-section-label">Activation</div>
-        <div class="md-alp-chips">
-          <button class="md-alp-chip" data-layer-type="activation_relu">ReLU</button>
-          <button class="md-alp-chip" data-layer-type="activation_sigmoid">Sigmoid</button>
-          <button class="md-alp-chip" data-layer-type="activation_softmax">Softmax</button>
-          <button class="md-alp-chip" data-layer-type="activation_tanh">Tanh</button>
-          <button class="md-alp-chip" data-layer-type="activation_leakyrelu">LeakyReLU</button>
-        </div>
-      </div>
-
-      <!-- Regularization -->
-      <div class="md-alp-section">
-        <div class="md-alp-section-label">Regularization</div>
-        <div class="md-alp-chips">
-          <button class="md-alp-chip" data-layer-type="dropout">Dropout</button>
-          <button class="md-alp-chip" data-layer-type="batch_norm1d">BatchNorm1D</button>
-          <button class="md-alp-chip" data-layer-type="batch_norm2d">BatchNorm2D</button>
-        </div>
-      </div>
-
-      <!-- Structural -->
-      <div class="md-alp-section">
-        <div class="md-alp-section-label">Structural</div>
-        <div class="md-alp-chips">
-          <button class="md-alp-chip" data-layer-type="flatten">Flatten</button>
-          <button class="md-alp-chip" data-layer-type="lstm">LSTM</button>
-          <button class="md-alp-chip" data-layer-type="gru">GRU</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
 
 <!-- ===== JSON Preview Modal ===== -->
 <div class="modal fade" id="json-preview-modal" tabindex="-1">
@@ -542,7 +577,6 @@
   =================================================================== */
   function renderLayers() {
     var container = document.getElementById('dynamic-layers-container');
-    var preConnector = document.getElementById('pre-output-connector');
 
     // Clear existing dynamic content
     while (container.firstChild) container.removeChild(container.firstChild);
@@ -557,13 +591,6 @@
       var card = buildLayerCard(layer, idx);
       container.appendChild(card);
     });
-
-    // Show/hide pre-output connector
-    if (layers.length > 0) {
-      preConnector.style.display = 'block';
-    } else {
-      preConnector.style.display = 'none';
-    }
 
     // Update count badge
     var badge = document.getElementById('layer-count-badge');
@@ -593,7 +620,7 @@
     iconWrap.className = 'md-layer-card-icon-wrap';
     var icon = document.createElement('i');
     icon.setAttribute('data-lucide', meta.icon);
-    icon.style.cssText = 'width:16px;height:16px;';
+    icon.style.cssText = 'width:13px;height:13px;';
     iconWrap.appendChild(icon);
 
     // Info
@@ -907,7 +934,6 @@
     markUnsaved();
     renderLayers();
     selectLayer(layer.id);
-    closeAddLayerPopover();
   }
 
   function removeLayer(layerId) {
@@ -943,20 +969,6 @@
     isUnsaved = false;
     var badge = document.getElementById('unsaved-badge');
     if (badge) badge.style.display = 'none';
-  }
-
-  /* ===================================================================
-     ADD LAYER POPOVER
-  =================================================================== */
-  function openAddLayerPopover() {
-    var overlay = document.getElementById('add-layer-overlay');
-    overlay.style.display = 'flex';
-    lucide.createIcons();
-  }
-
-  function closeAddLayerPopover() {
-    var overlay = document.getElementById('add-layer-overlay');
-    overlay.style.display = 'none';
   }
 
   /* ===================================================================
@@ -1013,7 +1025,7 @@
       model_name: document.getElementById('model-name-input').value.trim(),
       model_description: document.getElementById('model-description-input').value.trim(),
       optimizer: document.getElementById('optimizer-value').value,
-      learning_rate: Math.pow(10, parseFloat(document.getElementById('learning-rate-input').value)),
+      learning_rate: parseFloat(document.getElementById('learning-rate-input').value) || 0.001,
       loss_function: document.getElementById('loss-value').value,
       layers: layers.map(function(l) {
         return { type: l.type, params: Object.assign({}, l.params) };
@@ -1135,11 +1147,9 @@
         var optVal = cfg.optimizer || 'adam';
         setRichDropdown('optimizer', optVal);
 
-        // Learning rate (log scale)
+        // Learning rate
         var lr = cfg.learning_rate || 0.001;
-        var logLr = Math.log10(lr);
-        document.getElementById('learning-rate-input').value = logLr;
-        document.getElementById('lr-display').textContent = lr.toExponential ? lr.toExponential(1) : lr;
+        document.getElementById('learning-rate-input').value = lr;
 
         // Loss
         var lossVal = cfg.loss_function || 'cross_entropy';
@@ -1284,14 +1294,11 @@
   }
 
   /* ===================================================================
-     LEARNING RATE SLIDER
+     LEARNING RATE INPUT
   =================================================================== */
   function initLrSlider() {
-    var slider = document.getElementById('learning-rate-input');
-    var display = document.getElementById('lr-display');
-    slider.addEventListener('input', function() {
-      var val = Math.pow(10, parseFloat(slider.value));
-      display.textContent = val.toExponential(1);
+    var input = document.getElementById('learning-rate-input');
+    input.addEventListener('input', function() {
       markUnsaved();
     });
   }
@@ -1390,19 +1397,46 @@
     // LR slider
     initLrSlider();
 
-    // Add layer buttons
-    document.getElementById('main-add-layer-btn').addEventListener('click', openAddLayerPopover);
-
-    document.getElementById('add-layer-close').addEventListener('click', closeAddLayerPopover);
-
-    document.getElementById('add-layer-overlay').addEventListener('click', function(e) {
-      if (e.target === this) closeAddLayerPopover();
-    });
-
-    document.querySelectorAll('.md-alp-chip').forEach(function(chip) {
+    // Sidebar layer picker — chips
+    document.querySelectorAll('.md-lp-chip').forEach(function(chip) {
       chip.addEventListener('click', function() {
         addLayer(chip.getAttribute('data-layer-type'));
       });
+    });
+
+    // Accordion toggle
+    document.querySelectorAll('[data-acc-toggle]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        btn.closest('[data-acc]').classList.toggle('is-open');
+        lucide.createIcons();
+      });
+    });
+
+    // Search filter
+    document.getElementById('lp-search').addEventListener('input', function() {
+      var q = this.value.trim().toLowerCase();
+      var anyVisible = false;
+      document.querySelectorAll('[data-acc]').forEach(function(acc) {
+        if (!q) {
+          // Restore normal accordion state
+          acc.style.display = '';
+          acc.querySelectorAll('.md-lp-chip').forEach(function(c) { c.style.display = ''; });
+          return;
+        }
+        var hasMatch = false;
+        acc.querySelectorAll('.md-lp-chip').forEach(function(chip) {
+          var match = chip.textContent.toLowerCase().indexOf(q) !== -1;
+          chip.style.display = match ? '' : 'none';
+          if (match) hasMatch = true;
+        });
+        acc.style.display = hasMatch ? '' : 'none';
+        if (hasMatch) {
+          acc.classList.add('is-open');
+          anyVisible = true;
+        }
+      });
+      document.getElementById('lp-empty').style.display = (q && !anyVisible) ? 'flex' : 'none';
+      lucide.createIcons();
     });
 
     // Save
