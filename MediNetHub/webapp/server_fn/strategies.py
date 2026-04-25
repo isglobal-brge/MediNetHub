@@ -1415,15 +1415,18 @@ class FedDPRandomForestStrategy(Strategy):
         print(f"  Total trees: {len(self.global_forest)}")
         print(f"  Voting method: {voting_method}")
 
-        # Nota: Esta es una implementación placeholder
-        # En producción, necesitarías reconstruir SecureDPTree desde tree_state
-        # y llamar a tree.predict(X) para cada árbol
+        def _traverse(node: dict, x: np.ndarray) -> int:
+            while node['type'] != 'leaf':
+                node = node['left'] if x[node['feature']] <= node['threshold'] else node['right']
+            return int(node['label'])
 
-        # Por ahora retornamos None ya que no tenemos acceso a SecureDPTree aquí
-        raise NotImplementedError(
-            "Prediction requires SecureDPTree implementation. "
-            "This should be implemented in a separate prediction module."
-        )
+        n_samples = X.shape[0]
+        predictions = np.zeros(n_samples, dtype=int)
+        for i in range(n_samples):
+            votes = [_traverse(ts['tree_structure'], X[i]) for ts in self.global_forest]
+            unique, counts = np.unique(votes, return_counts=True)
+            predictions[i] = unique[np.argmax(counts)]
+        return predictions
 
     def get_privacy_report(self) -> Dict:
         """Generar reporte de privacidad"""

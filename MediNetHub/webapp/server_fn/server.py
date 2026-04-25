@@ -100,27 +100,39 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
             return {}
         
         # Extract metrics and weights (number of examples)
+        import math
         accuracies = []
         losses = []
         precisions = []
         recalls = []
         f1_scores = []
+        epsilon_values = []  # collect valid per-client cumulative ε values
         total_examples = 0
-        
+
         for num_examples, client_metrics in metrics:
             total_examples += num_examples
-            
+
             # Get metrics with defaults
             accuracies.append(num_examples * client_metrics.get("accuracy", 0.0))
             losses.append(num_examples * client_metrics.get("loss", 1.0))
             precisions.append(num_examples * client_metrics.get("precision", 0.0))
             recalls.append(num_examples * client_metrics.get("recall", 0.0))
             f1_scores.append(num_examples * client_metrics.get("f1", 0.0))
-        
+
+            # Node sends privacy_epsilon as a float; -1.0 means DP failed / non-finite.
+            raw_eps = client_metrics.get("privacy_epsilon")
+            if raw_eps is not None:
+                try:
+                    eps_float = float(raw_eps)
+                    if math.isfinite(eps_float) and eps_float > 0.0:
+                        epsilon_values.append(eps_float)
+                except (TypeError, ValueError):
+                    pass
+
         if total_examples == 0:
             print("⚠️ No examples found in metrics")
             return {}
-        
+
         # Calculate weighted averages
         aggregated = {
             "accuracy": sum(accuracies) / total_examples,
@@ -129,10 +141,24 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
             "recall": sum(recalls) / total_examples,
             "f1": sum(f1_scores) / total_examples,
         }
-        
+
         print(f"✅ Aggregated metrics: {aggregated}")
+
+        # Persist DP accounting: worst-case (max) ε across all reporting clients.
+        # Overwrite on every round so job.privacy_epsilon always reflects the
+        # latest cumulative spend (Opacus accumulates ε across rounds internally).
+        if epsilon_values:
+            worst_case_eps = max(epsilon_values)
+            try:
+                server_manager.job.privacy_epsilon = worst_case_eps
+                server_manager.job.privacy_delta = 1e-5  # matches Node _DP_DELTA
+                server_manager.job.save(update_fields=['privacy_epsilon', 'privacy_delta'])
+                print(f"[DP] Saved job privacy_epsilon={worst_case_eps:.4f} (δ=1e-5, {len(epsilon_values)} clients)")
+            except Exception as dp_save_exc:
+                print(f"[DP] Could not save privacy_epsilon to job: {dp_save_exc}")
+
         # saving metrics to database
-        
+
         current_round = getattr(strategy_instance, 'current_round', 0)
         if current_round > 0:
             round_start_time = getattr(strategy_instance, 'round_start_time', None)

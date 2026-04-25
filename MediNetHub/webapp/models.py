@@ -161,7 +161,18 @@ class TrainingJob(models.Model):
     # NUEVO CAMPO: Frecuencia de guardado de checkpoints.
     # 0 o nulo significa guardar solo el modelo final.
     save_frequency = models.PositiveIntegerField(default=0, null=True, blank=True, help_text="Save a checkpoint every X rounds. 0 to save only the final model.")
-    
+
+    # Differential-privacy accounting: populated when Flower reports final metrics.
+    # None means training has not completed or DP was not active.
+    privacy_epsilon = models.FloatField(
+        null=True, blank=True,
+        help_text="Accumulated ε reported by the Node after training (lower = stronger privacy).",
+    )
+    privacy_delta = models.FloatField(
+        null=True, blank=True,
+        help_text="δ value used when computing ε (typically 1e-5).",
+    )
+
     def __str__(self):
         return f"{self.name} ({self.status})"
 

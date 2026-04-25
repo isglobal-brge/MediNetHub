@@ -155,6 +155,38 @@
                             </div>
                         </div>
 
+                        <!-- Differential Privacy -->
+                        <div class="dashboard-card card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i data-lucide="shield" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Differential Privacy</h5>
+                                {% if job.privacy_epsilon is not None %}
+                                <span class="badge bg-info text-dark">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                {% if job.privacy_epsilon is not None %}
+                                <dl class="row mb-0 param-table">
+                                    <dt class="col-sm-5">Epsilon (ε)</dt>
+                                    <dd class="col-sm-7">
+                                        <code>{{ job.privacy_epsilon|floatformat:4 }}</code>
+                                        <small class="text-muted d-block">Lower = stronger privacy</small>
+                                    </dd>
+                                    {% if job.privacy_delta is not None %}
+                                    <dt class="col-sm-5">Delta (δ)</dt>
+                                    <dd class="col-sm-7"><code>1e-5</code></dd>
+                                    {% endif %}
+                                </dl>
+                                {% else %}
+                                <div class="text-center py-2">
+                                    <i data-lucide="shield-off" style="width:28px;height:28px;" class="text-muted mb-2"></i>
+                                    <p class="text-muted small mb-0">No differential privacy applied to this job.</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <!-- Model Download -->
                         <div class="dashboard-card card mb-4">
                             <div class="card-header d-flex justify-content-between align-items-center">
