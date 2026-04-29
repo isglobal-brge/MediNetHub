@@ -134,7 +134,7 @@ def model_designer(request):
     } for model in model_configs]
 
     selected_datasets = request.session.get('selected_datasets', [])
-    
+
     context = {
         'model_configs': models_list,
         'layer_types': layer_types,
@@ -143,6 +143,7 @@ def model_designer(request):
         'strategy_types': strategy_types,
         'previous_step_completed': True,
         'selected_datasets': selected_datasets,
+        'selected_datasets_json': json.dumps(selected_datasets),
         'edit_mode': edit_mode,
         'edit_model': edit_model,
         'edit_model_json': edit_model_json,
@@ -341,11 +342,24 @@ def save_model_config(request):
             
             # Get config from unified structure
             config_json = data.get('config', {})
-            
-            # Extract from unified structure
-            name = config_json.get('basic_info', {}).get('name', '')
-            description = config_json.get('basic_info', {}).get('description', '')
-            model_type = config_json.get('metadata', {}).get('model_type', 'dl')
+
+            # Accept both payload shapes:
+            #  - UI shape:   { model_name, config: { model_name, ... } }
+            #  - API shape:  { config: { basic_info: { name }, metadata: { ... } } }
+            name = (
+                config_json.get('basic_info', {}).get('name')
+                or config_json.get('model_name')
+                or data.get('model_name', '')
+            )
+            description = (
+                config_json.get('basic_info', {}).get('description')
+                or config_json.get('model_description')
+                or data.get('model_description', '')
+            )
+            model_type = (
+                config_json.get('metadata', {}).get('model_type')
+                or config_json.get('type', 'dl')
+            )
             framework = config_json.get('metadata', {}).get('framework', 'pytorch')
             
             if not name:

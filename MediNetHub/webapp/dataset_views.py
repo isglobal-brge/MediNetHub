@@ -175,9 +175,9 @@ def datasets(request):
             connection_id = int(request.POST.get('connection_id'))
             try:
                 connection = get_object_or_404(Connection, pk=connection_id, user=request.user)
-                # Validar puerto en rango permitido (5000-5099)
-                if not (8000 <= connection.port <= 8099):
-                    messages.error(request, f'Port {connection.port} is not allowed. Use ports 5000-5099')
+                # Validate port is in allowed range (any valid TCP port)
+                if not (1 <= connection.port <= 65535):
+                    messages.error(request, f'Port {connection.port} is not a valid port number (1–65535).')
                     return redirect('datasets')
                 
                 url_scheme = "http" 
@@ -386,6 +386,11 @@ def datasets(request):
                         # Remove any characters that aren't alphanumeric or hyphens
                         import re
                         safe_dataset_name = re.sub(r'[^a-z0-9-]', '', safe_dataset_name)
+                        # Privacy budget from Node (None if the dataset has no policy yet)
+                        privacy_policy = None
+                        if 'privacy_policy' in conn_data and i < len(conn_data['privacy_policy']):
+                            privacy_policy = conn_data['privacy_policy'][i]
+
                         dataset_info = {
                             'id': f"ds-{conn_id_str}-{safe_dataset_name}",
                             'connection': connection_obj,
@@ -402,7 +407,8 @@ def datasets(request):
                             'target_column': target_column,
                             'metadata': metadata,
                             'features_info': features_info,
-                            'target_info': target_info
+                            'target_info': target_info,
+                            'privacy_policy': privacy_policy,  # DP budget from Node
                         }
                         
                         # Check if selected
@@ -554,7 +560,8 @@ def store_selected_datasets(request):
                         'name': new_dataset['connection']['name'],
                         'ip': new_dataset['connection']['ip'],
                         'port': new_dataset['connection']['port']
-                    }
+                    },
+                    'privacy_policy': new_dataset.get('privacy_policy'),  # DP budget from Node
                 }
 
                 current_datasets.append(clean_dataset)
@@ -839,3 +846,79 @@ def dataset_detail_view(request, dataset_id):
     except Exception as e:
         messages.error(request, f"Error loading dataset details: {str(e)}")
         return redirect('datasets')
+
+
+@login_required
+def dataset_info_api(request, dataset_id):
+    """
+    Lightweight API called by Model Designer when ?dataset_id= is in the URL.
+    Returns num_features (input) and num_classes (output) so the designer
+    can pre-fill the first and last Linear layers automatically.
+
+    dataset_id format: "ds-<connection_id>-<safe_dataset_name>"
+    """
+    try:
+        if not dataset_id.startswith('ds-'):
+            return JsonResponse({'success': False, 'error': 'Invalid dataset id format'}, status=400)
+
+        id_without_prefix = dataset_id[3:]
+        parts = id_without_prefix.split('-', 1)
+        if len(parts) != 2:
+            return JsonResponse({'success': False, 'error': 'Invalid dataset id format'}, status=400)
+
+        conn_id_str, safe_dataset_name = parts
+
+        session_datasets = request.session.get('datasets', {})
+        if conn_id_str not in session_datasets:
+            return JsonResponse({'success': False, 'error': 'Dataset not found in session'}, status=404)
+
+        conn_data = session_datasets[conn_id_str]
+        dataset_names = conn_data.get('dataset_name', [])
+        dataset_index = None
+        actual_name = None
+
+        for i, name in enumerate(dataset_names):
+            safe = name.replace(' ', '-').replace('_', '-').lower()
+            safe = re.sub(r'[^a-z0-9-]', '', safe)
+            if safe == safe_dataset_name:
+                dataset_index = i
+                actual_name = name
+                break
+
+        if dataset_index is None:
+            return JsonResponse({'success': False, 'error': 'Dataset not found'}, status=404)
+
+        num_columns = conn_data.get('num_columns', [0])[dataset_index] if isinstance(conn_data.get('num_columns', []), list) else conn_data.get('num_columns', 0)
+        target_column = conn_data.get('target_column', [None])[dataset_index] if isinstance(conn_data.get('target_column', []), list) else conn_data.get('target_column', 'unknown')
+
+        # num_features = all columns minus the target column
+        num_features = max(1, int(num_columns) - 1)
+
+        # Extract num_classes from metadata if available
+        metadata_raw = conn_data.get('metadata', [{}])[dataset_index] if isinstance(conn_data.get('metadata', []), list) else conn_data.get('metadata', {})
+        metadata = {}
+        if isinstance(metadata_raw, str):
+            try:
+                metadata = json.loads(metadata_raw)
+            except json.JSONDecodeError:
+                pass
+        elif isinstance(metadata_raw, dict):
+            metadata = metadata_raw
+
+        statistical_summary = metadata.get('statistical_summary', {})
+        target_info_raw = statistical_summary.get('target_info', {})
+        num_classes = target_info_raw.get('num_classes', 0) or target_info_raw.get('output_neurons', 0)
+        if not num_classes:
+            num_classes = 2  # safe default for binary classification
+
+        return JsonResponse({
+            'success': True,
+            'dataset_name': actual_name,
+            'num_features': num_features,
+            'num_classes': int(num_classes),
+            'target_column': target_column,
+            'num_columns': int(num_columns),
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

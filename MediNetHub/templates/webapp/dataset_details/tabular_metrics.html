@@ -1,142 +1,487 @@
 {% load humanize %}
 {% load dataset_filters %}
-<!-- Tabular Dataset Metrics - Professional Medical Style -->
 
 {% if dataset.metadata %}
-<!-- Metadata Analysis -->
 {% if dataset.metadata.statistical_summary.statistical_summary %}
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card-flat">
-            <div class="card-header-custom d-flex justify-content-between align-items-center">
-                <span class="d-flex align-items-center gap-2">
-                    <i data-lucide="bar-chart-2" style="width:14px;height:14px;color:var(--color-accent);"></i>
-                    Metadata Analysis
-                </span>
-                <small style="color:var(--color-text-secondary);">
-                    <i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>Last updated
-                </small>
-            </div>
-            <div class="card-body" style="background-color: #fff;">
-                <div class="mb-3">
-                    <p class="text-muted mb-0" style="font-size: 14px;">
-                        Statistical Summary for {{ dataset.num_columns|default:"13" }} columns
-                    </p>
-                </div>
-                
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" style="font-size: 14px;">
-                        <thead style="background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
-                            <tr>
-                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Column</th>
-                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Type</th>
-                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Mean</th>
-                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Median</th>
-                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">Std Dev</th>
-                                <th style="padding: 12px; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #495057;">P5 - P95</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for column, stats in dataset.metadata.statistical_summary.statistical_summary.items %}
-                            <tr style="border-bottom: 1px solid #f1f3f4;">
-                                <td style="padding: 12px; vertical-align: middle;">
-                                    <strong style="color: #1f2937;">{{ column }}</strong>
-                                    {% if column == dataset.target_column %}
-                                        <span class="badge ms-2" style="background-color: #f59e0b; color: white; font-size: 10px;">Target</span>
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px; vertical-align: middle;">
-                                    <span class="badge" style="background-color: #6b7280; color: white; font-size: 10px;">
-                                        {% if dataset.metadata.statistical_summary.column_types %}
-                                            {{ dataset.metadata.statistical_summary.column_types|lookup:column|default:"numeric" }}
-                                        {% else %}
-                                            numeric
-                                        {% endif %}
-                                    </span>
-                                </td>
-                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
-                                    {% if stats.mean %}
-                                        {{ stats.mean|floatformat:2 }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
-                                    {% if stats.median is not None %}
-                                        {{ stats.median|floatformat:2 }}
-                                    {% else %}
-                                        {{ stats|lookup:"50%"|default:"-"|floatformat:2 }}
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
-                                    {% if stats.std is not None %}
-                                        {{ stats.std|floatformat:2 }}
-                                    {% else %}
-                                        {{ stats.stddev|default:"-"|floatformat:2 }}
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px; vertical-align: middle; color: #4b5563;">
-                                    {% if stats.p5 is not None and stats.p95 is not None %}
-                                        {{ stats.p5|floatformat:1 }} - {{ stats.p95|floatformat:1 }}
-                                    {% else %}
-                                        {% with p5_val=stats|lookup:"5%" p95_val=stats|lookup:"95%" %}
-                                            {% if p5_val and p95_val %}
-                                                {{ p5_val|floatformat:1 }} - {{ p95_val|floatformat:1 }}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        {% endwith %}
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+
+<style>
+/* ── Stats Table Card ──────────────────────────────────────── */
+.stc-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.stc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+}
+.stc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: .01em;
+}
+.stc-badge {
+  background: rgba(8,145,178,.12);
+  color: var(--color-accent);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: .03em;
+}
+.stc-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 5px 10px;
+}
+.stc-search input {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--color-text);
+  outline: none;
+  width: 160px;
+}
+.stc-search input::placeholder { color: var(--color-text-muted); }
+
+/* ── Table ──────────────────────────────────────────────────── */
+.stc-scroll { overflow-x: auto; }
+.stc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.stc-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface-secondary);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--color-border);
+  white-space: nowrap;
+  z-index: 2;
+}
+.stc-table thead th:first-child { border-left: 3px solid var(--color-accent); padding-left: 16px; }
+
+.stc-row { transition: background .12s; cursor: default; }
+.stc-row:hover td { background: var(--color-surface-hover); }
+.stc-row td {
+  padding: 11px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+}
+.stc-row td:first-child {
+  border-left: 3px solid transparent;
+  padding-left: 16px;
+}
+.stc-row.is-target td { background: rgba(245,158,11,.04); }
+.stc-row.is-target td:first-child { border-left-color: #f59e0b; }
+.stc-row.st-hidden { display: none; }
+
+/* ── Column name cell ───────────────────────────────────────── */
+.col-name {
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.target-dot {
+  width: 6px; height: 6px;
+  background: #f59e0b;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.target-chip {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  background: rgba(245,158,11,.15);
+  color: #b45309;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* ── Type badges ────────────────────────────────────────────── */
+.st-type {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.st-type--num  { background: rgba(8,145,178,.12); color: var(--color-accent); }
+.st-type--cat  { background: rgba(139,92,246,.12); color: #7c3aed; }
+.st-type--bool { background: rgba(5,150,105,.12);  color: var(--color-success); }
+.st-type--other{ background: var(--color-surface-hover); color: var(--color-text-muted); }
+
+/* ── Numeric value cells ────────────────────────────────────── */
+.num-val { color: var(--color-text); }
+.num-em  { color: var(--color-accent); font-weight: 600; }
+.num-muted { color: var(--color-text-muted); }
+
+/* ── Sparkline ──────────────────────────────────────────────── */
+.spark-wrap {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  min-width: 90px;
+  overflow: visible;
+}
+.spark-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(8,145,178,.25), rgba(8,145,178,.55));
+}
+.spark-median {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  background: var(--color-accent);
+  border-radius: 1px;
+  transform: translateX(-50%);
+}
+.spark-mean {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: #f59e0b;
+  border-radius: 1px;
+  transform: translateX(-50%);
+  opacity: .85;
+}
+.spark-legend {
+  display: flex;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.spark-legend-dot {
+  display: inline-block;
+  width: 2px; height: 9px;
+  border-radius: 1px;
+  vertical-align: middle;
+  margin-right: 2px;
+  position: relative;
+  top: -1px;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.stc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-surface-secondary);
+}
+.stc-footer-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stc-legend {
+  display: flex;
+  gap: 12px;
+}
+.stc-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+</style>
+
+<div class="stc-wrap">
+
+  <!-- Header -->
+  <div class="stc-header">
+    <div class="stc-header-left">
+      <i data-lucide="bar-chart-2" style="width:15px;height:15px;color:var(--color-accent);flex-shrink:0;"></i>
+      <span class="stc-title">Feature Statistics</span>
+      <span class="stc-badge">{{ dataset.num_columns|default:"—" }} columns</span>
     </div>
+    <div class="stc-search" id="stc-search-box">
+      <i data-lucide="search" style="width:12px;height:12px;color:var(--color-text-muted);flex-shrink:0;"></i>
+      <input type="text" id="stc-search-input" placeholder="Filter columns…" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="stc-scroll">
+    <table class="stc-table" id="stc-table">
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Type</th>
+          <th>Mean</th>
+          <th>Median</th>
+          <th>Std Dev</th>
+          <th>P5 → P95</th>
+          <th style="min-width:130px;">Distribution</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for column, stats in dataset.metadata.statistical_summary.statistical_summary.items %}
+        {% with col_type=dataset.metadata.statistical_summary.column_types|lookup:column|default:"numeric" %}
+        <tr class="stc-row {% if column == dataset.target_column %}is-target{% endif %}"
+            data-col="{{ column|lower }}">
+
+          <!-- Column name -->
+          <td>
+            <div class="col-name">
+              {% if column == dataset.target_column %}<span class="target-dot"></span>{% endif %}
+              <span>{{ column }}</span>
+              {% if column == dataset.target_column %}<span class="target-chip">target</span>{% endif %}
+            </div>
+          </td>
+
+          <!-- Type badge -->
+          <td>
+            {% if col_type == 'categorical' or col_type == 'object' %}
+              <span class="st-type st-type--cat">{{ col_type }}</span>
+            {% elif col_type == 'bool' or col_type == 'boolean' %}
+              <span class="st-type st-type--bool">bool</span>
+            {% elif col_type == 'numeric' or col_type == 'float' or col_type == 'int' or col_type == 'integer' %}
+              <span class="st-type st-type--num">{{ col_type }}</span>
+            {% else %}
+              <span class="st-type st-type--other">{{ col_type }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Mean -->
+          <td>
+            {% if stats.mean is not None %}
+              <span class="num-em">{{ stats.mean|floatformat:3 }}</span>
+            {% else %}
+              <span class="num-muted">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Median -->
+          <td>
+            {% if stats.median is not None %}
+              <span class="num-val">{{ stats.median|floatformat:3 }}</span>
+            {% else %}
+              {% with p50=stats|lookup:"50%" %}
+              {% if p50 %}
+                <span class="num-val">{{ p50|floatformat:3 }}</span>
+              {% else %}
+                <span class="num-muted">—</span>
+              {% endif %}
+              {% endwith %}
+            {% endif %}
+          </td>
+
+          <!-- Std Dev -->
+          <td>
+            {% if stats.std is not None %}
+              <span class="num-val">{{ stats.std|floatformat:3 }}</span>
+            {% elif stats.stddev is not None %}
+              <span class="num-val">{{ stats.stddev|floatformat:3 }}</span>
+            {% else %}
+              <span class="num-muted">—</span>
+            {% endif %}
+          </td>
+
+          <!-- P5 → P95 text -->
+          <td>
+            {% if stats.p5 is not None and stats.p95 is not None %}
+              <span class="num-muted" style="font-size:11px;">{{ stats.p5|floatformat:2 }}</span>
+              <span style="color:var(--color-border);margin:0 3px;">→</span>
+              <span class="num-muted" style="font-size:11px;">{{ stats.p95|floatformat:2 }}</span>
+            {% else %}
+              {% with p5v=stats|lookup:"5%" p95v=stats|lookup:"95%" %}
+              {% if p5v and p95v %}
+                <span class="num-muted" style="font-size:11px;">{{ p5v|floatformat:2 }}</span>
+                <span style="color:var(--color-border);margin:0 3px;">→</span>
+                <span class="num-muted" style="font-size:11px;">{{ p95v|floatformat:2 }}</span>
+              {% else %}
+                <span class="num-muted">—</span>
+              {% endif %}
+              {% endwith %}
+            {% endif %}
+          </td>
+
+          <!-- Sparkline — rendered by JS below -->
+          <td>
+            {% if stats.p5 is not None and stats.p95 is not None %}
+              <div class="spark-wrap"
+                   data-p5="{{ stats.p5 }}"
+                   data-p95="{{ stats.p95 }}"
+                   data-median="{% if stats.median is not None %}{{ stats.median }}{% else %}{{ stats|lookup:"50%"|default:"" }}{% endif %}"
+                   data-mean="{% if stats.mean is not None %}{{ stats.mean }}{% endif %}">
+              </div>
+            {% else %}
+              {% with p5v=stats|lookup:"5%" p95v=stats|lookup:"95%" %}
+              {% if p5v and p95v %}
+                <div class="spark-wrap"
+                     data-p5="{{ p5v }}"
+                     data-p95="{{ p95v }}"
+                     data-median="{% if stats.median is not None %}{{ stats.median }}{% else %}{{ stats|lookup:"50%"|default:"" }}{% endif %}"
+                     data-mean="{% if stats.mean is not None %}{{ stats.mean }}{% endif %}">
+                </div>
+              {% else %}
+                <span class="num-muted">—</span>
+              {% endif %}
+              {% endwith %}
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer legend -->
+  <div class="stc-footer">
+    <span class="stc-footer-label">
+      <i data-lucide="info" style="width:11px;height:11px;"></i>
+      Distribution bar spans P5–P95 range
+    </span>
+    <div class="stc-legend">
+      <span class="stc-legend-item">
+        <span style="display:inline-block;width:3px;height:12px;background:var(--color-accent);border-radius:1px;"></span>
+        Median
+      </span>
+      <span class="stc-legend-item">
+        <span style="display:inline-block;width:3px;height:12px;background:#f59e0b;border-radius:1px;"></span>
+        Mean
+      </span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  /* ── Build sparklines ───────────────────────────────────────── */
+  document.querySelectorAll('.spark-wrap[data-p5]').forEach(function (wrap) {
+    var p5  = parseFloat(wrap.dataset.p5);
+    var p95 = parseFloat(wrap.dataset.p95);
+    var med = wrap.dataset.median !== '' ? parseFloat(wrap.dataset.median) : null;
+    var avg = wrap.dataset.mean   !== '' ? parseFloat(wrap.dataset.mean)   : null;
+
+    if (isNaN(p5) || isNaN(p95) || p95 === p5) return;
+
+    var range = p95 - p5;
+
+    /* teal fill bar (full width — represents P5–P95 window) */
+    var fill = document.createElement('div');
+    fill.className = 'spark-fill';
+    fill.style.left  = '0';
+    fill.style.right = '0';
+    wrap.appendChild(fill);
+
+    /* median marker */
+    if (med !== null && !isNaN(med)) {
+      var pct = Math.max(0, Math.min(100, ((med - p5) / range) * 100));
+      var mEl = document.createElement('div');
+      mEl.className = 'spark-median';
+      mEl.style.left = pct.toFixed(1) + '%';
+      mEl.title = 'Median: ' + med.toFixed(2);
+      wrap.appendChild(mEl);
+    }
+
+    /* mean marker */
+    if (avg !== null && !isNaN(avg)) {
+      var pctA = Math.max(0, Math.min(100, ((avg - p5) / range) * 100));
+      var aEl = document.createElement('div');
+      aEl.className = 'spark-mean';
+      aEl.style.left = pctA.toFixed(1) + '%';
+      aEl.title = 'Mean: ' + avg.toFixed(2);
+      wrap.appendChild(aEl);
+    }
+  });
+
+  /* ── Column filter ──────────────────────────────────────────── */
+  var searchInput = document.getElementById('stc-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      var q = this.value.toLowerCase().trim();
+      document.querySelectorAll('#stc-table tbody .stc-row').forEach(function (row) {
+        var name = (row.dataset.col || '').toLowerCase();
+        row.classList.toggle('st-hidden', q.length > 0 && name.indexOf(q) === -1);
+      });
+    });
+  }
+})();
+</script>
+
+{% else %}
+<!-- No statistical_summary inside metadata -->
+<div class="stc-wrap" style="padding:40px;text-align:center;">
+  <i data-lucide="bar-chart-2" style="width:36px;height:36px;color:var(--color-border);margin-bottom:12px;"></i>
+  <p style="font-size:13px;color:var(--color-text-secondary);margin:0;">
+    Statistical summary not available for this dataset.
+  </p>
 </div>
 {% endif %}
 
 {% else %}
-<!-- Fallback for datasets without rich metadata -->
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
-        <div class="text-center py-4">
-            <div class="mb-3">
-                <i data-lucide="info" style="width:48px;height:48px;color:var(--color-accent);"></i>
-            </div>
-            <h5 class="text-dark mb-3">Limited Metadata Available</h5>
-            <p class="text-muted mb-4">This dataset doesn't have detailed statistical metadata. Here's the basic information:</p>
-            
-            <div class="row g-3 justify-content-center">
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
-                        <div class="fw-bold text-primary">{{ dataset.patient_count|intcomma|default:"299" }}</div>
-                        <small class="text-muted">Samples</small>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
-                        <div class="fw-bold text-success">{{ dataset.num_columns|default:"13" }}</div>
-                        <small class="text-muted">Features</small>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
-                        <div class="fw-bold text-info">{{ dataset.file_size|filesizeformat }}</div>
-                        <small class="text-muted">Size</small>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="p-3" style="background-color: #f8f9fa; border-radius: 8px;">
-                        <div class="fw-bold text-warning">{{ dataset.target_column|default:"DEATH_EVENT" }}</div>
-                        <small class="text-muted">Target</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- No metadata at all — fallback -->
+<div class="stc-wrap" style="padding:48px 32px;">
+  <div style="text-align:center;">
+    <i data-lucide="info" style="width:40px;height:40px;color:var(--color-accent);margin-bottom:16px;"></i>
+    <h5 style="font-size:15px;font-weight:700;color:var(--color-text);margin-bottom:8px;">Limited Metadata Available</h5>
+    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:24px;">
+      This dataset doesn't have detailed statistical metadata. Here's the basic information:
+    </p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      <div style="background:var(--color-surface-secondary);border-radius:var(--radius-md);padding:16px 24px;min-width:110px;">
+        <div style="font-size:20px;font-weight:700;color:var(--color-accent);">{{ dataset.patient_count|intcomma|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Samples</div>
+      </div>
+      <div style="background:var(--color-surface-secondary);border-radius:var(--radius-md);padding:16px 24px;min-width:110px;">
+        <div style="font-size:20px;font-weight:700;color:var(--color-success);">{{ dataset.num_columns|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Features</div>
+      </div>
+      <div style="background:var(--color-surface-secondary);border-radius:var(--radius-md);padding:16px 24px;min-width:110px;">
+        <div style="font-size:20px;font-weight:700;color:var(--color-text);">{{ dataset.file_size|filesizeformat }}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">File Size</div>
+      </div>
+      <div style="background:var(--color-surface-secondary);border-radius:var(--radius-md);padding:16px 24px;min-width:110px;">
+        <div style="font-size:16px;font-weight:700;color:#f59e0b;">{{ dataset.target_column|default:"—" }}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Target</div>
+      </div>
     </div>
+  </div>
 </div>
 {% endif %}

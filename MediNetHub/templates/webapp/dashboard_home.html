@@ -5,7 +5,7 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/pages/dashboard.css">
+<link rel="stylesheet" href="/static/css/pages/dashboard.css?v=2">
 {% endblock %}
 
 {% block content %}
@@ -87,9 +87,13 @@
     <!-- Active Jobs -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--accent animate-in">
-        <div class="stat-card__top">
+        <div class="stat-card__main">
           <div class="stat-card__icon stat-card__icon--cyan">
             <i data-lucide="activity"></i>
+          </div>
+          <div class="stat-card__body">
+            <div class="stat-card__value">{{ active_jobs|length }}</div>
+            <div class="stat-card__label">Active Jobs</div>
           </div>
           {% if active_jobs %}
             <div class="stat-card__delta stat-card__delta--up">
@@ -98,10 +102,6 @@
           {% else %}
             <div class="stat-card__delta stat-card__delta--neu">—</div>
           {% endif %}
-        </div>
-        <div>
-          <div class="stat-card__value">{{ active_jobs|length }}</div>
-          <div class="stat-card__label">Active Jobs</div>
         </div>
         <div class="stat-card__footer">
           {% if stats.total_jobs > 0 %}{{ stats.total_jobs }} total job{{ stats.total_jobs|pluralize }}{% else %}No jobs yet{% endif %}
@@ -112,15 +112,15 @@
     <!-- Models -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--primary animate-in">
-        <div class="stat-card__top">
+        <div class="stat-card__main">
           <div class="stat-card__icon stat-card__icon--blue">
             <i data-lucide="layers"></i>
           </div>
+          <div class="stat-card__body">
+            <a href="{% url 'models_list' %}" class="stat-card__value text-decoration-none">{{ stats.total_models }}</a>
+            <div class="stat-card__label">Models</div>
+          </div>
           <div class="stat-card__delta stat-card__delta--neu">—</div>
-        </div>
-        <div>
-          <a href="{% url 'models_list' %}" class="stat-card__value text-decoration-none">{{ stats.total_models }}</a>
-          <div class="stat-card__label">Models</div>
         </div>
         <div class="stat-card__footer">
           {% if stats.total_models > 0 %}<a href="{% url 'models_list' %}" style="color:#3B82F6;text-decoration:none;">View all →</a>{% else %}No models yet{% endif %}
@@ -131,19 +131,19 @@
     <!-- Connections -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--warning animate-in">
-        <div class="stat-card__top">
+        <div class="stat-card__main">
           <div class="stat-card__icon stat-card__icon--amber">
             <i data-lucide="database"></i>
+          </div>
+          <div class="stat-card__body">
+            <a href="{% url 'datasets' %}" class="stat-card__value text-decoration-none">{{ stats.active_connections }}</a>
+            <div class="stat-card__label">Connections</div>
           </div>
           {% if stats.active_connections > 0 %}
             <div class="stat-card__delta stat-card__delta--up">Active</div>
           {% else %}
             <div class="stat-card__delta stat-card__delta--neu">—</div>
           {% endif %}
-        </div>
-        <div>
-          <a href="{% url 'datasets' %}" class="stat-card__value text-decoration-none">{{ stats.active_connections }}</a>
-          <div class="stat-card__label">Connections</div>
         </div>
         <div class="stat-card__footer">
           {% if stats.active_connections == 0 %}<a href="{% url 'datasets' %}" style="color:#D97706;text-decoration:none;">Add a connection →</a>{% else %}{{ stats.active_connections }} node{{ stats.active_connections|pluralize }} connected{% endif %}
@@ -154,9 +154,13 @@
     <!-- Success Rate -->
     <div class="col-6 col-lg-3">
       <div class="stat-card stat-card--success animate-in">
-        <div class="stat-card__top">
+        <div class="stat-card__main">
           <div class="stat-card__icon stat-card__icon--green">
             <i data-lucide="check-circle-2"></i>
+          </div>
+          <div class="stat-card__body">
+            <div class="stat-card__value">{{ stats.success_rate }}<span style="font-size:var(--text-lg);font-weight:600;letter-spacing:0;">%</span></div>
+            <div class="stat-card__label">Success Rate</div>
           </div>
           {% if stats.success_rate > 0 %}
             <div class="stat-card__delta stat-card__delta--up">
@@ -165,10 +169,6 @@
           {% else %}
             <div class="stat-card__delta stat-card__delta--neu">—</div>
           {% endif %}
-        </div>
-        <div>
-          <div class="stat-card__value">{{ stats.success_rate }}<span style="font-size:var(--text-lg);font-weight:600;letter-spacing:0;">%</span></div>
-          <div class="stat-card__label">Success Rate</div>
         </div>
         <div class="stat-card__footer">
           {% if stats.total_jobs > 0 %}{{ stats.total_jobs }} job{{ stats.total_jobs|pluralize }} total{% else %}No jobs yet{% endif %}

@@ -5,14 +5,42 @@
 .md-page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: var(--space-5);
   gap: var(--space-4);
 }
 
 .md-page-header-left {
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
+}
+
+/* Inline compact stepper — sits between title and action buttons */
+.md-page-header-stepper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.md-page-header-stepper .ds-stepper {
+  padding: 0;
+  margin-bottom: 0;
+  max-width: 380px;
+  width: 100%;
+}
+
+.md-page-header-stepper .ds-step-circle {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.md-page-header-stepper .ds-step-label {
+  font-size: 10px;
+}
+
+.md-page-header-stepper .ds-step-connector {
+  margin-bottom: 12px;
 }
 
 .md-page-header-title-row {
@@ -326,6 +354,57 @@
 
 /* Chips that span both columns (long names) */
 .md-lp-chip.full-width { grid-column: span 2; }
+
+/* Incompatible chip — grayed out, no hover tint, not clickable */
+.md-lp-chip--incompatible {
+  opacity: 0.28;
+  cursor: not-allowed;
+  filter: grayscale(0.55);
+}
+.md-lp-chip--incompatible:hover,
+.md-lp-section--dense   .md-lp-chip--incompatible:hover,
+.md-lp-section--conv    .md-lp-chip--incompatible:hover,
+.md-lp-section--pooling .md-lp-chip--incompatible:hover,
+.md-lp-section--act     .md-lp-chip--incompatible:hover,
+.md-lp-section--reg     .md-lp-chip--incompatible:hover,
+.md-lp-section--struct  .md-lp-chip--incompatible:hover {
+  background: var(--color-bg);
+  border-color: var(--color-border-light);
+  color: var(--color-text-secondary);
+  filter: grayscale(0.55);
+}
+
+/* Canvas footer — param stats + architecture warnings */
+.md-canvas-footer {
+  border-top: 1px solid var(--color-border-light);
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.md-canvas-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+.md-canvas-stats strong {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.md-canvas-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-size: 11px;
+  color: #D97706;
+  line-height: 1.45;
+}
 
 /* Search empty state */
 .md-lp-empty {
@@ -1091,6 +1170,7 @@
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
+  width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -2173,24 +2253,25 @@ details[open] .md-collapsible-chevron {
    28. Rich Dropdown (simplified for new HTML)
    ============================================================ */
 
+/* Trigger: name + desc in one line */
 .md-rdd-selected {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   text-align: left;
 }
 
 .md-rdd-selected-name {
-  display: block;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 .md-rdd-selected-desc {
-  display: block;
   font-size: 11px;
   color: var(--color-text-muted);
   white-space: nowrap;
@@ -2198,10 +2279,13 @@ details[open] .md-collapsible-chevron {
   text-overflow: ellipsis;
 }
 
+/* Option rows: name + desc in one line */
 .md-rdd-option {
   display: flex;
-  flex-direction: column;
-  padding: 9px 12px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
   cursor: pointer;
   transition: background 0.1s ease;
 }
@@ -2214,12 +2298,16 @@ details[open] .md-collapsible-chevron {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .md-rdd-option-desc {
   font-size: 11px;
   color: var(--color-text-muted);
-  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ============================================================
@@ -2659,3 +2747,103 @@ details[open] .md-collapsible-chevron {
 }
 
 /* Layer picker category color accent */
+
+/* ============================================================
+   32. Differential Privacy Section
+   ============================================================ */
+
+.md-dp-section {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.md-dp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-surface);
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+  transition: background 0.12s ease;
+}
+
+.md-dp-header:hover {
+  background: var(--color-surface-raised, rgba(0,0,0,0.03));
+}
+
+.md-dp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.md-dp-title {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+
+.md-dp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Chevron rotates when section open */
+.md-dp-section.is-open .md-dp-chevron {
+  transform: rotate(180deg);
+}
+
+.md-dp-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.18s ease;
+  flex-shrink: 0;
+}
+
+/* Body */
+.md-dp-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* Budget info strip */
+.md-dp-budget {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  border-radius: var(--radius-sm);
+}
+
+.md-dp-budget-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.md-dp-budget-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.md-dp-budget-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #8B5CF6;
+}
+
+

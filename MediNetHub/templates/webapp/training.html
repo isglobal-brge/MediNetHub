@@ -2,793 +2,847 @@
 {% load webapp_filters %}
 
 {% block title %}MediNet - Federated Training{% endblock %}
-
-{% block page_title %}Federated Training{% endblock %}
-
-{% block breadcrumb %}Configure and run distributed training jobs on multiple data sources{% endblock %}
+{% block page_title %}New Training Job{% endblock %}
 
 {% block extra_css %}
-{{ block.super }}
 <link rel="stylesheet" href="/static/css/pages/training.css">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-
-  <!-- Workflow Stepper -->
-  {% include 'webapp/includes/stepper.html' with active_step=3 %}
-
-  <!-- Page actions row -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <a href="/experiments-preview/" class="btn btn-sm btn-outline-secondary-custom me-2">
-        <i data-lucide="flask-conical" style="width:14px;height:14px;" class="me-1"></i>Experiments (Preview)
-      </a>
-      <a href="{% url 'model_studio' %}" class="btn btn-sm btn-outline-secondary-custom">
-        <i data-lucide="box" style="width:14px;height:14px;" class="me-1"></i>Design New Model
-      </a>
-    </div>
-    <button type="button" class="btn btn-sm btn-outline-secondary-custom btn-refresh-jobs" id="refresh-jobs-btn">
-      <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
-      <span class="ms-1">Refresh</span>
-    </button>
-  </div>
-
-  <!-- Tab Navigation -->
-  <div class="training-tabs mb-4">
-    <ul class="nav nav-tabs" id="trainingTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-jobs-btn" data-bs-toggle="tab" data-bs-target="#tab-jobs" type="button" role="tab">
-          <i data-lucide="list" style="width:14px;height:14px;" class="me-1"></i>
-          Training Jobs
-          {% if training_jobs %}
-            <span class="tab-badge">{{ training_jobs|length }}</span>
-          {% endif %}
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-new-btn" data-bs-toggle="tab" data-bs-target="#tab-new" type="button" role="tab">
-          <i data-lucide="plus-circle" style="width:14px;height:14px;" class="me-1"></i>
-          New Training
-        </button>
-      </li>
-    </ul>
-  </div>
-
-  <!-- Tab Content -->
-  <div class="tab-content" id="trainingTabContent">
-
-    <!-- ===== Tab 1: Training Jobs ===== -->
-    <div class="tab-pane fade show active" id="tab-jobs" role="tabpanel">
-      <div class="card-flat">
-        {% if training_jobs %}
-        <div class="job-table-wrapper">
-          <table class="table table-custom mb-0">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Model</th>
-                <th>Status</th>
-                <th>Progress</th>
-                <th class="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for job in training_jobs %}
-              <tr>
-                <td class="job-name-cell">
-                  <strong title="{{ job.name }}">{{ job.name }}</strong>
-                  {% if job.description %}
-                  <p class="small text-muted mb-0">{{ job.description|truncatewords:8 }}</p>
-                  {% endif %}
-                </td>
-                <td class="text-muted" style="font-size:var(--text-sm);">{{ job.model_config.name }}</td>
-                <td>
-                  <span class="status-badge {% if job.status == 'running' %}status-running{% elif job.status == 'pending' or job.status == 'server_ready' %}status-pending{% elif job.status == 'completed' %}status-completed{% elif job.status == 'failed' %}status-failed{% else %}status-completed{% endif %}" data-status="{{ job.status }}">
-                    {{ job.status|capfirst }}
-                  </span>
-                </td>
-                <td style="min-width:120px;">
-                  {% if job.progress %}
-                  <div class="progress-table">
-                    <div class="progress-fill" data-width="{{ job.progress }}" style="width:{{ job.progress }}%;"></div>
-                  </div>
-                  <span class="progress-label">{{ job.progress }}%</span>
-                  {% else %}
-                  <span class="text-muted" style="font-size:var(--text-sm);">-</span>
-                  {% endif %}
-                </td>
-                <td class="text-center">
-                  <div class="dropdown">
-                    <a href="{% url 'dashboard' job.id %}" class="btn-job-dashboard me-1">
-                      <i data-lucide="bar-chart-3" style="width:12px;height:12px;" class="me-1"></i>Dashboard
-                    </a>
-                    <button class="btn btn-sm btn-outline-secondary-custom dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      <span class="visually-hidden">More</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                      <li>
-                        <a class="dropdown-item" href="{% url 'job_detail' job.id %}">
-                          <i data-lucide="info" style="width:14px;height:14px;" class="me-2 text-info"></i>Details
-                        </a>
-                      </li>
-                      {% if job.status == 'completed' %}
-                      <li>
-                        <a class="dropdown-item" href="{% url 'download_model' job.id %}">
-                          <i data-lucide="download" style="width:14px;height:14px;" class="me-2 text-success"></i>Download model
-                        </a>
-                      </li>
-                      {% endif %}
-                      <li><hr class="dropdown-divider"></li>
-                      <li>
-                        <button class="dropdown-item text-danger delete-job"
-                                data-delete-url="{% url 'delete_job' job.id %}"
-                                data-job-name="{{ job.name }}">
-                          <i data-lucide="trash-2" style="width:14px;height:14px;" class="me-2"></i>Delete
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+<div class="container py-4">
+    <!-- Workflow Stepper -->
+    {% include 'webapp/includes/stepper.html' with active_step=3 %}
+    
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0"><i data-lucide="layers" style="width:20px;height:20px;color:var(--color-primary);vertical-align:middle;" class="me-2"></i>Federated Training</h2>
+            <p class="text-muted">Configure and run distributed training jobs on multiple data sources</p>
         </div>
-        {% else %}
-        <div class="jobs-empty-state">
-          <i data-lucide="layers" style="width:40px;height:40px;" class="text-muted mb-3 d-block mx-auto"></i>
-          <p class="text-muted mb-3">No training jobs yet. Configure and start a new training.</p>
-          <button class="btn btn-accent btn-sm" data-bs-toggle="tab" data-bs-target="#tab-new">
-            <i data-lucide="plus-circle" style="width:14px;height:14px;" class="me-1"></i>New Training
-          </button>
+        <div class="col-auto">
+            <a href="{% url 'model_studio' %}" class="btn btn-outline-primary">
+                <i data-lucide="edit" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Design New Model
+            </a>
         </div>
-        {% endif %}
-      </div>
     </div>
+    
+    <div class="row">
+        <!-- Left panel: training configuration -->
+        <div class="col-lg-5 mb-4">
+            <div class="card h-90">
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-lucide="settings" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="trainingConfigForm">
+                        <!-- Selección de modelo -->
+                        <div class="mb-3">
+                            <label for="model-select" class="form-label">Model</label>
+                            <input type="text" class="form-control" id="model-name" readonly>
+                            <input type="hidden" id="model-id" name="model_id">
+                            <div class="form-text">Model configured in the model designer</div>
+                        </div>
+                        
+                        <!-- Nombre del trabajo -->
+                        <div class="mb-3">
+                            <label for="job-name" class="form-label">Job Name</label>
+                            <input type="text" class="form-control" id="job-name" name="job_name" required>
+                            <div class="form-text">A descriptive name to identify this training</div>
+                        </div>
+                        
+                        <!-- Descripción del trabajo -->
+                        <div class="mb-3">
+                            <label for="job-description" class="form-label">Job Description</label>
+                            <textarea class="form-control" id="job-description" name="job_description" rows="2"></textarea>
+                        </div>
+                        
+                        <hr>
 
-    <!-- ===== Tab 2: New Training ===== -->
-    <div class="tab-pane fade" id="tab-new" role="tabpanel">
-      <div class="row g-4">
+                        <div class="accordion metric-cards" id="mainConfigAccordion">
+                            <!-- Training Parameters Card -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrainingParams">
+                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                            <div>
+                                                <i data-lucide="settings" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-secondary"></i>
+                                                <strong>Core Training Parameters</strong>
+                                                <div class="d-block text-muted fw-normal small" id="training-summary">
+                                                    Epochs: <strong id="epochs-summary" class="text-dark">5</strong> |
+                                                    Batch Size: <strong id="batch-summary" class="text-dark">32</strong> |
+                                                    Rounds: <strong id="rounds-summary" class="text-dark">10</strong> |
+                                                    Save Every: <strong id="save-freq-summary" class="text-dark">0</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapseTrainingParams" class="accordion-collapse collapse" data-bs-parent="#mainConfigAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6 param-container">
+                                                <label for="train-epochs" class="form-label d-flex align-items-center">
+                                                    Epochs
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>
+                                                </label>
+                                                <input type="number" class="form-control" id="train-epochs" name="epochs" min="1" value="5" required>
+                                            </div>
+                                            
+                                            <div class="col-md-6 param-container">
+                                                <label for="train-batch-size" class="form-label d-flex align-items-center">
+                                                    Batch Size
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of samples processed before updating the model"></i>
+                                                </label>
+                                                <input type="number" class="form-control" id="train-batch-size" name="batch_size" min="1" value="32" required>
+                                            </div>
+                                            
+                                            <div class="col-md-6 param-container">
+                                                <label class="form-label d-flex align-items-center">
+                                                    Federated Rounds
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ NUM_ROUNDS_HELPER }}"></i>
+                                                </label>
+                                                <input type="number" class="form-control" id="train-rounds" name="rounds" min="1" value="10" required>
+                                            </div>
+                                            
+                                            <div class="col-md-6 param-container">
+                                                <label for="save-frequency" class="form-label d-flex align-items-center">
+                                                    Save Checkpoint Every
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Saves a model every X rounds. Set 0 to save only the final model."></i>
+                                                </label>
+                                                <input type="number" class="form-control" id="save-frequency" name="save_frequency" min="0" value="0" required>
+                                            </div>
 
-        <!-- Left column: Basic config -->
-        <div class="col-lg-6">
-          <div class="card-flat">
-            <div class="section-card-header">
-              <i data-lucide="settings" style="width:16px;height:16px;"></i>
-              Training Configuration
+                                            <div class="col-md-12 param-container">
+                                                <label for="fed-strategy" class="form-label d-flex align-items-center">
+                                                    Federated Strategy
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ STRATEGY_HELPER }}"></i>
+                                                </label>
+                                                <select class="form-select" id="fed-strategy" name="fed_strategy">
+                                                    <option value="FedAvg" selected>Federated Averaging</option>
+                                                    <option value="FedProx">Federated Proximal</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12 param-container">
+                                                <label for="flower-version" class="form-label d-flex align-items-center">
+                                                    Flower Version
+                                                </label>
+                                                <select class="form-select" id="flower-version" name="flower_version">
+                                                    <option value="1.6" selected>1.6</option>
+                                                    <option value="1.20">1.20</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Metrics Card -->
+                            <div class="accordion-item">
+                                <!-- The existing metrics accordion structure -->
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetrics">
+                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                            <div>
+                                                <i data-lucide="filter" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-primary"></i>
+                                                <strong>Additional Specialized Metrics</strong>
+                                                <small class="d-block text-muted fw-normal">Select metrics specific to your task.</small>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill metric-counter d-none"></span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapseMetrics" class="accordion-collapse collapse" data-bs-parent="#mainConfigAccordion">
+                                    <div class="accordion-body">
+                                        <!-- The inner accordion for metrics goes here -->
+                                        <div class="accordion metric-cards" id="metricsAccordion">
+                                            <!-- Segmentation Card -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSegmentation">
+                                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                                            <div>
+                                                                <i data-lucide="layers" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-primary"></i>
+                                                                <strong>Segmentation</strong>
+                                                                <small class="d-block text-muted fw-normal">Metrics for pixel-level tasks like organ or tumor segmentation.</small>
+                                                            </div>
+                                                            <span class="badge bg-primary rounded-pill metric-counter d-none"></span>
+                                                        </div>
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseSegmentation" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
+                                                    <div class="accordion-body">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-iou" name="metrics" value="mean_iou">
+                                                            <label class="form-check-label" for="metric-iou">Mean IoU (Intersection over Union)</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-dice" name="metrics" value="dice_score">
+                                                            <label class="form-check-label" for="metric-dice">Dice Score</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-hausdorff" name="metrics" value="hausdorff_distance">
+                                                            <label class="form-check-label" for="metric-hausdorff">Hausdorff Distance</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Medical Diagnostics Card -->
+                                            <div class="accordion-item">
+                                                 <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMedical">
+                                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                                            <div>
+                                                                <i data-lucide="activity" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>
+                                                                <strong>Medical Diagnostics</strong>
+                                                                <small class="d-block text-muted fw-normal">Metrics for evaluating diagnostic test performance.</small>
+                                                            </div>
+                                                            <span class="badge bg-primary rounded-pill metric-counter d-none"></span>
+                                                        </div>
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseMedical" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
+                                                    <div class="accordion-body">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-sensitivity" name="metrics" value="sensitivity">
+                                                            <label class="form-check-label" for="metric-sensitivity">Sensitivity (True Positive Rate)</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-specificity" name="metrics" value="specificity">
+                                                            <label class="form-check-label" for="metric-specificity">Specificity (True Negative Rate)</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-npv" name="metrics" value="npv">
+                                                            <label class="form-check-label" for="metric-npv">Negative Predictive Value (NPV)</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Detection & Classification Card -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDetection">
+                                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                                            <div>
+                                                                <i data-lucide="search" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-warning"></i>
+                                                                <strong>Detection & Classification</strong>
+                                                                <small class="d-block text-muted fw-normal">Metrics for object detection and classification tasks.</small>
+                                                            </div>
+                                                            <span class="badge bg-primary rounded-pill metric-counter d-none"></span>
+                                                        </div>
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseDetection" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
+                                                    <div class="accordion-body">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-auc-roc" name="metrics" value="auc_roc">
+                                                            <label class="form-check-label" for="metric-auc-roc">AUC-ROC</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-auc-pr" name="metrics" value="auc_pr">
+                                                            <label class="form-check-label" for="metric-auc-pr">AUC-PR (Precision-Recall)</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-map" name="metrics" value="mean_ap">
+                                                            <label class="form-check-label" for="metric-map">mAP (mean Average Precision)</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Regression & Time Series Card -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression">
+                                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                                            <div>
+                                                                <i data-lucide="trending-up" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-info"></i>
+                                                                <strong>Regression & Time Series</strong>
+                                                                <small class="d-block text-muted fw-normal">Metrics for regression and time series tasks.</small>
+                                                            </div>
+                                                            <span class="badge bg-primary rounded-pill metric-counter d-none"></span>
+                                                        </div>
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseRegression" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
+                                                    <div class="accordion-body">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-mae" name="metrics" value="mae">
+                                                            <label class="form-check-label" for="metric-mae">MAE (Mean Absolute Error)</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-rmse" name="metrics" value="rmse">
+                                                            <label class="form-check-label" for="metric-rmse">RMSE (Root Mean Square Error)</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="metric-mape" name="metrics" value="mape">
+                                                            <label class="form-check-label" for="metric-mape">MAPE (Mean Absolute Percentage Error)</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón para mostrar/ocultar parámetros avanzados -->
+                        <div class="d-grid mt-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-advanced-params">
+                                <i data-lucide="sliders" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Advanced Parameters
+                            </button>
+                        </div>
+                        
+                        <!-- Parámetros avanzados de la estrategia federada -->
+                        <div id="advanced-fed-params" class="advanced-params">
+                            <h6 class="mb-3">Advanced Federated Strategy Parameters</h6>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6 param-container">
+                                    <label for="fraction-fit" class="form-label d-flex align-items-center">
+                                        Fraction Fit
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
+                                           title="{{ FRACTION_FIT_HELPER }}">
+                                        </i>
+                                    </label>
+                                    <input type="number" class="form-control" id="fraction-fit" name="fraction_fit" min="0.1" max="1.0" step="0.1" value="1.0">
+                                </div>
+                                
+                                <div class="col-md-6 param-container">
+                                    <label for="fraction-eval" class="form-label d-flex align-items-center">
+                                        Fraction Eval
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
+                                           title="{{ FRACTION_EVALUATE_HELPER }}">
+                                        </i>
+                                    </label>
+                                    <input type="number" class="form-control" id="fraction-eval" name="fraction_eval" min="0.1" max="1.0" step="0.1" value="0.3">
+                                </div>
+                                
+                                <div class="col-md-4 param-container">
+                                    <label for="min-fit-clients" class="form-label d-flex align-items-center">
+                                        Min Fit Clients
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
+                                           title="{{ MIN_FIT_CLIENTS_HELPER }}">
+                                        </i>
+                                    </label>
+                                    <input type="number" class="form-control" id="min-fit-clients" name="min_fit_clients" min="1" value="1">
+                                </div>
+                                
+                                <div class="col-md-4 param-container">
+                                    <label for="min-eval-clients" class="form-label d-flex align-items-center">
+                                        Min Eval Clients
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
+                                           title="{{ MIN_EVALUATE_CLIENTS_HELPER }}">
+                                        </i>
+                                    </label>
+                                    <input type="number" class="form-control" id="min-eval-clients" name="min_eval_clients" min="1" value="1">
+                                </div>
+                                
+                                <div class="col-md-4 param-container">
+                                    <label for="min-available-clients" class="form-label d-flex align-items-center">
+                                        Min Clients
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
+                                           title="{{ MIN_AVAILABLE_CLIENTS_HELPER }}">
+                                        </i>
+                                    </label>
+                                    <input type="number" class="form-control" id="min-available-clients" name="min_available_clients" min="1" value="1">
+                                </div>
+                            </div>
+                            
+                          
+                        </div>
+                        
+                        <!-- Botones de acción -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-primary" id="start-training-btn">
+                                <i data-lucide="play" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Start Training
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="preview-config-json-btn">
+                                <i data-lucide="code" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Preview JSON
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="p-4">
-              <form id="trainingConfigForm">
-
-                <!-- Model -->
-                <div class="mb-3">
-                  <label for="model-name" class="form-label">Model</label>
-                  <input type="text" class="form-control" id="model-name" readonly>
-                  <input type="hidden" id="model-id" name="model_id">
-                  <div class="form-text">Model configured in the model designer</div>
+        </div>
+        
+        <!-- Right panel: training jobs and status -->
+        <div class="col-lg-7 mb-4">
+            <div class="card h-90 jobs-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-lucide="list-checks" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Management</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-jobs-btn">
+                        <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;"></i>
+                    </button>
                 </div>
-
-                <!-- Job Name -->
-                <div class="mb-3">
-                  <label for="job-name" class="form-label">Job Name</label>
-                  <input type="text" class="form-control" id="job-name" name="job_name" required>
-                  <div class="form-text">A descriptive name to identify this training</div>
-                </div>
-
-                <!-- Job Description -->
-                <div class="mb-3">
-                  <label for="job-description" class="form-label">Job Description</label>
-                  <textarea class="form-control" id="job-description" name="job_description" rows="2"></textarea>
-                </div>
-
-                <hr>
-
-                <!-- Core Training Parameters Accordion -->
-                <div class="accordion metric-cards" id="mainConfigAccordion">
-
-                  <!-- Training Parameters -->
-                  <div class="accordion-item">
-                    <h2 class="accordion-header">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrainingParams">
-                        <div class="d-flex w-100 justify-content-between align-items-center">
-                          <div>
-                            <i data-lucide="settings" style="width:14px;height:14px;" class="me-2 text-secondary"></i>
-                            <strong>Core Training Parameters</strong>
-                            <div class="d-block text-muted fw-normal small" id="training-summary">
-                              Epochs: <strong id="epochs-summary" class="text-dark">5</strong> |
-                              Batch Size: <strong id="batch-summary" class="text-dark">32</strong> |
-                              Rounds: <strong id="rounds-summary" class="text-dark">10</strong> |
-                              Save Every: <strong id="save-freq-summary" class="text-dark">0</strong>
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    </h2>
-                    <div id="collapseTrainingParams" class="accordion-collapse collapse" data-bs-parent="#mainConfigAccordion">
-                      <div class="accordion-body">
-                        <div class="row g-3">
-                          <div class="col-md-6 param-container">
-                            <label for="train-epochs" class="form-label">
-                              Epochs
-                              <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>
-                            </label>
-                            <input type="number" class="form-control" id="train-epochs" name="epochs" min="1" value="5" required>
-                          </div>
-                          <div class="col-md-6 param-container">
-                            <label for="train-batch-size" class="form-label">
-                              Batch Size
-                              <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of samples processed before updating the model"></i>
-                            </label>
-                            <input type="number" class="form-control" id="train-batch-size" name="batch_size" min="1" value="32" required>
-                          </div>
-                          <div class="col-md-6 param-container">
-                            <label for="train-rounds" class="form-label">
-                              Federated Rounds
-                              <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ NUM_ROUNDS_HELPER }}"></i>
-                            </label>
-                            <input type="number" class="form-control" id="train-rounds" name="rounds" min="1" value="10" required>
-                          </div>
-                          <div class="col-md-6 param-container">
-                            <label for="save-frequency" class="form-label">
-                              Save Checkpoint Every
-                              <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="Saves a model every X rounds. Set 0 to save only the final model."></i>
-                            </label>
-                            <input type="number" class="form-control" id="save-frequency" name="save_frequency" min="0" value="0" required>
-                          </div>
-                          <div class="col-md-12 param-container">
-                            <label for="fed-strategy" class="form-label">
-                              Federated Strategy
-                              <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ STRATEGY_HELPER }}"></i>
-                            </label>
-                            <select class="form-select" id="fed-strategy" name="fed_strategy">
-                              <option value="FedAvg" selected>Federated Averaging</option>
-                              <option value="FedProx">Federated Proximal</option>
-                            </select>
-                          </div>
-                          <div class="col-md-12 param-container">
-                            <label for="flower-version" class="form-label">Flower Version</label>
-                            <select class="form-select" id="flower-version" name="flower_version">
-                              <option value="1.6" selected>1.6</option>
-                              <option value="1.20">1.20</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
+                <div class="card-body">
+                    <!-- Tabs Content -->
+                    <div class="tab-content" id="trainingTabsContent">
+                        <!-- Training Jobs -->
+                        <div id="jobs-panel">
+                    {% if training_jobs %}
+                    <div class="table-responsive job-table-container">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Model</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in training_jobs %}
+                                <tr>
+                                    <td>
+                                        <strong class="job-name" title="{{ job.name }}">{{ job.name }}</strong>
+                                        {% if job.description %}
+                                        <p class="small text-muted mb-0">{{ job.description|truncatewords:8 }}</p>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ job.model_config.name }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if job.status == 'pending' %}warning{% elif job.status == 'running' %}primary{% elif job.status == 'completed' %}success{% elif job.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                                            {{ job.status|capfirst }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if job.progress %}
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar" role="progressbar" data-width="{{ job.progress }}" aria-valuenow="{{ job.progress }}" aria-valuemin="0" aria-valuemax="100">{{ job.progress }}%</div>
+                                        </div>
+                                        <script>
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                document.querySelectorAll('.progress-bar[data-width]').forEach(function(el) {
+                                                    el.style.width = el.getAttribute('data-width') + '%';
+                                                });
+                                            });
+                                        </script>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="action-buttons">
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-dashboard" title="View detailed metrics and analytics">
+                                                    <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Dashboard
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" id="job{{ job.id }}More" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
+                                                    <i data-lucide="more-vertical" style="width:16px;height:16px;vertical-align:middle;"></i>
+                                                    <span class="visually-hidden">More options</span>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="job{{ job.id }}More">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'job_detail' job.id %}">
+                                                            <i data-lucide="info" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-info"></i>Details
+                                                        </a>
+                                                    </li>
+                                                    {% if job.status == 'completed' %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'download_model' job.id %}">
+                                                            <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>Download model
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button class="dropdown-item text-danger delete-job" data-delete-url="{% url 'delete_job' job.id %}" data-job-name="{{ job.name }}">
+                                                            <i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Delete
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                  </div>
-
-                  <!-- Advanced Federated Parameters -->
-                  <div class="accordion-item">
-                    <h2 class="accordion-header">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdvanced">
-                        <div>
-                          <i data-lucide="sliders-horizontal" style="width:14px;height:14px;" class="me-2 text-secondary"></i>
-                          <strong>Advanced Federated Parameters</strong>
-                          <small class="d-block text-muted fw-normal">Fraction fit, eval, min clients.</small>
-                        </div>
-                      </button>
-                    </h2>
-                    <div id="collapseAdvanced" class="accordion-collapse collapse" data-bs-parent="#mainConfigAccordion">
-                      <div class="accordion-body">
-                        <div id="advanced-fed-params">
-                          <div class="row g-3">
-                            <div class="col-md-6 param-container">
-                              <label for="fraction-fit" class="form-label">
-                                Fraction Fit
-                                <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ FRACTION_FIT_HELPER }}"></i>
-                              </label>
-                              <input type="number" class="form-control" id="fraction-fit" name="fraction_fit" min="0.1" max="1.0" step="0.1" value="1.0">
-                            </div>
-                            <div class="col-md-6 param-container">
-                              <label for="fraction-eval" class="form-label">
-                                Fraction Eval
-                                <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ FRACTION_EVALUATE_HELPER }}"></i>
-                              </label>
-                              <input type="number" class="form-control" id="fraction-eval" name="fraction_eval" min="0.1" max="1.0" step="0.1" value="0.3">
-                            </div>
-                            <div class="col-md-4 param-container">
-                              <label for="min-fit-clients" class="form-label">
-                                Min Fit Clients
-                                <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ MIN_FIT_CLIENTS_HELPER }}"></i>
-                              </label>
-                              <input type="number" class="form-control" id="min-fit-clients" name="min_fit_clients" min="1" value="1">
-                            </div>
-                            <div class="col-md-4 param-container">
-                              <label for="min-eval-clients" class="form-label">
-                                Min Eval Clients
-                                <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ MIN_EVALUATE_CLIENTS_HELPER }}"></i>
-                              </label>
-                              <input type="number" class="form-control" id="min-eval-clients" name="min_eval_clients" min="1" value="1">
-                            </div>
-                            <div class="col-md-4 param-container">
-                              <label for="min-available-clients" class="form-label">
-                                Min Clients
-                                <i data-lucide="help-circle" style="width:13px;height:13px;" class="ms-1 text-muted" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ MIN_AVAILABLE_CLIENTS_HELPER }}"></i>
-                              </label>
-                              <input type="number" class="form-control" id="min-available-clients" name="min_available_clients" min="1" value="1">
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i data-lucide="list-checks" style="width:48px;height:48px;" class="text-muted mb-3"></i>
+                        <p>There are no training jobs. Configure and start a new training.</p>
                     </div>
-                  </div>
-
-                </div><!-- /mainConfigAccordion -->
-
-              </form>
+                    {% endif %}
+                        </div>
+                    </div>
+                    <!-- End Tab Content -->
+                </div>
             </div>
-          </div>
-        </div><!-- /left col -->
+        </div>
+    </div>
+</div>
 
-        <!-- Right column: Metrics + Actions -->
-        <div class="col-lg-6">
-
-          <!-- Metrics Card -->
-          <div class="card-flat mb-4">
-            <div class="section-card-header">
-              <i data-lucide="flask-conical" style="width:16px;height:16px;"></i>
-              Additional Specialized Metrics
-            </div>
-            <div class="p-4">
-              <div class="accordion metric-cards" id="metricsAccordion">
-
-                <!-- Segmentation -->
-                <div class="accordion-item">
-                  <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSegmentation">
-                      <div class="d-flex w-100 justify-content-between align-items-center">
-                        <div>
-                          <i data-lucide="scan" style="width:14px;height:14px;" class="me-2 text-primary"></i>
-                          <strong>Segmentation</strong>
-                          <small class="d-block text-muted fw-normal">Metrics for pixel-level tasks like organ or tumor segmentation.</small>
-                        </div>
-                        <span class="badge rounded-pill metric-counter d-none"></span>
-                      </div>
-                    </button>
-                  </h2>
-                  <div id="collapseSegmentation" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
-                    <div class="accordion-body">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-iou" name="metrics" value="mean_iou">
-                        <label class="form-check-label" for="metric-iou">Mean IoU (Intersection over Union)</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-dice" name="metrics" value="dice_score">
-                        <label class="form-check-label" for="metric-dice">Dice Score</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-hausdorff" name="metrics" value="hausdorff_distance">
-                        <label class="form-check-label" for="metric-hausdorff">Hausdorff Distance</label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Medical Diagnostics -->
-                <div class="accordion-item">
-                  <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMedical">
-                      <div class="d-flex w-100 justify-content-between align-items-center">
-                        <div>
-                          <i data-lucide="activity" style="width:14px;height:14px;" class="me-2 text-success"></i>
-                          <strong>Medical Diagnostics</strong>
-                          <small class="d-block text-muted fw-normal">Metrics for evaluating diagnostic test performance.</small>
-                        </div>
-                        <span class="badge rounded-pill metric-counter d-none"></span>
-                      </div>
-                    </button>
-                  </h2>
-                  <div id="collapseMedical" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
-                    <div class="accordion-body">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-sensitivity" name="metrics" value="sensitivity">
-                        <label class="form-check-label" for="metric-sensitivity">Sensitivity (True Positive Rate)</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-specificity" name="metrics" value="specificity">
-                        <label class="form-check-label" for="metric-specificity">Specificity (True Negative Rate)</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-npv" name="metrics" value="npv">
-                        <label class="form-check-label" for="metric-npv">Negative Predictive Value (NPV)</label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Detection and Classification -->
-                <div class="accordion-item">
-                  <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDetection">
-                      <div class="d-flex w-100 justify-content-between align-items-center">
-                        <div>
-                          <i data-lucide="crosshair" style="width:14px;height:14px;" class="me-2 text-warning"></i>
-                          <strong>Detection and Classification</strong>
-                          <small class="d-block text-muted fw-normal">Metrics for object detection and classification tasks.</small>
-                        </div>
-                        <span class="badge rounded-pill metric-counter d-none"></span>
-                      </div>
-                    </button>
-                  </h2>
-                  <div id="collapseDetection" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
-                    <div class="accordion-body">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-auc-roc" name="metrics" value="auc_roc">
-                        <label class="form-check-label" for="metric-auc-roc">AUC-ROC</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-auc-pr" name="metrics" value="auc_pr">
-                        <label class="form-check-label" for="metric-auc-pr">AUC-PR (Precision-Recall)</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-map" name="metrics" value="mean_ap">
-                        <label class="form-check-label" for="metric-map">mAP (mean Average Precision)</label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Regression and Time Series -->
-                <div class="accordion-item">
-                  <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression">
-                      <div class="d-flex w-100 justify-content-between align-items-center">
-                        <div>
-                          <i data-lucide="trending-up" style="width:14px;height:14px;" class="me-2 text-info"></i>
-                          <strong>Regression and Time Series</strong>
-                          <small class="d-block text-muted fw-normal">Metrics for regression and time series tasks.</small>
-                        </div>
-                        <span class="badge rounded-pill metric-counter d-none"></span>
-                      </div>
-                    </button>
-                  </h2>
-                  <div id="collapseRegression" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
-                    <div class="accordion-body">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-mae" name="metrics" value="mae">
-                        <label class="form-check-label" for="metric-mae">MAE (Mean Absolute Error)</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-rmse" name="metrics" value="rmse">
-                        <label class="form-check-label" for="metric-rmse">RMSE (Root Mean Square Error)</label>
-                      </div>
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="metric-mape" name="metrics" value="mape">
-                        <label class="form-check-label" for="metric-mape">MAPE (Mean Absolute Percentage Error)</label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div><!-- /metricsAccordion -->
-            </div>
-          </div>
-
-          <!-- Action buttons -->
-          <div class="card-flat p-4">
-            <button type="button" class="btn-start-training mb-2" id="start-training-btn">
-              <i data-lucide="play" style="width:16px;height:16px;" class="me-2"></i>Start Training
-            </button>
-            <button type="button" class="btn btn-outline-secondary-custom w-100" id="preview-config-json-btn">
-              <i data-lucide="code" style="width:14px;height:14px;" class="me-1"></i>Preview JSON
-            </button>
-          </div>
-
-        </div><!-- /right col -->
-      </div><!-- /row -->
-    </div><!-- /tab-new -->
-
-  </div><!-- /tab-content -->
-</div><!-- /container-fluid -->
-
-<!-- ===== Modals ===== -->
-
-<!-- Job Details Modal -->
+<!-- Modal de detalles del trabajo -->
 <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="jobDetailsModalLabel">
-          <i data-lucide="info" style="width:16px;height:16px;" class="me-2"></i>Job Details
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="text-center py-3" id="jobDetailsLoading">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="mt-2">Loading job details...</p>
-        </div>
-        <div id="jobDetailsContent" style="display:none;">
-          <div class="card-flat mb-3">
-            <div class="card-header-custom">Job Information</div>
-            <div class="p-4">
-              <div class="row">
-                <div class="col-md-6">
-                  <p><strong>Name:</strong> <span id="job-detail-name"></span></p>
-                  <p><strong>Description:</strong> <span id="job-detail-description"></span></p>
-                  <p><strong>Model:</strong> <span id="job-detail-model"></span></p>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobDetailsModalLabel"><i data-lucide="info" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Job Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center py-3" id="jobDetailsLoading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading job details...</p>
                 </div>
-                <div class="col-md-6">
-                  <p><strong>Status:</strong> <span id="job-detail-status"></span></p>
-                  <p><strong>Created:</strong> <span id="job-detail-created"></span></p>
-                  <p><strong>Dataset:</strong> <span id="job-detail-dataset"></span></p>
+                
+                <div id="jobDetailsContent" style="display: none;">
+                    <!-- Información básica -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Job Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Name:</strong> <span id="job-detail-name"></span></p>
+                                    <p><strong>Description:</strong> <span id="job-detail-description"></span></p>
+                                    <p><strong>Model:</strong> <span id="job-detail-model"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Status:</strong> <span id="job-detail-status"></span></p>
+                                    <p><strong>Created:</strong> <span id="job-detail-created"></span></p>
+                                    <p><strong>Dataset:</strong> <span id="job-detail-dataset"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Métricas -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Training Metrics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Round</th>
+                                            <th>Accuracy</th>
+                                            <th>Loss</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="job-metrics-table">
+                                        <!-- Aquí se insertarán las métricas -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Training configuration -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Training Configuration</h6>
+                        </div>
+                        <div class="card-body">
+                            <pre class="bg-light p-3 rounded" id="job-config-json"></pre>
+                        </div>
+                    </div>
                 </div>
-              </div>
+                
+                <div class="alert alert-danger" id="jobDetailsError" style="display: none;">
+                    <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>
+                    <span id="jobDetailsErrorMessage">Error loading job details</span>
+                </div>
             </div>
-          </div>
-          <div class="card-flat mb-3">
-            <div class="card-header-custom">Training Metrics</div>
-            <div class="p-4">
-              <div class="table-responsive">
-                <table class="table table-custom table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th>Round</th>
-                      <th>Accuracy</th>
-                      <th>Loss</th>
-                    </tr>
-                  </thead>
-                  <tbody id="job-metrics-table"></tbody>
-                </table>
-              </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
-          </div>
-          <div class="card-flat">
-            <div class="card-header-custom">Training Configuration</div>
-            <div class="p-4">
-              <pre class="log-container" id="job-config-json" style="max-height:200px;"></pre>
-            </div>
-          </div>
         </div>
-        <div class="alert alert-danger" id="jobDetailsError" style="display:none;">
-          <i data-lucide="alert-triangle" style="width:14px;height:14px;" class="me-2"></i>
-          <span id="jobDetailsErrorMessage">Error loading job details</span>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary-custom" data-bs-dismiss="modal">Close</button>
-      </div>
     </div>
-  </div>
 </div>
 
-<!-- Export Model Modal -->
+<!-- Modal de exportación de modelo -->
 <div class="modal fade" id="exportModelModal" tabindex="-1" aria-labelledby="exportModelModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exportModelModalLabel">
-          <i data-lucide="download" style="width:16px;height:16px;" class="me-2"></i>Export Model
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>You can export the trained model in different formats for use in production.</p>
-        <div class="mb-3">
-          <label for="export-format" class="form-label">Export Format</label>
-          <select class="form-select" id="export-format" name="export_format">
-            <option value="pt" selected>PyTorch (.pt)</option>
-            <option value="onnx">ONNX (.onnx)</option>
-            <option value="json">JSON (Configuration)</option>
-          </select>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModelModalLabel"><i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Export Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>You can export the trained model in different formats for use in production.</p>
+                
+                <div class="mb-3">
+                    <label for="export-format" class="form-label">Export Format</label>
+                    <select class="form-select" id="export-format" name="export_format">
+                        <option value="pt" selected>PyTorch (.pt)</option>
+                        <option value="onnx">ONNX (.onnx)</option>
+                        <option value="json">JSON (Configuration)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="export-name" class="form-label">File Name</label>
+                    <input type="text" class="form-control" id="export-name" name="export_name">
+                </div>
+                
+                <input type="hidden" id="export-job-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="download-model-btn">
+                    <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Download
+                </button>
+            </div>
         </div>
-        <div class="mb-3">
-          <label for="export-name" class="form-label">File Name</label>
-          <input type="text" class="form-control" id="export-name" name="export_name">
-        </div>
-        <input type="hidden" id="export-job-id">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary-custom" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-accent" id="download-model-btn">
-          <i data-lucide="download" style="width:14px;height:14px;" class="me-1"></i>Download
-        </button>
-      </div>
     </div>
-  </div>
 </div>
 
-<!-- Config JSON Preview Modal -->
+<!-- Modal: Configuration JSON Preview -->
 <div class="modal fade" id="configJsonModal" tabindex="-1" aria-labelledby="configJsonModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="configJsonModalLabel">
-          <i data-lucide="code" style="width:16px;height:16px;" class="me-2"></i>Training JSON Configuration
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <pre class="log-container" id="config-json-preview" style="max-height:400px;"></pre>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary-custom" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-accent" id="copy-config-json-btn">
-          <i data-lucide="copy" style="width:14px;height:14px;" class="me-1"></i>Copy
-        </button>
-      </div>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="configJsonModalLabel"><i data-lucide="code" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training JSON Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="bg-light p-3 rounded" id="config-json-preview"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="copy-config-json-btn">
+                    <i data-lucide="copy" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Copy
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<!-- Delete Job Confirmation Modal -->
+<!-- Modal de confirmación para eliminar trabajo -->
 <div class="modal fade" id="deleteJobModal" tabindex="-1" aria-labelledby="deleteJobModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="deleteJobModalLabel">
-          <i data-lucide="trash-2" style="width:16px;height:16px;" class="me-2 text-danger"></i>Delete Training Job
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to delete this training job?</p>
-        <p class="text-danger">This action cannot be undone.</p>
-        <p class="mb-0"><strong>Job:</strong> <span id="delete-job-name"></span></p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary-custom" data-bs-dismiss="modal">Cancel</button>
-        <form method="post" id="delete-job-form" style="display:inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Delete</button>
-        </form>
-      </div>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteJobModalLabel"><i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Delete Training Job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this training job?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+                <p class="mb-0"><strong>Job:</strong> <span id="delete-job-name"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" id="delete-job-form" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-(function() {
-    'use strict';
-    var progressPollingInterval = null;
-    var AUTO_REFRESH_INTERVAL = 10000;
-
+    let jobStatusInterval = null;
     document.addEventListener('DOMContentLoaded', function() {
-
-        function refreshIcons() {
-            if (window.lucide) { lucide.createIcons(); }
-        }
-
-        // Load model data from designer
-        function loadModelData() {
-            var modelId = "{{ model_id }}";
-            if (!modelId || modelId === "None") { return; }
-
-            fetch('/api/get-model-config/' + modelId + '/')
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    document.getElementById('model-name').value = data.name;
-                    document.getElementById('model-id').value = data.id;
-
-                    var cfg = data.config_json || {};
-                    var modelType = (cfg.metadata && cfg.metadata.model_type) ? cfg.metadata.model_type : 'dl';
-                    var algorithm = (cfg.architecture && cfg.architecture.ml_algorithm) ? cfg.architecture.ml_algorithm.type : null;
-
-                    adaptTrainingParamsForModelType(modelType, algorithm);
-
-                    var datasetInfo = (cfg.dataset && cfg.dataset.selected_datasets && cfg.dataset.selected_datasets[0]) ? cfg.dataset.selected_datasets[0] : null;
-                    if (datasetInfo) { updateJobName(); }
-                })
-                .catch(function(err) {
-                    console.error('Error loading model:', err);
-                    showToast('Error loading model', 'danger');
-                });
-        }
-
+        // Toggle advanced parameters
+        document.getElementById('toggle-advanced-params').addEventListener('click', function() {
+            const advancedParams = document.getElementById('advanced-fed-params');
+            if (advancedParams.style.display === 'none' || advancedParams.style.display === '') {
+                advancedParams.style.display = 'block';
+                this.textContent = 'Hide Advanced Parameters';
+            } else {
+                advancedParams.style.display = 'none';
+                this.textContent = 'Show Advanced Parameters';
+            }
+        });
+        
+        // Show/hide strategy-specific parameters
+        document.getElementById('fed-strategy').addEventListener('change', function() {
+            const strategy = this.value;
+            const fedProxParams = document.getElementById('advanced-fed-params');
+            
+            if (strategy === 'FedProx') {
+                fedProxParams.style.display = 'block';
+            } else {
+                fedProxParams.style.display = 'none';
+            }
+        });
+        
+        // Auto-generate simple job name
         function updateJobName() {
-            var modelName = document.getElementById('model-name').value;
-            var jobNameInput = document.getElementById('job-name');
+            const modelName = document.getElementById('model-name').value;
+            const jobNameInput = document.getElementById('job-name');
+            
+            // Only generate if field is empty
             if (modelName && !jobNameInput.value) {
-                var now = new Date();
-                var shortId = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
-                jobNameInput.value = modelName + '_' + shortId;
+                // Simple format: ModelName_001, ModelName_002, etc.
+                const now = new Date();
+                const shortId = now.getHours().toString().padStart(2, '0') + 
+                               now.getMinutes().toString().padStart(2, '0');
+                
+                const name = `${modelName}_${shortId}`;
+                jobNameInput.value = name;
+            }
+        }
+        
+        // Cargar datos del modelo desde el diseñador
+        function loadModelData() {
+            const modelId = "{{ model_id }}";
+            if (modelId && modelId !== "None") {
+                // Fer una petició AJAX per obtenir les dades del model
+                fetch(`/api/get-model-config/${modelId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('model-name').value = data.name;
+                        document.getElementById('model-id').value = data.id;
+
+                        // Adapt UI based on model type
+                        const modelType = data.config_json?.metadata?.model_type || 'dl';
+                        const algorithm = data.config_json?.architecture?.ml_algorithm?.type || null;
+
+                        console.log('Model config loaded:', {modelType, algorithm, config: data.config_json});
+                        adaptTrainingParamsForModelType(modelType, algorithm);
+
+                        // Obtenir informació del dataset
+                        const datasetInfo = data.config_json?.dataset?.selected_datasets?.[0];
+                        if (datasetInfo) {
+                            // Actualitzar nom del treball
+                            updateJobName();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading model:', error);
+                        showMessage('Error loading model', 'error');
+                    });
             }
         }
 
+        // Adapt training parameters based on model type
         function adaptTrainingParamsForModelType(modelType, algorithm) {
-            var batchCont = document.querySelector('#train-batch-size').closest('.param-container');
-            var epochsCont = document.querySelector('#train-epochs').closest('.param-container');
-            var saveFreqCont = document.querySelector('#save-frequency').closest('.param-container');
-            var strategySelect = document.getElementById('fed-strategy');
-            var trainingSummary = document.getElementById('training-summary');
+            console.log(`Adapting UI for model_type: ${modelType}, algorithm: ${algorithm}`);
 
-            function clearAndBuild(el, nodes) {
-                while (el.firstChild) { el.removeChild(el.firstChild); }
-                nodes.forEach(function(n) { el.appendChild(n); });
-            }
-
-            function t(text) { return document.createTextNode(text); }
-            function strong(id, cls, txt) {
-                var s = document.createElement('strong');
-                s.id = id; s.className = cls; s.textContent = txt;
-                return s;
-            }
-            function opt(val, txt, sel) {
-                var o = document.createElement('option');
-                o.value = val; o.textContent = txt; if (sel) { o.selected = true; }
-                return o;
-            }
+            // Get parameter containers
+            const batchSizeContainer = document.querySelector('#train-batch-size').closest('.param-container');
+            const epochsContainer = document.querySelector('#train-epochs').closest('.param-container');
+            const roundsContainer = document.querySelector('#train-rounds').closest('.param-container');
+            const saveFreqContainer = document.querySelector('#save-frequency').closest('.param-container');
+            const strategyContainer = document.querySelector('#fed-strategy').closest('.param-container');
+            const flowerVersionContainer = document.querySelector('#flower-version').closest('.param-container');
 
             if (modelType === 'ml') {
-                batchCont.style.display = 'none';
-                saveFreqCont.style.display = 'none';
-                epochsCont.querySelector('label').firstChild.nodeValue = 'Iterations ';
-                if (trainingSummary) {
-                    clearAndBuild(trainingSummary, [
-                        t('Iterations: '), strong('epochs-summary', 'text-dark', '5'),
-                        t(' | Rounds: '), strong('rounds-summary', 'text-dark', '10')
-                    ]);
+                // ML models (FedSVM, RandomForest, etc.) - Hide batch size, show iterations as epochs
+                batchSizeContainer.style.display = 'none';
+                saveFreqContainer.style.display = 'none';  // No checkpoints for ML models
+
+                // Change epochs label to "Iterations" for ML
+                const epochsLabel = epochsContainer.querySelector('label');
+                epochsLabel.innerHTML = `Iterations <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of training iterations for the ML algorithm"></i>`;
+
+                // Update summary - hide batch size and save frequency
+                const trainingSummary = document.querySelector('#training-summary');
+                trainingSummary.innerHTML = `
+                    Iterations: <strong id="epochs-summary" class="text-dark">5</strong> |
+                    Rounds: <strong id="rounds-summary" class="text-dark">10</strong>
+                `;
+
+                // Change strategy options to show FedSVM-specific strategies
+                const strategySelect = document.getElementById('fed-strategy');
+                strategySelect.innerHTML = `
+                    <option value="FedSVM" selected>Federated SVM</option>
+                `;
+
+                // Add ML algorithm indicator
+                const modelNameInput = document.getElementById('model-name');
+                if (algorithm && !modelNameInput.value.includes('[ML]')) {
+                    modelNameInput.value = `${modelNameInput.value} [ML: ${algorithm}]`;
                 }
-                clearAndBuild(strategySelect, [opt('FedSVM', 'Federated SVM', true)]);
-                var nameEl = document.getElementById('model-name');
-                if (algorithm && nameEl.value.indexOf('[ML]') === -1) {
-                    nameEl.value = nameEl.value + ' [ML: ' + algorithm + ']';
-                }
+
             } else {
-                batchCont.style.display = '';
-                saveFreqCont.style.display = '';
-                epochsCont.querySelector('label').firstChild.nodeValue = 'Epochs ';
-                if (trainingSummary) {
-                    clearAndBuild(trainingSummary, [
-                        t('Epochs: '), strong('epochs-summary', 'text-dark', '5'),
-                        t(' | Batch Size: '), strong('batch-summary', 'text-dark', '32'),
-                        t(' | Rounds: '), strong('rounds-summary', 'text-dark', '10'),
-                        t(' | Save Every: '), strong('save-freq-summary', 'text-dark', '0')
-                    ]);
-                }
-                clearAndBuild(strategySelect, [
-                    opt('FedAvg', 'Federated Averaging', true),
-                    opt('FedProx', 'Federated Proximal', false)
-                ]);
+                // DL models - Show all standard parameters
+                batchSizeContainer.style.display = '';
+                saveFreqContainer.style.display = '';
+
+                // Reset epochs label
+                const epochsLabel = epochsContainer.querySelector('label');
+                epochsLabel.innerHTML = `Epochs <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>`;
+
+                // Reset summary
+                const trainingSummary = document.querySelector('#training-summary');
+                trainingSummary.innerHTML = `
+                    Epochs: <strong id="epochs-summary" class="text-dark">5</strong> |
+                    Batch Size: <strong id="batch-summary" class="text-dark">32</strong> |
+                    Rounds: <strong id="rounds-summary" class="text-dark">10</strong> |
+                    Save Every: <strong id="save-freq-summary" class="text-dark">0</strong>
+                `;
+
+                // Reset strategy options
+                const strategySelect = document.getElementById('fed-strategy');
+                strategySelect.innerHTML = `
+                    <option value="FedAvg" selected>Federated Averaging</option>
+                    <option value="FedProx">Federated Proximal</option>
+                `;
             }
 
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
-                new bootstrap.Tooltip(el);
+            // Re-initialize tooltips after DOM changes
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
             });
-            refreshIcons();
         }
-
+        
+        // Cargar datos al iniciar
         loadModelData();
 
-        // Preview JSON
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Preview config JSON button
         document.getElementById('preview-config-json-btn').addEventListener('click', function() {
             updateConfigJsonPreview();
-            new bootstrap.Modal(document.getElementById('configJsonModal')).show();
+            const configJsonModal = new bootstrap.Modal(document.getElementById('configJsonModal'));
+            configJsonModal.show();
         });
-
-        // Copy JSON
+        
+        // Copy config JSON button
         document.getElementById('copy-config-json-btn').addEventListener('click', function() {
-            var txt = document.getElementById('config-json-preview').textContent;
-            navigator.clipboard.writeText(txt).then(function() {
-                showToast('JSON copied to clipboard!', 'success');
+            const jsonText = document.getElementById('config-json-preview').textContent;
+            navigator.clipboard.writeText(jsonText).then(function() {
+                showMessage('JSON copiado al portapapeles!', 'success');
             });
         });
-
-        // Start training
+        
+        // Start training button
         document.getElementById('start-training-btn').addEventListener('click', function() {
-            var form = document.getElementById('trainingConfigForm');
-            if (!form.checkValidity()) { form.reportValidity(); return; }
-            startTraining(generateTrainingConfig());
+            const form = document.getElementById('trainingConfigForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            // Gather form data and generate config JSON
+            const formData = generateTrainingConfig();
+            
+            // Submit training job
+            startTraining(formData);
         });
-
-        // Refresh jobs
-        document.getElementById('refresh-jobs-btn').addEventListener('click', function() {
-            window.location.reload();
-        });
-
+        
+        // Generate configuration JSON
         function generateTrainingConfig() {
-            var selectedMetrics = [];
-            document.querySelectorAll('input[name="metrics"]:checked').forEach(function(cb) {
-                selectedMetrics.push(cb.value);
+            // Recoger métricas seleccionadas
+            const selectedMetrics = [];
+            document.querySelectorAll('input[name="metrics"]:checked').forEach(checkbox => {
+                selectedMetrics.push(checkbox.value);
             });
-            var modelId = document.getElementById('model-id').value;
-            var formData = {
+            
+            // Obtener el ID del modelo
+            const modelId = document.getElementById('model-id').value;
+            let modelConfig = null;
+            
+            // Build base configuration object
+            const formData = {
                 model_id: modelId,
                 job_name: document.getElementById('job-name').value,
                 job_description: document.getElementById('job-description').value,
@@ -810,58 +864,74 @@
                             min_eval_clients: parseInt(document.getElementById('min-eval-clients').value),
                             min_available_clients: parseInt(document.getElementById('min-available-clients').value)
                         }
-                    }
+                    },
+                    
                 }
             };
-
+            
+            // Add strategy-specific parameters
             if (formData.config.federated.name === 'FedProx') {
-                var muEl = document.getElementById('proximal-mu');
-                if (muEl) { formData.config.federated.parameters.proximal_mu = parseFloat(muEl.value); }
+                formData.config.federated.parameters.proximal_mu = parseFloat(document.getElementById('proximal-mu').value);
             }
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/api/get-model-config/' + modelId + '/', false);
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/api/get-model-config/${modelId}/`, false); // false para síncrono
             xhr.send();
+            
             if (xhr.status === 200) {
-                var resp = JSON.parse(xhr.responseText);
+                const response = JSON.parse(xhr.responseText);
+                // Incloem tota la informació del model amb estructura unificada
                 formData.model = {
-                    id: resp.id, name: resp.name, framework: resp.framework,
-                    description: resp.description,
-                    model_type: resp.model_type || 'dl',
-                    config_json: resp.config_json
+                    id: response.id,
+                    name: response.name,
+                    framework: response.framework,
+                    description: response.description,
+                    model_type: response.model_type || 'dl',
+                    config_json: response.config_json
                 };
-                var selectedDatasets = {{ selected_datasets|default:'[]'|to_json }};
+                
+                // Add selected datasets to unified structure
+                const selectedDatasets = {{  selected_datasets|default:'[]'|to_json }};
                 if (selectedDatasets && selectedDatasets.length > 0) {
-                    if (!formData.model.config_json.dataset) { formData.model.config_json.dataset = {}; }
+                    if (!formData.model.config_json.dataset) {
+                        formData.model.config_json.dataset = {};
+                    }
                     formData.model.config_json.dataset.selected_datasets = selectedDatasets;
                 }
             }
+            
             return formData;
         }
-
+        
+        // Update JSON preview
         function updateConfigJsonPreview() {
-            var config = generateTrainingConfig();
-            var m = config.model || {};
-            var mc = m.config_json || {};
-            var unifiedConfig = {
+            const config = generateTrainingConfig();
+            
+            // Create unified structure JSON with complete configuration
+            const unifiedConfig = {
                 metadata: {
                     version: "1.0",
                     created_at: new Date().toISOString(),
-                    model_type: m.model_type || "dl",
-                    framework: m.framework || "pytorch"
+                    model_type: config.model?.model_type || "dl",
+                    framework: config.model?.framework || "pytorch"
                 },
-                basic_info: { name: m.name || "", description: m.description || "" },
-                architecture: mc.architecture || {},
+                basic_info: {
+                    name: config.model?.name || "",
+                    description: config.model?.description || ""
+                },
+                architecture: config.model?.config_json?.architecture || {},
                 training: {
-                    optimizer: (mc.training && mc.training.optimizer) ? mc.training.optimizer : {},
-                    loss_function: (mc.training && mc.training.loss_function) ? mc.training.loss_function : "",
+                    optimizer: config.model?.config_json?.training?.optimizer || {},
+                    loss_function: config.model?.config_json?.training?.loss_function || "",
                     metrics: config.config.train.metrics || [],
                     epochs: config.config.train.epochs,
                     batch_size: config.config.train.batch_size,
                     rounds: config.config.train.rounds,
                     flower_version: config.config.train.flower_version
                 },
-                dataset: { selected_datasets: (mc.dataset && mc.dataset.selected_datasets) ? mc.dataset.selected_datasets : [] },
+                dataset: {
+                    selected_datasets: config.model?.config_json?.dataset?.selected_datasets || []
+                },
                 federated: config.config.federated,
                 job_config: {
                     job_name: config.job_name,
@@ -869,242 +939,439 @@
                     save_frequency: config.save_frequency
                 }
             };
+            
             document.getElementById('config-json-preview').textContent = JSON.stringify(unifiedConfig, null, 2);
         }
+        
+        // Refresh jobs button
+        document.getElementById('refresh-jobs-btn').addEventListener('click', function() {
+            window.location.reload();
+        });
 
-        // Progress polling
+        // Auto-refresh job progress every 10 seconds
+        const AUTO_REFRESH_INTERVAL = 10000; // 10 seconds
+        let progressPollingInterval = null;
+
         function updateJobProgress(jobId, progressCell, statusBadge) {
-            fetch('/api/get-job-metrics/' + jobId + '/')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (!data.success) { return; }
-                    var progress = data.progress || 0;
-                    if (progress > 0) {
-                        var bar = progressCell.querySelector('.progress-fill');
-                        if (!bar) {
-                            progressCell.textContent = '';
-                            var wrapper = document.createElement('div');
-                            wrapper.className = 'progress-table';
-                            bar = document.createElement('div');
-                            bar.className = 'progress-fill';
-                            wrapper.appendChild(bar);
-                            var lbl = document.createElement('span');
-                            lbl.className = 'progress-label';
-                            progressCell.appendChild(wrapper);
-                            progressCell.appendChild(lbl);
+            fetch(`/api/get-job-metrics/${jobId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const progress = data.progress || 0;
+
+                        // Update or create progress bar
+                        let progressBar = progressCell.querySelector('.progress-bar');
+
+                        if (progress > 0) {
+                            // Job has started, show progress bar
+                            if (!progressBar) {
+                                // Replace the "-" span with a progress bar
+                                progressCell.innerHTML = `
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                `;
+                                progressBar = progressCell.querySelector('.progress-bar');
+                            }
+
+                            progressBar.style.width = `${progress}%`;
+                            progressBar.setAttribute('aria-valuenow', progress);
+                            progressBar.textContent = `${progress}%`;
                         }
-                        bar.style.width = progress + '%';
-                        var lblEl = progressCell.querySelector('.progress-label');
-                        if (lblEl) { lblEl.textContent = progress + '%'; }
+
+                        // Update status badge
+                        const statusMap = {
+                            'pending': { class: 'warning', text: 'Pending' },
+                            'server_ready': { class: 'info', text: 'Server_ready' },
+                            'running': { class: 'primary', text: 'Running' },
+                            'completed': { class: 'success', text: 'Completed' },
+                            'failed': { class: 'danger', text: 'Failed' }
+                        };
+
+                        const statusInfo = statusMap[data.job_status] || { class: 'secondary', text: data.job_status };
+                        statusBadge.className = `badge bg-${statusInfo.class}`;
+                        statusBadge.textContent = statusInfo.text;
+
+                        // Stop polling if job is complete
+                        if (data.job_status === 'completed' || data.job_status === 'failed') {
+                            console.log(`Job ${jobId} finished with status: ${data.job_status}. Stopping polling.`);
+                            return true; // Signal to stop polling this job
+                        }
                     }
-                    var statusMap = {
-                        'pending': ['status-pending', 'Pending'],
-                        'server_ready': ['status-pending', 'Server ready'],
-                        'running': ['status-running', 'Running'],
-                        'completed': ['status-completed', 'Completed'],
-                        'failed': ['status-failed', 'Failed']
-                    };
-                    var si = statusMap[data.job_status] || ['status-completed', data.job_status];
-                    statusBadge.className = 'status-badge ' + si[0];
-                    statusBadge.textContent = si[1];
+                    return false; // Continue polling
                 })
-                .catch(function(err) { console.error('Polling error for job ' + jobId + ':', err); });
+                .catch(error => {
+                    console.error(`Error fetching metrics for job ${jobId}:`, error);
+                    return false; // Continue polling despite error
+                });
         }
 
         function startProgressPolling() {
-            var activeJobs = [];
-            document.querySelectorAll('tbody tr').forEach(function(row) {
-                var badge = row.querySelector('.status-badge');
-                var cells = row.querySelectorAll('td');
-                var progressCell = cells[3];
-                if (!badge || !progressCell) { return; }
-                var status = (badge.dataset.status || badge.textContent.trim()).toLowerCase().replace(' ', '_');
-                if (status === 'running' || status === 'server_ready' || status === 'pending') {
-                    var link = row.querySelector('a[href*="/jobs/"]');
-                    if (link) {
-                        var match = link.getAttribute('href').match(/\/jobs\/(\d+)\//);
-                        if (match) {
-                            activeJobs.push({ jobId: match[1], progressCell: progressCell, statusBadge: badge });
+            // Get all job rows
+            const jobRows = document.querySelectorAll('tbody tr');
+            const activeJobs = [];
+
+            jobRows.forEach(row => {
+                const statusBadge = row.querySelector('.badge');
+                const progressCell = row.querySelectorAll('td')[3]; // Progress is 4th column (index 3)
+
+                if (statusBadge && progressCell) {
+                    const status = statusBadge.textContent.trim().toLowerCase();
+
+                    // Poll ALL active jobs (not just those with progress bars)
+                    if (status === 'running' || status === 'server_ready' || status === 'pending' || status === 'server ready') {
+                        // Extract job ID from the detail link
+                        const detailLink = row.querySelector('a[href*="/jobs/"]');
+                        if (detailLink) {
+                            const jobId = detailLink.getAttribute('href').match(/\/jobs\/(\d+)\//)?.[1];
+                            if (jobId) {
+                                activeJobs.push({
+                                    jobId: jobId,
+                                    progressCell: progressCell,
+                                    statusBadge: statusBadge,
+                                    row: row
+                                });
+                            }
                         }
                     }
                 }
             });
-            if (activeJobs.length === 0) { return; }
-            activeJobs.forEach(function(j) { updateJobProgress(j.jobId, j.progressCell, j.statusBadge); });
-            progressPollingInterval = setInterval(function() {
-                var still = activeJobs.filter(function(j) {
-                    var s = j.statusBadge.textContent.trim().toLowerCase();
-                    return s !== 'completed' && s !== 'failed';
-                });
-                if (still.length === 0) { clearInterval(progressPollingInterval); progressPollingInterval = null; return; }
-                still.forEach(function(j) { updateJobProgress(j.jobId, j.progressCell, j.statusBadge); });
-            }, AUTO_REFRESH_INTERVAL);
-        }
-        startProgressPolling();
-        window.addEventListener('beforeunload', function() {
-            if (progressPollingInterval) { clearInterval(progressPollingInterval); }
-        });
 
-        // Export modal
-        var expModal = document.getElementById('exportModelModal');
-        if (expModal) {
-            expModal.addEventListener('show.bs.modal', function(event) {
-                var btn = event.relatedTarget;
-                if (btn) {
-                    document.getElementById('export-job-id').value = btn.getAttribute('data-job-id');
-                    document.getElementById('export-name').value = 'model_' + btn.getAttribute('data-job-id');
+            if (activeJobs.length === 0) {
+                console.log('No active jobs to poll. Stopping auto-refresh.');
+                if (progressPollingInterval) {
+                    clearInterval(progressPollingInterval);
+                    progressPollingInterval = null;
                 }
+                return;
+            }
+
+            console.log(`Starting auto-refresh for ${activeJobs.length} active job(s)`);
+
+            // Poll immediately once
+            activeJobs.forEach(job => {
+                updateJobProgress(job.jobId, job.progressCell, job.statusBadge);
+            });
+
+            // Set up interval polling
+            if (!progressPollingInterval) {
+                progressPollingInterval = setInterval(() => {
+                    const stillActiveJobs = activeJobs.filter(job => {
+                        const status = job.statusBadge.textContent.trim().toLowerCase();
+                        return status !== 'completed' && status !== 'failed';
+                    });
+
+                    if (stillActiveJobs.length === 0) {
+                        console.log('All jobs completed. Stopping auto-refresh.');
+                        clearInterval(progressPollingInterval);
+                        progressPollingInterval = null;
+                        return;
+                    }
+
+                    stillActiveJobs.forEach(job => {
+                        updateJobProgress(job.jobId, job.progressCell, job.statusBadge);
+                    });
+                }, AUTO_REFRESH_INTERVAL);
+            }
+        }
+
+        // Start polling on page load if there are active jobs
+        startProgressPolling();
+
+        // Clean up interval on page unload
+        window.addEventListener('beforeunload', function() {
+            if (progressPollingInterval) {
+                clearInterval(progressPollingInterval);
+            }
+        });
+        
+        // View job details button
+        document.querySelectorAll('.view-job-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const jobId = this.getAttribute('data-job-id');
+                showJobDetails(jobId);
+            });
+        });
+        
+        // Setup export model modal
+        const exportModelModal = document.getElementById('exportModelModal');
+        if (exportModelModal) {
+            exportModelModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const jobId = button.getAttribute('data-job-id');
+                
+                document.getElementById('export-job-id').value = jobId;
+                document.getElementById('export-name').value = `model_${jobId}`;
             });
         }
-
+        
+        // Download model button
         document.getElementById('download-model-btn').addEventListener('click', function() {
-            var jobId = document.getElementById('export-job-id').value;
-            var fmt = document.getElementById('export-format').value;
-            var name = document.getElementById('export-name').value;
-            window.location.href = '/api/download-model/' + jobId + '/?format=' + fmt + '&name=' + encodeURIComponent(name);
+            const jobId = document.getElementById('export-job-id').value;
+            const format = document.getElementById('export-format').value;
+            const name = document.getElementById('export-name').value;
+            
+            downloadModel(jobId, format, name);
         });
-
+        
+        // API Functions
         function startTraining(formData) {
-            showToast('Starting training...', 'info');
-            fetch('/api/start-training/', {
+            // Show immediate feedback
+            showTrainingMessage('Starting training...');
+            
+            return fetch('/api/start-training/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
                 body: JSON.stringify(formData)
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
+            .then(response => response.json())
+            .then(data => {
                 if (data.success) {
-                    showToast(data.message, 'success');
-                    setTimeout(function() { window.location.reload(); }, 2000);
+                    showTrainingMessage(data.message, 'success');
+                    
+                    // Reload page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
                 } else {
-                    showToast('Error: ' + data.error, 'danger');
+                    showTrainingMessage(`Error: ${data.error}`, 'danger');
                 }
             })
-            .catch(function(err) { showToast('Communication error: ' + err, 'danger'); });
+            .catch(error => {
+                showTrainingMessage(`Communication error: ${error}`, 'danger');
+            });
         }
-
         function showJobDetails(jobId) {
-            new bootstrap.Modal(document.getElementById('jobDetailsModal')).show();
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+            modal.show();
+            
+            // Show loading, hide content and error
             document.getElementById('jobDetailsLoading').style.display = 'block';
             document.getElementById('jobDetailsContent').style.display = 'none';
             document.getElementById('jobDetailsError').style.display = 'none';
-            fetch('/api/job-details/' + jobId + '/')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    document.getElementById('jobDetailsLoading').style.display = 'none';
+            
+            // Fetch job details
+            fetch(`/api/job-details/${jobId}/`)
+                .then(response => response.json())
+                .then(data => {
                     if (data.success) {
+                        // Hide loading
+                        document.getElementById('jobDetailsLoading').style.display = 'none';
+                        
+                        // Populate details
                         document.getElementById('job-detail-name').textContent = data.job.name;
                         document.getElementById('job-detail-description').textContent = data.job.description || '-';
                         document.getElementById('job-detail-model').textContent = data.job.model_name;
-                        document.getElementById('job-detail-status').textContent = data.job.status;
+                        document.getElementById('job-detail-status').textContent = getStatusText(data.job.status);
                         document.getElementById('job-detail-created').textContent = data.job.created_at;
                         document.getElementById('job-detail-dataset').textContent = data.job.dataset || '-';
-                        var tbl = document.getElementById('job-metrics-table');
-                        while (tbl.firstChild) { tbl.removeChild(tbl.firstChild); }
+                        
+                        // Populate metrics table
+                        const metricsTable = document.getElementById('job-metrics-table');
+                        metricsTable.innerHTML = '';
+                        
                         if (data.job.metrics && data.job.metrics.length > 0) {
-                            data.job.metrics.forEach(function(metric) {
-                                var row = document.createElement('tr');
-                                ['round', 'accuracy', 'loss'].forEach(function(k) {
-                                    var td = document.createElement('td');
-                                    td.textContent = (metric[k] !== undefined && typeof metric[k] === 'number') ? metric[k].toFixed(4) : (metric[k] || '-');
-                                    row.appendChild(td);
-                                });
-                                tbl.appendChild(row);
+                            data.job.metrics.forEach(metric => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${metric.round}</td>
+                                    <td>${metric.accuracy !== undefined ? metric.accuracy.toFixed(4) : '-'}</td>
+                                    <td>${metric.loss !== undefined ? metric.loss.toFixed(4) : '-'}</td>
+                                `;
+                                metricsTable.appendChild(row);
                             });
                         } else {
-                            var row = document.createElement('tr');
-                            var td = document.createElement('td'); td.colSpan = 3; td.className = 'text-center'; td.textContent = 'No metrics available.';
-                            row.appendChild(td); tbl.appendChild(row);
+                            const row = document.createElement('tr');
+                            row.innerHTML = `<td colspan="3" class="text-center">There are no metrics available.</td>`;
+                            metricsTable.appendChild(row);
                         }
+                        
+                        // Populate config
                         document.getElementById('job-config-json').textContent = JSON.stringify(data.job.config, null, 2);
+                        
+                        // Show content
                         document.getElementById('jobDetailsContent').style.display = 'block';
                     } else {
+                        // Show error
+                        document.getElementById('jobDetailsLoading').style.display = 'none';
                         document.getElementById('jobDetailsErrorMessage').textContent = data.error;
                         document.getElementById('jobDetailsError').style.display = 'block';
                     }
                 })
-                .catch(function(err) {
+                .catch(error => {
+                    // Show error
                     document.getElementById('jobDetailsLoading').style.display = 'none';
-                    document.getElementById('jobDetailsErrorMessage').textContent = 'Communication error: ' + err;
+                    document.getElementById('jobDetailsErrorMessage').textContent = `Error de comunicación: ${error}`;
                     document.getElementById('jobDetailsError').style.display = 'block';
                 });
         }
-
-        document.querySelectorAll('.view-job-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() { showJobDetails(this.getAttribute('data-job-id')); });
-        });
-
+        
+        function downloadModel(jobId, format, name) {
+            window.location.href = `/api/download-model/${jobId}/?format=${format}&name=${encodeURIComponent(name)}`;
+        }
+        
+        // Helper functions
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Pendiente',
+                'running': 'En Ejecución',
+                'completed': 'Completado',
+                'failed': 'Error'
+            };
+            
+            return statusMap[status] || 'Desconocido';
+        }
+        
+        function showTrainingMessage(message, type = 'info') {
+            showToast(message, type);
+        }
+        
         function getCookie(name) {
-            var val = null;
-            if (document.cookie) {
-                document.cookie.split(';').forEach(function(c) {
-                    c = c.trim();
-                    if (c.startsWith(name + '=')) { val = decodeURIComponent(c.substring(name.length + 1)); }
-                });
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
             }
-            return val;
+            return cookieValue;
         }
 
-        // Tooltips
-        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
-            new bootstrap.Tooltip(el);
-        });
+        // Function to show messages using the global toast system
+        function showMessage(message, type = 'success') {
+            // Map error type to danger for consistency
+            const toastType = type === 'error' ? 'danger' : type;
+            showToast(message, toastType);
+        }
 
-        // Delete job
-        document.querySelectorAll('.delete-job').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.getElementById('delete-job-name').textContent = this.getAttribute('data-job-name');
-                document.getElementById('delete-job-form').action = this.getAttribute('data-delete-url');
-                new bootstrap.Modal(document.getElementById('deleteJobModal')).show();
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // Delete job button - Versió millorada amb modal
+        document.querySelectorAll('.delete-job').forEach(button => {
+            button.addEventListener('click', function() {
+                const deleteUrl = this.getAttribute('data-delete-url');
+                const jobName = this.getAttribute('data-job-name');
+                
+                // Configurar el modal
+                document.getElementById('delete-job-name').textContent = jobName;
+                
+                // Configurar el form action
+                const deleteForm = document.getElementById('delete-job-form');
+                deleteForm.action = deleteUrl;
+                
+                // Mostrar el modal
+                const deleteJobModal = new bootstrap.Modal(document.getElementById('deleteJobModal'));
+                deleteJobModal.show();
             });
         });
 
-        // Metric counters
-        function updateMetricCounter(item) {
-            var checked = item.querySelectorAll('.accordion-body .form-check-input:checked').length;
-            var counter = item.querySelector('.metric-counter');
+        function showButtonFeedback(button, message) {
+            const originalText = button.innerHTML;
+            button.textContent = message;
+            button.classList.add('btn-outline-success');
+            button.classList.remove('btn-primary');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-outline-success');
+                button.classList.add('btn-primary');
+            }, 2000);
+        }
+
+        // Logic for Interactive Metric Cards
+        function updateMetricCounter(accordionItem) {
+            const checkboxes = accordionItem.querySelectorAll('.accordion-body .form-check-input');
+            const counter = accordionItem.querySelector('.metric-counter');
+            
+            let checkedCount = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    checkedCount++;
+                }
+            });
+
             if (counter) {
-                counter.textContent = checked;
-                counter.classList.toggle('d-none', checked === 0);
+                if (checkedCount > 0) {
+                    counter.textContent = checkedCount;
+                    counter.classList.remove('d-none');
+                } else {
+                    counter.classList.add('d-none');
+                }
             }
         }
-        var mAcc = document.getElementById('metricsAccordion');
-        if (mAcc) {
-            mAcc.querySelectorAll('.accordion-item').forEach(function(item) {
-                item.querySelectorAll('.form-check-input').forEach(function(cb) {
-                    cb.addEventListener('change', function() { updateMetricCounter(item); });
+
+        const metricsAccordion = document.getElementById('metricsAccordion');
+        if (metricsAccordion) {
+            const accordionItems = metricsAccordion.querySelectorAll('.accordion-item');
+            
+            accordionItems.forEach(item => {
+                const checkboxes = item.querySelectorAll('.form-check-input');
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        updateMetricCounter(item);
+                    });
                 });
+                // Initial check on page load
                 updateMetricCounter(item);
             });
         }
 
-        // Training summary
+        // Logic for Training Parameters Summary
         function updateTrainingSummary() {
-            var epEl = document.getElementById('train-epochs');
-            var rnEl = document.getElementById('train-rounds');
-            var epSum = document.getElementById('epochs-summary');
-            var rnSum = document.getElementById('rounds-summary');
-            var bsEl = document.getElementById('train-batch-size');
-            var bsSum = document.getElementById('batch-summary');
-            var sfEl = document.getElementById('save-frequency');
-            var sfSum = document.getElementById('save-freq-summary');
+            const epochs = document.getElementById('train-epochs').value;
+            const rounds = document.getElementById('train-rounds').value;
 
-            if (epSum && epEl) { epSum.textContent = epEl.value || '...'; }
-            if (rnSum && rnEl) { rnSum.textContent = rnEl.value || '...'; }
-            if (bsSum && bsEl) {
-                var bsCont = bsEl.closest('.param-container');
-                if (bsCont && bsCont.style.display !== 'none') { bsSum.textContent = bsEl.value || '...'; }
+            // Update epochs/iterations
+            const epochsSummary = document.getElementById('epochs-summary');
+            if (epochsSummary) {
+                epochsSummary.textContent = epochs || '...';
             }
-            if (sfSum && sfEl) { sfSum.textContent = sfEl.value || '...'; }
+
+            // Update batch size (only if visible for DL models)
+            const batchSummary = document.getElementById('batch-summary');
+            if (batchSummary) {
+                const batchSize = document.getElementById('train-batch-size').value;
+                const batchSizeContainer = document.querySelector('#train-batch-size').closest('.param-container');
+                if (batchSizeContainer && batchSizeContainer.style.display !== 'none') {
+                    batchSummary.textContent = batchSize || '...';
+                }
+            }
+
+            // Update rounds
+            const roundsSummary = document.getElementById('rounds-summary');
+            if (roundsSummary) {
+                roundsSummary.textContent = rounds || '...';
+            }
+
+            // Update save frequency (only if visible for DL models)
+            const saveFreqSummary = document.getElementById('save-freq-summary');
+            if (saveFreqSummary) {
+                const saveFreq = document.getElementById('save-frequency').value;
+                saveFreqSummary.textContent = saveFreq || '...';
+            }
         }
 
-        ['train-epochs', 'train-batch-size', 'train-rounds', 'save-frequency'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) { el.addEventListener('input', updateTrainingSummary); }
+        const paramInputs = ['train-epochs', 'train-batch-size', 'train-rounds', 'save-frequency'];
+        paramInputs.forEach(inputId => {
+            const inputElement = document.getElementById(inputId);
+            if (inputElement) {
+                inputElement.addEventListener('input', updateTrainingSummary);
+            }
         });
+        
+        // Initial call on page load
         updateTrainingSummary();
-
-    }); // end DOMContentLoaded
-})();
+    });
 </script>
-{% endblock %}
+{% endblock %} 

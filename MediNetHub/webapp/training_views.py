@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from .models import ModelConfig, TrainingJob, Connection
 from webapp.server_process import run_flower_server_process
 from webapp.server_fn.server import get_ca_certificate, is_ssl_enabled
@@ -332,7 +332,7 @@ def training(request):
         'STRATEGY_HELPER': STRATEGY_HELPER,
     }
 
-    return render(request, 'webapp/training_copy.html', context)
+    return render(request, 'webapp/training.html', context)
 
 
 @login_required
@@ -386,8 +386,11 @@ def get_job_metrics(request, job_id):
     API endpoint to get metrics for a training job
     """
     try:
-        job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
+        job = TrainingJob.objects.get(id=job_id, user=request.user)
+    except TrainingJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    try:
         # Obtenir mètriques
         metrics = []
         if job.metrics_json:
@@ -398,11 +401,11 @@ def get_job_metrics(request, job_id):
                     metrics = []
             else:
                 metrics = job.metrics_json
-        
+
         progress = job.progress
         if job.status == 'completed' and progress != 100:
             progress = 100
-        
+
         return JsonResponse({
             'success': True,
             'metrics': metrics,
@@ -411,7 +414,6 @@ def get_job_metrics(request, job_id):
             'current_round': job.current_round,
             'total_rounds': job.total_rounds
         })
-        
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -419,18 +421,21 @@ def get_job_metrics(request, job_id):
         })
 
 
-@login_required  
+@login_required
 def client_status(request, job_id):
     """
     API endpoint to get client status for a training job
     """
     try:
-        job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
+        job = TrainingJob.objects.get(id=job_id, user=request.user)
+    except TrainingJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    try:
         # Obtenir estat de clients
         clients = job.clients_status or {}
         #clients = json.loads(job.clients_status) if job.clients_status else {}
-        
+
         return JsonResponse({
             'success': True,
             'clients': clients,
@@ -438,7 +443,6 @@ def client_status(request, job_id):
             'job_status': job.status,  # Inclou l'estat per saber si ha acabat
             'is_complete': job.status in ['completed', 'failed', 'cancelled']
         })
-        
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -770,8 +774,11 @@ def api_job_details(request, job_id):
     API endpoint to get job details
     """
     try:
-        job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
+        job = TrainingJob.objects.get(id=job_id, user=request.user)
+    except TrainingJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    try:
         # Parse metrics
         metrics = []
         if job.metrics_json:
@@ -779,14 +786,14 @@ def api_job_details(request, job_id):
                 metrics = json.loads(job.metrics_json)
             except json.JSONDecodeError:
                 metrics = []
-        
+
         # Calculate training duration
         duration = None
         if job.started_at and job.completed_at:
             duration = (job.completed_at - job.started_at).total_seconds()
         elif job.started_at:
             duration = (timezone.now() - job.started_at).total_seconds()
-        
+
         data = {
             'id': job.id,
             'name': job.name,
@@ -798,9 +805,8 @@ def api_job_details(request, job_id):
             'metrics': metrics,
             'model_name': job.model_config.name if job.model_config else 'Unknown'
         }
-        
+
         return JsonResponse(data)
-        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 

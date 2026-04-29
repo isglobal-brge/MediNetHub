@@ -38,6 +38,7 @@ urlpatterns = [
     path('jobs/<int:job_id>/delete/', training_views.delete_job, name='delete_job'),
     
     # API endpoints
+    path('api/datasets/<str:dataset_id>/info/', dataset_views.dataset_info_api, name='dataset_info_api'),
     path('api/validate-connection/', dataset_views.validate_connection, name='validate_connection'),
     path('api/test-connection/', dataset_views.test_connection, name='test_connection'),
     path('api/save-model-config/', modelStudio_views.save_model_config, name='api_save_model_config'),

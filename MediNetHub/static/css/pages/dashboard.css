@@ -43,17 +43,18 @@
 /* Tighter padding for the stat card row */
 .row .stat-card { padding: 12px 16px; }
 
-.stat-card__top {
+/* Main row: icon + value/label + delta in one line */
+.stat-card__main {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 8px;
 }
 
 .stat-card__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -67,15 +68,22 @@
 .stat-card__icon--amber { background: rgba(217,119,6,0.10);  color: #D97706; }
 .stat-card__icon--green { background: rgba(5,150,105,0.10);  color: #059669; }
 
+/* Value + label stacked, grows to fill space */
+.stat-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
 .stat-card__delta {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 20px;
   display: flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .stat-card__delta i { width: 10px; height: 10px; }
@@ -84,7 +92,7 @@
 .stat-card__delta--neu { background: #F8FAFC; color: #94A3B8; }
 
 .stat-card__value {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.5px;
@@ -97,17 +105,20 @@
 .stat-card--success .stat-card__value { color: #059669; }
 
 .stat-card__label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: #64748B;
-  margin-top: 2px;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-card__footer {
   font-size: 11px;
   color: #94A3B8;
   padding-top: 6px;
-  margin-top: 6px;
+  margin-top: 0;
   border-top: 1px solid #F1F5F9;
 }
 

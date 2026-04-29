@@ -437,6 +437,46 @@ class FedAvgModelStrategy(FedAvg):
 
         return aggregated_parameters, aggregated_metrics
 
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results,
+        failures,
+    ):
+        """Aggregate evaluation results and persist val_loss / val_accuracy to the job."""
+        loss_aggregated, metrics_aggregated = super().aggregate_evaluate(server_round, results, failures)
+
+        if loss_aggregated is not None:
+            try:
+                val_accuracy = metrics_aggregated.get("accuracy", 0.0) if metrics_aggregated else 0.0
+
+                # Persist validation metrics into the round's metrics_json entry so the
+                # dashboard can show train vs. val curves side-by-side.
+                if self.server_manager.job.metrics_json:
+                    import json as _json
+                    rounds_data = _json.loads(self.server_manager.job.metrics_json)
+                    # Update the entry for this round if it exists; append otherwise.
+                    updated = False
+                    for entry in rounds_data:
+                        if entry.get("round") == server_round:
+                            entry["val_loss"]     = float(loss_aggregated)
+                            entry["val_accuracy"] = float(val_accuracy)
+                            updated = True
+                            break
+                    if not updated:
+                        rounds_data.append({
+                            "round":        server_round,
+                            "val_loss":     float(loss_aggregated),
+                            "val_accuracy": float(val_accuracy),
+                        })
+                    self.server_manager.job.metrics_json = _json.dumps(rounds_data)
+                    self.server_manager.job.save(update_fields=["metrics_json"])
+                    print(f"[EVAL] Round {server_round}: val_loss={loss_aggregated:.4f}, val_accuracy={val_accuracy:.4f}")
+            except Exception as exc:
+                print(f"[EVAL] Failed to persist evaluation metrics for round {server_round}: {exc}")
+
+        return loss_aggregated, metrics_aggregated
+
 
 class FedSVMStrategy(Strategy):
     """

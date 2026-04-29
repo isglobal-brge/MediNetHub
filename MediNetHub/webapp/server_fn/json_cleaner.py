@@ -22,12 +22,33 @@ class ModelConfigCleaner:
     
     @staticmethod
     def clean_padding(params: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert padding='same' to numeric value"""
-        if 'padding' in params and params['padding'] == 'same':
-            if 'kernel_size' in params:
-                kernel_size = params['kernel_size']
-                # For 'same' padding: padding = kernel_size // 2
-                params['padding'] = kernel_size // 2
+        """Resolve padding='same' to a value PyTorch accepts.
+
+        PyTorch supports the string 'same' natively (since 1.10) **only** when
+        stride == 1.  For stride > 1 it raises an error, so we validate early.
+
+        The old formula ``kernel_size // 2`` was wrong for even kernels:
+        k=4 → padding=2 gives output_size = input_size + 1, not input_size.
+        Passing 'same' directly lets PyTorch compute the exact value.
+        """
+        if params.get('padding') != 'same':
+            return params
+
+        stride = params.get('stride', 1)
+        # Normalise stride — can be a tuple (h, w) or a scalar
+        if isinstance(stride, (list, tuple)):
+            stride_val = max(stride)
+        else:
+            stride_val = int(stride)
+
+        if stride_val > 1:
+            raise ValueError(
+                "padding='same' is not supported with stride > 1 in PyTorch. "
+                f"Got stride={stride}. Use explicit padding or set stride=1."
+            )
+
+        # stride == 1: pass 'same' directly — PyTorch computes the exact padding.
+        # No change needed; params['padding'] is already 'same'.
         return params
     
     @staticmethod

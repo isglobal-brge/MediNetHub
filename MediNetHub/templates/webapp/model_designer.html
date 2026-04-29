@@ -4,7 +4,7 @@
 {% block title %}MediNet - Model Designer{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/pages/model-designer.css">
+<link rel="stylesheet" href="/static/css/pages/model-designer.css?v=2">
 {% endblock %}
 
 {% block page_title %}Model Designer{% endblock %}
@@ -17,8 +17,8 @@
 
 {% block content %}
 
-<!-- ===== Page Header ===== -->
-<div class="md-page-header">
+<!-- ===== Page Header (title · stepper · actions) ===== -->
+<div class="md-page-header" style="align-items:center;">
   <div class="md-page-header-left">
     <div class="md-page-header-title-row">
       <h1 class="md-page-header-title">Neural Network Designer</h1>
@@ -27,6 +27,12 @@
     </div>
     <p class="md-page-header-subtitle">Build and configure neural architectures layer by layer</p>
   </div>
+
+  <!-- Compact inline stepper -->
+  <div class="md-page-header-stepper">
+    {% include 'webapp/includes/stepper.html' with active_step=2 %}
+  </div>
+
   <div class="md-page-header-actions">
     <button class="btn btn-outline-secondary-custom btn-sm" id="load-model-btn">
       <i data-lucide="folder-open" style="width:14px;height:14px;"></i>
@@ -181,6 +187,10 @@
           <span class="md-layer-count-badge" id="layer-count-badge">0 layers</span>
         </div>
         <div class="md-canvas-header-actions">
+          <button class="btn btn-outline-secondary-custom btn-sm" id="presets-btn">
+            <i data-lucide="layout-template" style="width:13px;height:13px;"></i>
+            Presets
+          </button>
           <button class="btn btn-outline-secondary-custom btn-sm" id="validate-model-btn">
             <i data-lucide="check-circle" style="width:13px;height:13px;"></i>
             Validate
@@ -208,8 +218,22 @@
             </div>
           </div>
 
+          <!-- Empty state — shown when no layers have been added yet -->
+          <div id="canvas-empty-state" style="display:none; flex-direction:column; align-items:center;
+               gap:10px; padding:20px 12px; text-align:center;">
+            <i data-lucide="layers" style="width:28px;height:28px;color:var(--color-text-muted);opacity:.5;"></i>
+            <p style="margin:0;font-size:12px;color:var(--color-text-muted);line-height:1.5;">
+              No layers yet. Pick a layer from the left panel<br>or start with a preset.
+            </p>
+            <button class="btn btn-sm btn-outline-primary" onclick="openPresetsModal()"
+                    aria-label="Open architecture presets" style="font-size:11px;padding:4px 10px;">
+              <i data-lucide="layout-template" style="width:12px;height:12px;"></i>
+              Load Preset
+            </button>
+          </div>
+
           <!-- Dynamic layers will be inserted here -->
-          <div id="dynamic-layers-container"></div>
+          <div id="dynamic-layers-container" aria-live="polite" aria-label="Model layer stack"></div>
 
           <!-- Connector to output -->
           <div class="md-layer-connector" id="pre-output-connector"></div>
@@ -230,6 +254,12 @@
         </div><!-- /md-layer-list -->
       </div><!-- /md-canvas-body -->
 
+      <!-- Canvas Footer: param count + architecture warnings -->
+      <div class="md-canvas-footer" id="canvas-footer" style="display:none;">
+        <div class="md-canvas-stats" id="canvas-stats"></div>
+        <div class="md-canvas-warning" id="canvas-warning" style="display:none;"></div>
+      </div>
+
     </div><!-- /md-canvas -->
   </div><!-- /md-canvas-col -->
 
@@ -238,19 +268,21 @@
     <div class="md-panel card-flat">
 
       <!-- Panel Tab Bar -->
-      <div class="md-panel-tabs">
-        <button class="md-panel-tab active" data-tab="config" id="tab-config">
+      <div class="md-panel-tabs" role="tablist" aria-label="Model designer panels">
+        <button class="md-panel-tab active" data-tab="config" id="tab-config"
+                role="tab" aria-selected="true" aria-controls="panel-config">
           <i data-lucide="settings-2" style="width:14px;height:14px;"></i>
           Model Config
         </button>
-        <button class="md-panel-tab" data-tab="params" id="tab-params">
+        <button class="md-panel-tab" data-tab="params" id="tab-params"
+                role="tab" aria-selected="false" aria-controls="panel-params">
           <i data-lucide="sliders-horizontal" style="width:14px;height:14px;"></i>
           Layer Params
         </button>
       </div>
 
       <!-- ===== Config Tab ===== -->
-      <div class="md-panel-content" id="panel-config">
+      <div class="md-panel-content" id="panel-config" role="tabpanel" aria-labelledby="tab-config">
 
         <!-- Model Name -->
         <div class="md-field-group">
@@ -344,6 +376,56 @@
           <input type="hidden" id="loss-value" value="cross_entropy">
         </div>
 
+        <!-- Differential Privacy -->
+        <div class="md-dp-section" id="dp-section">
+          <div class="md-dp-header" id="dp-collapse-trigger">
+            <div class="md-dp-header-left">
+              <i data-lucide="shield" style="width:13px;height:13px;color:#8B5CF6;"></i>
+              <span class="md-dp-title">Differential Privacy</span>
+            </div>
+            <div class="md-dp-header-right">
+              <i data-lucide="chevron-down" class="md-dp-chevron" style="width:12px;height:12px;"></i>
+            </div>
+          </div>
+          <div class="md-dp-body" id="dp-body" style="display:none;">
+            <!-- Node budget (read-only, shown when dataset has privacy_policy) -->
+            <div class="md-dp-budget" id="dp-budget" style="display:none;">
+              <div class="md-dp-budget-row">
+                <span class="md-dp-budget-label">Budget / job</span>
+                <span class="md-dp-budget-val" id="dp-budget-per-job">—</span>
+              </div>
+              <div class="md-dp-budget-row">
+                <span class="md-dp-budget-label">Remaining ε</span>
+                <span class="md-dp-budget-val" id="dp-budget-remaining">—</span>
+              </div>
+            </div>
+            <!-- DP parameter inputs -->
+            <div class="md-dp-params" id="dp-params">
+              <div class="md-field-group">
+                <label class="md-field-label" for="dp-noise-multiplier">
+                  Noise Multiplier σ
+                  <span class="md-field-meta" id="dp-noise-val">1.0</span>
+                </label>
+                <input type="number" class="md-text-input" id="dp-noise-multiplier"
+                       min="0.1" max="5.0" step="0.1" value="1.0" placeholder="1.0">
+              </div>
+              <div class="md-field-group">
+                <label class="md-field-label" for="dp-max-grad-norm">
+                  Gradient Clip Norm C
+                  <span class="md-field-meta" id="dp-norm-val">1.0</span>
+                </label>
+                <input type="number" class="md-text-input" id="dp-max-grad-norm"
+                       min="0.1" max="10.0" step="0.1" value="1.0" placeholder="1.0">
+              </div>
+              <div class="md-field-group">
+                <label class="md-field-label" for="dp-random-seed">Random Seed</label>
+                <input type="number" class="md-text-input" id="dp-random-seed"
+                       min="0" max="2147483647" step="1" value="42" placeholder="42">
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Shape Flow -->
         <div class="md-shape-flow" id="shape-flow" style="display:none;">
           <div class="md-shape-flow-header">
@@ -365,7 +447,7 @@
       </div><!-- /panel-config -->
 
       <!-- ===== Layer Params Tab ===== -->
-      <div class="md-panel-content" id="panel-params" style="display:none;">
+      <div class="md-panel-content" id="panel-params" role="tabpanel" aria-labelledby="tab-params" style="display:none;">
 
         <!-- Empty state when no layer selected -->
         <div class="md-params-empty" id="params-empty">
@@ -380,15 +462,6 @@
             <div class="md-params-layer-title" id="params-layer-title">Layer Name</div>
           </div>
           <div id="params-fields"></div>
-
-          <!-- Unsaved confirm widget -->
-          <div class="md-unsaved-confirm" id="unsaved-confirm" style="display:none;">
-            <span class="md-unsaved-confirm-text">You have unsaved parameter changes.</span>
-            <div class="md-unsaved-confirm-actions">
-              <button class="btn btn-sm btn-outline-secondary-custom" id="unsaved-discard-btn">Discard</button>
-              <button class="btn btn-sm btn-accent" id="unsaved-apply-btn">Apply</button>
-            </div>
-          </div>
         </div>
 
       </div><!-- /panel-params -->
@@ -400,16 +473,50 @@
 
 <!-- ===== Add Layer Popover ===== -->
 
+<!-- ===== Presets Modal ===== -->
+<div class="modal fade" id="presets-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Architecture Presets</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <ul class="list-unstyled mb-0" id="presets-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <span class="text-muted" style="font-size:11px;flex:1;">Selecting a preset replaces the current canvas.</span>
+        <button type="button" class="btn btn-outline-secondary-custom btn-sm"
+                data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== JSON Preview Modal ===== -->
 <div class="modal fade" id="json-preview-modal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Model JSON Preview</h5>
+        <h5 class="modal-title">Model Export</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
-        <pre class="log-container m-0" style="max-height:480px;border-radius:0 0 var(--radius-xl) var(--radius-xl);"
+        <!-- Export tabs -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--color-border-light);padding:0 16px;">
+          <button class="md-export-tab active" id="export-tab-json" data-export-tab="json"
+                  style="padding:8px 14px;font-size:12px;font-weight:500;background:none;border:none;
+                         border-bottom:2px solid var(--color-accent);color:var(--color-accent);cursor:pointer;">
+            JSON Config
+          </button>
+          <button class="md-export-tab" id="export-tab-pytorch" data-export-tab="pytorch"
+                  style="padding:8px 14px;font-size:12px;font-weight:500;background:none;border:none;
+                         border-bottom:2px solid transparent;color:var(--color-text-muted);cursor:pointer;">
+            PyTorch Code
+          </button>
+        </div>
+        <pre class="log-container m-0"
+             style="max-height:460px;border-radius:0 0 var(--radius-xl) var(--radius-xl);"
              id="json-preview-content"></pre>
       </div>
     </div>
@@ -492,8 +599,118 @@
   var selectedLayerId = null;
   var layerCounter = 0;
   var isUnsaved = false;      // model-level unsaved
-  var layerLocalUnsaved = false; // layer params unsaved
   var currentModelId = null;
+  var _dsHintsApplied = false; // guard: apply dataset hints only once per canvas session
+
+  /* ===================================================================
+     TENSOR CONTEXT SYSTEM
+     Tracks what shape-space the last non-passthrough layer produces.
+     'none' → no layers yet (all chips enabled)
+     '1d'   → [B, C, L]     — Conv1D / Pool1D / LSTM/GRU space
+     '2d'   → [B, C, H, W]  — Conv2D / Pool2D space
+     'flat' → [B, F]         — Linear / Flatten output
+     'seq'  → [B, L, H]     — LSTM/GRU output (allows stacking or Linear)
+     null   → passthrough (keeps previous context)
+  =================================================================== */
+  var LAYER_OUTPUT_CONTEXT = {
+    linear:               'flat',
+    conv1d:               '1d',
+    conv2d:               '2d',
+    maxpool1d:            '1d',
+    maxpool2d:            '2d',
+    avgpool1d:            '1d',
+    avgpool2d:            '2d',
+    adaptive_avg_pool1d:  '1d',
+    batch_norm1d:         null,
+    batch_norm2d:         '2d',
+    dropout:              null,
+    activation_relu:      null,
+    activation_sigmoid:   null,
+    activation_softmax:   null,
+    activation_tanh:      null,
+    activation_leakyrelu: null,
+    flatten:              'flat',
+    lstm:                 'seq',
+    gru:                  'seq',
+  };
+
+  var COMPATIBLE_WITH = {
+    'none': null, // null = all types allowed
+    '1d':  ['conv1d','maxpool1d','avgpool1d','adaptive_avg_pool1d','batch_norm1d','dropout',
+             'activation_relu','activation_sigmoid','activation_softmax','activation_tanh','activation_leakyrelu',
+             'flatten','lstm','gru'],
+    '2d':  ['conv2d','maxpool2d','avgpool2d','batch_norm2d','dropout',
+             'activation_relu','activation_sigmoid','activation_softmax','activation_tanh','activation_leakyrelu',
+             'flatten'],
+    'flat':['linear','dropout','batch_norm1d',
+             'activation_relu','activation_sigmoid','activation_softmax','activation_tanh','activation_leakyrelu',
+             'lstm','gru'],
+    'seq': ['linear','dropout','batch_norm1d','lstm','gru',
+             'activation_relu','activation_sigmoid','activation_softmax','activation_tanh','activation_leakyrelu'],
+  };
+
+  /* ===================================================================
+     ARCHITECTURE PRESETS
+  =================================================================== */
+  var PRESETS = {
+    mlp_classifier: {
+      label: 'MLP Classifier',
+      desc:  'Linear stack for tabular / structured data classification (federated-safe)',
+      icon:  'box',
+      layers: [
+        { type: 'linear',          params: { in_features: 128, out_features: 256, bias: true } },
+        { type: 'activation_relu', params: {} },
+        { type: 'dropout',         params: { p: 0.3 } },
+        { type: 'linear',          params: { in_features: 256, out_features: 64, bias: true } },
+        { type: 'activation_relu', params: {} },
+        { type: 'dropout',         params: { p: 0.3 } },
+        { type: 'linear',          params: { in_features: 64, out_features: 2, bias: true } },
+      ]
+    },
+    cnn_1d: {
+      label: '1D CNN (Signals)',
+      desc:  'Conv1D stack for ECG, EEG, or time-series data (federated-safe)',
+      icon:  'activity',
+      layers: [
+        { type: 'conv1d',               params: { in_channels: 1,  out_channels: 32, kernel_size: 5, stride: 1, padding: 2 } },
+        { type: 'activation_relu',      params: {} },
+        { type: 'dropout',              params: { p: 0.1 } },
+        { type: 'maxpool1d',            params: { kernel_size: 2, stride: 2 } },
+        { type: 'conv1d',               params: { in_channels: 32, out_channels: 64, kernel_size: 3, stride: 1, padding: 1 } },
+        { type: 'activation_relu',      params: {} },
+        { type: 'dropout',              params: { p: 0.1 } },
+        { type: 'adaptive_avg_pool1d',  params: { output_size: 1 } },
+        { type: 'flatten',              params: { start_dim: 1 } },
+        { type: 'linear',               params: { in_features: 64, out_features: 2, bias: true } },
+      ]
+    },
+    lstm_classifier: {
+      label: 'LSTM Classifier',
+      desc:  'Stacked LSTM for sequential and longitudinal data',
+      icon:  'git-branch',
+      layers: [
+        { type: 'lstm',    params: { input_size: 32, hidden_size: 128, num_layers: 2, batch_first: true } },
+        { type: 'dropout', params: { p: 0.3 } },
+        { type: 'linear',  params: { in_features: 128, out_features: 2, bias: true } },
+      ]
+    },
+    deep_mlp_regression: {
+      label: 'Deep MLP (Regression)',
+      desc:  'Deeper linear stack for continuous output prediction',
+      icon:  'trending-up',
+      layers: [
+        { type: 'linear',          params: { in_features: 64, out_features: 128, bias: true } },
+        { type: 'activation_relu', params: {} },
+        { type: 'dropout',         params: { p: 0.2 } },
+        { type: 'linear',          params: { in_features: 128, out_features: 64, bias: true } },
+        { type: 'activation_relu', params: {} },
+        { type: 'dropout',         params: { p: 0.2 } },
+        { type: 'linear',          params: { in_features: 64, out_features: 32, bias: true } },
+        { type: 'activation_relu', params: {} },
+        { type: 'linear',          params: { in_features: 32, out_features: 1, bias: true } },
+      ]
+    },
+  };
 
   /* ===================================================================
      LAYER METADATA
@@ -528,6 +745,331 @@
   }
   function getIcon(type) {
     return LAYER_META[type] ? LAYER_META[type].icon : 'box';
+  }
+
+  /* ===================================================================
+     TENSOR CONTEXT HELPERS
+  =================================================================== */
+  function inferCurrentContext() {
+    var ctx = 'none';
+    for (var i = 0; i < layers.length; i++) {
+      var out = LAYER_OUTPUT_CONTEXT[layers[i].type];
+      if (out !== null && out !== undefined) ctx = out;
+    }
+    return ctx;
+  }
+
+  function getIncompatibleReason(ctx, type) {
+    if ((ctx === '1d' || ctx === '2d' || ctx === 'seq') && type === 'linear') {
+      return 'Linear needs a flat [B,F] tensor — add a Flatten layer first.';
+    }
+    if (ctx === 'flat' &&
+        ['conv1d','conv2d','maxpool1d','maxpool2d','avgpool1d','avgpool2d',
+         'adaptive_avg_pool1d','batch_norm2d'].indexOf(type) !== -1) {
+      return 'This layer needs spatial/channel dimensions. The current tensor is flat after Linear or Flatten.';
+    }
+    if (ctx === '2d' &&
+        ['conv1d','maxpool1d','avgpool1d','adaptive_avg_pool1d','lstm','gru'].indexOf(type) !== -1) {
+      return '1D and sequence layers are not compatible with 2D spatial tensors [B,C,H,W].';
+    }
+    if (ctx === '1d' && ['conv2d','maxpool2d','avgpool2d','batch_norm2d'].indexOf(type) !== -1) {
+      return '2D spatial layers are not compatible with 1D tensors [B,C,L].';
+    }
+    var ctxName = { '1d':'1D [B,C,L]', '2d':'2D [B,C,H,W]', 'flat':'flat [B,F]', 'seq':'sequence [B,L,H]' };
+    return 'Not compatible with current tensor context: ' + (ctxName[ctx] || ctx) + '.';
+  }
+
+  function updateLayerPickerCompatibility() {
+    var ctx = inferCurrentContext();
+    var allowed = COMPATIBLE_WITH[ctx]; // null = all allowed
+    document.querySelectorAll('.md-lp-chip[data-layer-type]').forEach(function(chip) {
+      var type = chip.getAttribute('data-layer-type');
+      var meta = LAYER_META[type] || {};
+      var ok = !allowed || allowed.indexOf(type) !== -1;
+      if (ok) {
+        chip.classList.remove('md-lp-chip--incompatible');
+        chip.removeAttribute('title');
+        chip.setAttribute('aria-disabled', 'false');
+        chip.setAttribute('aria-label', 'Add ' + (meta.display || type) + ' layer');
+      } else {
+        var reason = getIncompatibleReason(ctx, type);
+        chip.classList.add('md-lp-chip--incompatible');
+        chip.title = reason;
+        chip.setAttribute('aria-disabled', 'true');
+        chip.setAttribute('aria-label', (meta.display || type) + ' — incompatible: ' + reason);
+      }
+    });
+  }
+
+  /* ===================================================================
+     PARAMETER COUNT
+  =================================================================== */
+  function computeLayerParamCount(layer) {
+    var p = layer.params;
+    switch (layer.type) {
+      case 'linear':
+        return (p.in_features || 0) * (p.out_features || 0) +
+               (p.bias !== false ? (p.out_features || 0) : 0);
+      case 'conv1d':
+        return (p.in_channels || 0) * (p.out_channels || 0) * (p.kernel_size || 1) +
+               (p.out_channels || 0);
+      case 'conv2d':
+        return (p.in_channels || 0) * (p.out_channels || 0) *
+               (p.kernel_size || 1) * (p.kernel_size || 1) + (p.out_channels || 0);
+      case 'batch_norm1d':
+      case 'batch_norm2d':
+        return 2 * (p.num_features || 0);
+      case 'lstm': {
+        var li = p.input_size || 0, lh = p.hidden_size || 0, ln = p.num_layers || 1;
+        return 4 * (li * lh + lh * lh + lh) + (ln > 1 ? (ln - 1) * 4 * (2 * lh * lh + lh) : 0);
+      }
+      case 'gru': {
+        var gi = p.input_size || 0, gh = p.hidden_size || 0, gn = p.num_layers || 1;
+        return 3 * (gi * gh + gh * gh + gh) + (gn > 1 ? (gn - 1) * 3 * (2 * gh * gh + gh) : 0);
+      }
+      default: return 0;
+    }
+  }
+
+  function computeTotalParams() {
+    return layers.reduce(function(acc, l) { return acc + computeLayerParamCount(l); }, 0);
+  }
+
+  function formatParamCount(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toString();
+  }
+
+  function makeStatSpan(label, value) {
+    var s = document.createElement('span');
+    s.appendChild(document.createTextNode(label + ': '));
+    var strong = document.createElement('strong');
+    strong.textContent = value;
+    s.appendChild(strong);
+    return s;
+  }
+
+  function updateCanvasFooter() {
+    var footer  = document.getElementById('canvas-footer');
+    var statsEl = document.getElementById('canvas-stats');
+    var warnEl  = document.getElementById('canvas-warning');
+
+    if (layers.length === 0) { footer.style.display = 'none'; return; }
+    footer.style.display = 'flex';
+
+    var total = computeTotalParams();
+    var mb = (total * 4 / 1024 / 1024).toFixed(2);
+    while (statsEl.firstChild) statsEl.removeChild(statsEl.firstChild);
+    statsEl.appendChild(makeStatSpan('Params', formatParamCount(total)));
+    statsEl.appendChild(makeStatSpan('Size (fp32)', mb + ' MB'));
+    statsEl.appendChild(makeStatSpan('Layers', layers.length.toString()));
+
+    var last = layers[layers.length - 1];
+    var loss = document.getElementById('loss-value').value;
+
+    // Check for multiple warning conditions
+    var warnings = [];
+
+    if (last && last.type === 'activation_softmax' &&
+        (loss === 'cross_entropy' || loss === 'nll')) {
+      warnings.push('CrossEntropyLoss already applies log-softmax internally. ' +
+                    'Remove the final Softmax or switch to NLLLoss.');
+    }
+
+    var hasBatchNorm = layers.some(function(l) {
+      return l.type === 'batch_norm1d' || l.type === 'batch_norm2d' || l.type === 'batch_norm3d';
+    });
+    if (hasBatchNorm) {
+      warnings.push('BatchNorm running statistics are NOT aggregated by FedAvg — ' +
+                    'each node keeps its own stats, causing inference drift. ' +
+                    'Consider using Dropout for regularization instead.');
+    }
+
+    if (warnings.length > 0) {
+      warnEl.style.display = 'flex';
+      warnEl.style.flexDirection = 'column';
+      warnEl.style.gap = '4px';
+      while (warnEl.firstChild) warnEl.removeChild(warnEl.firstChild);
+      warnings.forEach(function(msg) {
+        var span = document.createElement('span');
+        span.textContent = '⚠ ' + msg;
+        warnEl.appendChild(span);
+      });
+    } else {
+      warnEl.style.display = 'none';
+      while (warnEl.firstChild) warnEl.removeChild(warnEl.firstChild);
+    }
+  }
+
+  /* ===================================================================
+     AUTO-FILL INPUT DIMENSIONS
+     When a layer is added, pre-fill its input dim from the previous
+     layer's known output dim so users don't have to count manually.
+  =================================================================== */
+  function getLayerOutputDim(layer) {
+    var p = layer.params;
+    switch (layer.type) {
+      case 'linear':            return { kind: 'features', value: p.out_features };
+      case 'conv1d':            return { kind: 'channels', value: p.out_channels };
+      case 'conv2d':            return { kind: 'channels', value: p.out_channels };
+      case 'lstm': case 'gru':  return { kind: 'features', value: p.hidden_size };
+      default: return null;
+    }
+  }
+
+  function autoFillInputDim(newLayer) {
+    if (layers.length < 2) return;
+    for (var i = layers.length - 2; i >= 0; i--) {
+      var src = layers[i];
+      var outCtx = LAYER_OUTPUT_CONTEXT[src.type];
+      if (outCtx === null || outCtx === undefined) continue; // passthrough, keep searching
+      var dim = getLayerOutputDim(src);
+      if (!dim || dim.value == null) break;
+      switch (newLayer.type) {
+        case 'linear':
+          newLayer.params.in_features = dim.value;
+          break;
+        case 'conv1d': case 'conv2d':
+          if (dim.kind === 'channels') newLayer.params.in_channels = dim.value;
+          break;
+        case 'batch_norm1d': case 'batch_norm2d':
+          newLayer.params.num_features = dim.value;
+          break;
+        case 'lstm': case 'gru':
+          newLayer.params.input_size = dim.value;
+          break;
+      }
+      break;
+    }
+  }
+
+  /* ===================================================================
+     PRESETS
+  =================================================================== */
+  function openPresetsModal() {
+    var listEl = document.getElementById('presets-list');
+    while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+
+    Object.keys(PRESETS).forEach(function(key) {
+      var preset = PRESETS[key];
+      var li = document.createElement('li');
+      li.style.cssText = 'border-bottom:1px solid var(--color-border-light);';
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.style.cssText = 'display:flex;flex-direction:column;gap:2px;width:100%;padding:12px 16px;' +
+                          'background:none;border:none;text-align:left;cursor:pointer;' +
+                          'transition:background 0.12s;';
+      btn.addEventListener('mouseenter', function() { btn.style.background = 'var(--color-bg-hover, rgba(0,0,0,0.04))'; });
+      btn.addEventListener('mouseleave', function() { btn.style.background = 'none'; });
+
+      var nameEl = document.createElement('span');
+      nameEl.textContent = preset.label;
+      nameEl.style.cssText = 'font-weight:600;font-size:13px;color:var(--color-text-primary);';
+
+      var descEl = document.createElement('span');
+      descEl.textContent = preset.desc;
+      descEl.style.cssText = 'font-size:11px;color:var(--color-text-muted);';
+
+      var metaEl = document.createElement('span');
+      metaEl.textContent = preset.layers.length + ' layers';
+      metaEl.style.cssText = 'font-size:11px;color:var(--color-accent);margin-top:2px;';
+
+      btn.appendChild(nameEl);
+      btn.appendChild(descEl);
+      btn.appendChild(metaEl);
+
+      btn.addEventListener('click', function() {
+        loadPreset(key);
+        bootstrap.Modal.getInstance(document.getElementById('presets-modal')).hide();
+      });
+
+      li.appendChild(btn);
+      listEl.appendChild(li);
+    });
+
+    new bootstrap.Modal(document.getElementById('presets-modal')).show();
+  }
+
+  function loadPreset(key) {
+    var preset = PRESETS[key];
+    if (!preset) return;
+    layers = [];
+    layerCounter = 0;
+    preset.layers.forEach(function(l) {
+      layerCounter++;
+      layers.push({
+        id: 'layer-' + layerCounter,
+        type: l.type,
+        category: getCategory(l.type),
+        params: Object.assign({}, l.params)
+      });
+    });
+    selectedLayerId = null;
+    renderLayers();
+    renderLayerParams(null);
+    markUnsaved();
+    showToast('Preset "' + preset.label + '" loaded.', 'success');
+  }
+
+  /* ===================================================================
+     PYTORCH CODE EXPORT
+  =================================================================== */
+  var UI_TO_PYTORCH_CLS = {
+    linear: 'Linear', conv1d: 'Conv1d', conv2d: 'Conv2d',
+    maxpool1d: 'MaxPool1d', maxpool2d: 'MaxPool2d',
+    avgpool1d: 'AvgPool1d', avgpool2d: 'AvgPool2d',
+    adaptive_avg_pool1d: 'AdaptiveAvgPool1d',
+    batch_norm1d: 'BatchNorm1d', batch_norm2d: 'BatchNorm2d',
+    dropout: 'Dropout',
+    activation_relu: 'ReLU', activation_sigmoid: 'Sigmoid',
+    activation_softmax: 'Softmax', activation_tanh: 'Tanh',
+    activation_leakyrelu: 'LeakyReLU',
+    flatten: 'Flatten', lstm: 'LSTM', gru: 'GRU',
+  };
+
+  function layerToArgs(l) {
+    var p = l.params;
+    switch (l.type) {
+      case 'linear':
+        return p.in_features + ', ' + p.out_features + (p.bias === false ? ', bias=False' : '');
+      case 'conv1d': case 'conv2d': {
+        var a = p.in_channels + ', ' + p.out_channels + ', kernel_size=' + p.kernel_size;
+        if (p.stride && p.stride !== 1) a += ', stride=' + p.stride;
+        if (p.padding && p.padding !== 0) a += ', padding=' + p.padding;
+        return a;
+      }
+      case 'maxpool1d': case 'maxpool2d':
+      case 'avgpool1d': case 'avgpool2d':
+        return p.kernel_size + (p.stride && p.stride !== p.kernel_size ? ', stride=' + p.stride : '');
+      case 'adaptive_avg_pool1d': return String(p.output_size);
+      case 'batch_norm1d': case 'batch_norm2d': return String(p.num_features);
+      case 'dropout': return p.p !== 0.5 ? 'p=' + p.p : '';
+      case 'activation_softmax': return 'dim=' + (p.dim !== undefined ? p.dim : 1);
+      case 'activation_leakyrelu': return p.negative_slope !== 0.01 ? 'negative_slope=' + p.negative_slope : '';
+      case 'flatten': return 'start_dim=' + (p.start_dim !== undefined ? p.start_dim : 1);
+      case 'lstm': case 'gru': {
+        var a = p.input_size + ', ' + p.hidden_size;
+        if (p.num_layers && p.num_layers > 1) a += ', num_layers=' + p.num_layers;
+        if (p.batch_first) a += ', batch_first=True';
+        return a;
+      }
+      default: return '';
+    }
+  }
+
+  function generatePyTorchCode() {
+    if (layers.length === 0) return '# No layers defined.';
+    var lines = ['import torch.nn as nn', '', 'model = nn.Sequential('];
+    layers.forEach(function(l, idx) {
+      var cls = UI_TO_PYTORCH_CLS[l.type] || l.type;
+      var args = layerToArgs(l);
+      var comma = idx < layers.length - 1 ? ',' : '';
+      lines.push('    nn.' + cls + '(' + args + ')' + comma);
+    });
+    lines.push(')');
+    return lines.join('\n');
   }
 
   /* ===================================================================
@@ -577,9 +1119,13 @@
   =================================================================== */
   function renderLayers() {
     var container = document.getElementById('dynamic-layers-container');
+    var emptyState = document.getElementById('canvas-empty-state');
 
     // Clear existing dynamic content
     while (container.firstChild) container.removeChild(container.firstChild);
+
+    // Show / hide empty state
+    emptyState.style.display = layers.length === 0 ? 'flex' : 'none';
 
     layers.forEach(function(layer, idx) {
       // Connector before this layer
@@ -595,6 +1141,10 @@
     // Update count badge
     var badge = document.getElementById('layer-count-badge');
     badge.textContent = layers.length + ' layer' + (layers.length !== 1 ? 's' : '');
+
+    // Update picker compatibility and canvas footer stats/warnings
+    updateLayerPickerCompatibility();
+    updateCanvasFooter();
 
     // Re-render icons
     lucide.createIcons();
@@ -693,27 +1243,22 @@
      LAYER SELECTION & PARAMS
   =================================================================== */
   function selectLayer(layerId) {
-    if (layerLocalUnsaved) {
-      // Show unsaved confirm before switching
-      pendingSelectLayerId = layerId;
-      showUnsavedConfirm();
-      return;
-    }
     selectedLayerId = layerId;
     renderLayers();
     switchToParamsTab();
     renderLayerParams(layerId);
   }
 
-  var pendingSelectLayerId = null;
-
   function switchToParamsTab() {
     document.getElementById('panel-config').style.display = 'none';
     document.getElementById('panel-params').style.display = 'block';
     document.querySelectorAll('.md-panel-tab').forEach(function(t) {
       t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
     });
-    document.getElementById('tab-params').classList.add('active');
+    var paramsTab = document.getElementById('tab-params');
+    paramsTab.classList.add('active');
+    paramsTab.setAttribute('aria-selected', 'true');
   }
 
   function renderLayerParams(layerId) {
@@ -741,10 +1286,6 @@
     while (fieldsEl.firstChild) fieldsEl.removeChild(fieldsEl.firstChild);
     fieldsEl.appendChild(buildParamFields(layer));
 
-    // Reset unsaved state
-    layerLocalUnsaved = false;
-    hideUnsavedConfirm();
-
     lucide.createIcons();
   }
 
@@ -771,7 +1312,6 @@
         chk.id = 'param-' + key;
         chk.checked = !!p[key];
         chk.addEventListener('change', function() {
-          markLayerLocalUnsaved();
           updateLayerParam(layer.id, key, chk.checked);
         });
         wrap.appendChild(chk);
@@ -788,7 +1328,6 @@
           sel.appendChild(o);
         });
         sel.addEventListener('change', function() {
-          markLayerLocalUnsaved();
           updateLayerParam(layer.id, key, sel.value);
         });
         group.appendChild(sel);
@@ -802,7 +1341,6 @@
         if (options && options.max !== undefined) inp.max = options.max;
         if (options && options.step !== undefined) inp.step = options.step;
         inp.addEventListener('input', function() {
-          markLayerLocalUnsaved();
           var val = type === 'number' ? parseFloat(inp.value) : inp.value;
           updateLayerParam(layer.id, key, val);
         });
@@ -892,26 +1430,6 @@
   }
 
   /* ===================================================================
-     UNSAVED PARAMS TRACKING
-  =================================================================== */
-  function markLayerLocalUnsaved() {
-    if (!layerLocalUnsaved) {
-      layerLocalUnsaved = true;
-      showUnsavedConfirm();
-    }
-  }
-
-  function showUnsavedConfirm() {
-    var el = document.getElementById('unsaved-confirm');
-    if (el) el.style.display = 'flex';
-  }
-
-  function hideUnsavedConfirm() {
-    var el = document.getElementById('unsaved-confirm');
-    if (el) el.style.display = 'none';
-  }
-
-  /* ===================================================================
      UPDATE / ADD / REMOVE LAYERS
   =================================================================== */
   function updateLayerParam(layerId, key, value) {
@@ -919,6 +1437,7 @@
     if (layer) {
       layer.params[key] = value;
       markUnsaved();
+      renderLayers();
     }
   }
 
@@ -931,6 +1450,8 @@
       params: getDefaultParams(type)
     };
     layers.push(layer);
+    autoFillInputDim(layer);   // pre-fill input dim from previous layer output
+    applySelectedDatasetToLayers(); // apply dataset hints (runs once per canvas session)
     markUnsaved();
     renderLayers();
     selectLayer(layer.id);
@@ -940,7 +1461,6 @@
     layers = layers.filter(function(l) { return l.id !== layerId; });
     if (selectedLayerId === layerId) {
       selectedLayerId = null;
-      layerLocalUnsaved = false;
       renderLayerParams(null);
     }
     markUnsaved();
@@ -949,8 +1469,8 @@
 
   function clearLayers() {
     layers = [];
+    _dsHintsApplied = false;  // allow hints to re-apply when user starts fresh
     selectedLayerId = null;
-    layerLocalUnsaved = false;
     markUnsaved();
     renderLayers();
     renderLayerParams(null);
@@ -1020,17 +1540,79 @@
   }
 
   function buildModelConfig() {
-    return {
-      type: 'dl',
-      model_name: document.getElementById('model-name-input').value.trim(),
-      model_description: document.getElementById('model-description-input').value.trim(),
-      optimizer: document.getElementById('optimizer-value').value,
-      learning_rate: parseFloat(document.getElementById('learning-rate-input').value) || 0.001,
-      loss_function: document.getElementById('loss-value').value,
-      layers: layers.map(function(l) {
-        return { type: l.type, params: Object.assign({}, l.params) };
-      })
+    var name        = document.getElementById('model-name-input').value.trim();
+    var description = document.getElementById('model-description-input').value.trim();
+    var optimizer   = document.getElementById('optimizer-value').value;
+    var lr          = parseFloat(document.getElementById('learning-rate-input').value) || 0.001;
+    var loss        = document.getElementById('loss-value').value;
+
+    // DP params — always included (null values fall back to defaults on the Node)
+    var dpParams = {
+      noise_multiplier: parseFloat(document.getElementById('dp-noise-multiplier').value) || 1.0,
+      max_grad_norm:    parseFloat(document.getElementById('dp-max-grad-norm').value)    || 1.0,
+      random_seed:      parseInt(document.getElementById('dp-random-seed').value, 10)    || 42
     };
+
+    // Resolve input/output feature count from dataset or infer from layers
+    var numFeatures = 0, numOutput = 0;
+    if (SELECTED_DATASETS && SELECTED_DATASETS.length > 0) {
+      var _ds = SELECTED_DATASETS[0];
+      var _fi = _ds.features_info || {};
+      var _ti = _ds.target_info   || {};
+      numFeatures = _fi.input_features || (_ds.num_columns ? _ds.num_columns - 1 : 0);
+      numOutput   = _ti.output_neurons || _ti.num_classes || 0;
+    }
+    if (!numFeatures) {
+      var _fl = layers.find(function(l) { return l.type === 'linear' || l.type === 'lstm' || l.type === 'gru'; });
+      if (_fl) numFeatures = _fl.params.in_features || _fl.params.input_size || 0;
+    }
+    if (!numOutput) {
+      for (var _i = layers.length - 1; _i >= 0; _i--) {
+        if (layers[_i].type === 'linear') { numOutput = layers[_i].params.out_features || 0; break; }
+      }
+    }
+
+    // Build architecture layers with explicit Input / Output boundary nodes
+    var archLayers = [];
+    archLayers.push({ name: 'Input Layer',  type: 'input',  params: { features: numFeatures }, readonly: true });
+    layers.forEach(function(l) {
+      var displayName = getDisplayName(l.type);
+      var params = Object.assign({}, l.params);
+      // Add 'features' = output size of this layer (used by older rendering code)
+      if      (l.type === 'linear')     params.features = l.params.out_features || 0;
+      else if (l.params.out_channels)   params.features = l.params.out_channels;
+      else if (l.params.hidden_size)    params.features = l.params.hidden_size;
+      else if (l.params.output_size)    params.features = l.params.output_size;
+      archLayers.push({ name: displayName, type: displayName, params: params });
+    });
+    archLayers.push({ name: 'Output Layer', type: 'output', params: { features: numOutput }, readonly: true });
+
+    var config = {
+      metadata: {
+        version:    '1.0',
+        created_at: new Date().toISOString(),
+        model_type: 'dl_linear',
+        framework:  'pytorch'
+      },
+      basic_info: { name: name, description: description },
+      architecture: { layers: archLayers },
+      training: {
+        optimizer: {
+          type:          optimizer,
+          learning_rate: lr,
+          weight_decay:  0,
+          differential_privacy: dpParams
+        },
+        loss_function: loss
+      },
+      dataset: {
+        selected_datasets: (SELECTED_DATASETS && SELECTED_DATASETS.length > 0)
+          ? SELECTED_DATASETS
+          : []
+      }
+    };
+
+    return config;
   }
 
   /* ===================================================================
@@ -1169,7 +1751,6 @@
         });
 
         selectedLayerId = null;
-        layerLocalUnsaved = false;
         renderLayers();
         renderLayerParams(null);
         markSaved();
@@ -1192,6 +1773,27 @@
     if (layers.length === 0) {
       errors.push('At least one hidden layer is required.');
     }
+
+    // Architecture-level checks
+    var loss = document.getElementById('loss-value').value;
+    var last = layers[layers.length - 1];
+    if (last && last.type === 'activation_softmax' && (loss === 'cross_entropy' || loss === 'nll')) {
+      errors.push('⚠ Softmax + CrossEntropyLoss: CELoss already applies log-softmax internally. ' +
+                  'Remove the final Softmax or switch loss to NLLLoss.');
+    }
+
+    // Check sequential tensor context compatibility
+    var ctx = 'none';
+    layers.forEach(function(l, idx) {
+      var allowed = COMPATIBLE_WITH[ctx];
+      if (allowed && allowed.indexOf(l.type) === -1) {
+        errors.push('Layer ' + (idx + 1) + ' (' + getDisplayName(l.type) + '): ' +
+                    getIncompatibleReason(ctx, l.type));
+      }
+      var out = LAYER_OUTPUT_CONTEXT[l.type];
+      if (out !== null && out !== undefined) ctx = out;
+    });
+
     layers.forEach(function(l, idx) {
       var p = l.params;
       switch (l.type) {
@@ -1229,12 +1831,27 @@
   }
 
   /* ===================================================================
-     JSON PREVIEW
+     JSON PREVIEW / EXPORT MODAL
   =================================================================== */
-  function showJsonPreview() {
-    var cfg = buildModelConfig();
+  var currentExportTab = 'json';
+
+  function setExportTab(tab) {
+    currentExportTab = tab;
     var pre = document.getElementById('json-preview-content');
-    pre.textContent = JSON.stringify(cfg, null, 2);
+    if (tab === 'pytorch') {
+      pre.textContent = generatePyTorchCode();
+    } else {
+      pre.textContent = JSON.stringify(buildModelConfig(), null, 2);
+    }
+    document.querySelectorAll('.md-export-tab').forEach(function(t) {
+      var active = t.getAttribute('data-export-tab') === tab;
+      t.style.borderBottomColor = active ? 'var(--color-accent)' : 'transparent';
+      t.style.color = active ? 'var(--color-accent)' : 'var(--color-text-muted)';
+    });
+  }
+
+  function showJsonPreview() {
+    setExportTab('json');
     var modal = new bootstrap.Modal(document.getElementById('json-preview-modal'));
     modal.show();
   }
@@ -1243,27 +1860,33 @@
      RICH DROPDOWNS
   =================================================================== */
   function initRichDropdown(ddId, hiddenId, triggerId, popoverId, selectedNameId, selectedDescId) {
-    var trigger = document.getElementById(triggerId);
-    var popover = document.getElementById(popoverId);
+    var trigger   = document.getElementById(triggerId);
+    var popover   = document.getElementById(popoverId);
+    var container = trigger.closest('.md-rich-dropdown'); // open class lives here
 
     trigger.addEventListener('click', function(e) {
       e.stopPropagation();
-      popover.classList.toggle('open');
+      // Close any other open dropdowns first
+      document.querySelectorAll('.md-rich-dropdown.open').forEach(function(el) {
+        if (el !== container) el.classList.remove('open');
+      });
+      container.classList.toggle('open');
     });
 
     popover.querySelectorAll('.md-rdd-option').forEach(function(opt) {
       opt.addEventListener('click', function() {
-        var val = opt.getAttribute('data-value');
+        var val  = opt.getAttribute('data-value');
         var desc = opt.getAttribute('data-desc');
         var name = opt.querySelector('.md-rdd-option-name').textContent;
         setRichDropdown(ddId, val, name, desc);
-        popover.classList.remove('open');
+        container.classList.remove('open');
         markUnsaved();
+        updateCanvasFooter();
       });
     });
 
     document.addEventListener('click', function() {
-      popover.classList.remove('open');
+      container.classList.remove('open');
     });
   }
 
@@ -1314,38 +1937,154 @@
   }
 
   /* ===================================================================
-     DATASET PARAMETER
+     DATASET AUTO-CONFIGURATION
+     Reads selected_datasets injected by Django → pre-fills first and
+     last Linear layers so the designer matches the dataset shape.
   =================================================================== */
-  function checkForDatasetParameter() {
-    var params = new URLSearchParams(window.location.search);
-    var datasetId = params.get('dataset_id');
-    if (!datasetId) return;
 
-    fetch('/api/datasets/' + datasetId + '/info/')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.success) {
-          var banner = document.getElementById('dataset-banner');
-          var title = document.getElementById('dataset-banner-title');
-          var sub = document.getElementById('dataset-banner-sub');
-          title.textContent = data.dataset_name || 'Dataset Connected';
-          sub.textContent = 'Input features: ' + (data.num_features || '?');
-          banner.style.display = 'flex';
-          connectDatasetToModel(datasetId, data);
-        }
-      })
-      .catch(function(err) { console.error('Dataset info error:', err); });
+  // Django injects selected_datasets from session — use first one for layer hints
+  var SELECTED_DATASETS = {{ selected_datasets_json|safe }};
+
+  // Update the static Input / Output canvas node subtitles to show dataset shape.
+  // Called at DOMContentLoaded (even with empty canvas) and after layer hints are applied.
+  function updateCanvasIOLabels() {
+    if (!SELECTED_DATASETS || SELECTED_DATASETS.length === 0) return;
+    var ds = SELECTED_DATASETS[0];
+    var fi = ds.features_info || {};
+    var ti = ds.target_info   || {};
+    var numFeatures = fi.input_features || (ds.num_columns ? ds.num_columns - 1 : 0);
+    var numClasses  = ti.output_neurons || ti.num_classes || 0;
+
+    var inputTypeEl = document.querySelector('#input-layer-card .md-layer-card-type');
+    if (inputTypeEl && numFeatures) {
+      inputTypeEl.textContent = numFeatures + ' features';
+    }
+    var outputTypeEl = document.querySelector('#output-layer-card .md-layer-card-type');
+    if (outputTypeEl && numClasses) {
+      outputTypeEl.textContent = numClasses + ' class' + (numClasses !== 1 ? 'es' : '');
+    }
   }
 
-  function connectDatasetToModel(datasetId, info) {
-    // Pre-fill first linear layer in_features if dataset has feature count
-    if (info.num_features && layers.length > 0) {
-      var firstLinear = layers.find(function(l) { return l.type === 'linear'; });
-      if (firstLinear) {
-        firstLinear.params.in_features = info.num_features;
-        renderLayers();
+  /* ===================================================================
+     DP PANEL — budget display + toggle/collapse behaviour
+  =================================================================== */
+  function initDpPanel() {
+    var trigger = document.getElementById('dp-collapse-trigger');
+    var body    = document.getElementById('dp-body');
+    var section = document.getElementById('dp-section');
+
+    // ── Collapse / expand on header click ──
+    if (trigger && body && section) {
+      trigger.addEventListener('click', function() {
+        var open = section.classList.toggle('is-open');
+        body.style.display = open ? 'flex' : 'none';
+        lucide.createIcons();
+      });
+    }
+
+    // ── Live meta display (σ and C values next to label) ──
+    var noiseIn  = document.getElementById('dp-noise-multiplier');
+    var noiseVal = document.getElementById('dp-noise-val');
+    var normIn   = document.getElementById('dp-max-grad-norm');
+    var normVal  = document.getElementById('dp-norm-val');
+    if (noiseIn && noiseVal) {
+      noiseIn.addEventListener('input', function() {
+        noiseVal.textContent = noiseIn.value || '1.0';
+        markUnsaved();
+      });
+    }
+    if (normIn && normVal) {
+      normIn.addEventListener('input', function() {
+        normVal.textContent = normIn.value || '1.0';
+        markUnsaved();
+      });
+    }
+
+    // ── Populate Node budget from privacy_policy ──
+    if (!SELECTED_DATASETS || !SELECTED_DATASETS.length) return;
+    var pp = SELECTED_DATASETS[0].privacy_policy;
+    if (!pp) return;
+
+    var budgetDiv = document.getElementById('dp-budget');
+    var perJobEl  = document.getElementById('dp-budget-per-job');
+    var remEl     = document.getElementById('dp-budget-remaining');
+    if (!budgetDiv || !perJobEl || !remEl) return;
+
+    var perJob = pp.max_epsilon_per_job;
+    var rem    = pp.remaining_budget;
+    perJobEl.textContent = (perJob !== null && perJob !== undefined) ? 'ε ≤ ' + perJob : '—';
+    remEl.textContent    = (rem    !== null && rem    !== undefined) ? rem + ' left'    : '—';
+    budgetDiv.style.display = 'grid';
+  }
+
+  function applySelectedDatasetToLayers() {
+    if (!SELECTED_DATASETS || SELECTED_DATASETS.length === 0) return;
+    if (layers.length === 0) return;
+    if (_dsHintsApplied) return;   // don't clobber user edits after first application
+    _dsHintsApplied = true;
+
+    // Use the first selected dataset for auto-configuration
+    var ds = SELECTED_DATASETS[0];
+    var featuresInfo = ds.features_info || {};
+    var targetInfo   = ds.target_info   || {};
+
+    // input features = columns explicitly stored, else num_columns - 1
+    var numFeatures = featuresInfo.input_features
+                   || (ds.num_columns ? ds.num_columns - 1 : 0);
+
+    // output size = num_classes or output_neurons from target_info
+    var numClasses  = targetInfo.output_neurons
+                   || targetInfo.num_classes
+                   || 0;
+
+    if (!numFeatures) return;  // nothing useful to apply
+
+    var changed = false;
+
+    // ── First linear / lstm / gru → set input size ──
+    var firstInputLayer = layers.find(function(l) {
+      return l.type === 'linear' || l.type === 'lstm' || l.type === 'gru';
+    });
+    if (firstInputLayer) {
+      if (firstInputLayer.type === 'linear') {
+        firstInputLayer.params.in_features = numFeatures;
+      } else {
+        firstInputLayer.params.input_size = numFeatures;
+      }
+      changed = true;
+    }
+
+    // ── Last linear (different from first) → set output size ──
+    if (numClasses) {
+      var lastLinear = null;
+      for (var i = layers.length - 1; i >= 0; i--) {
+        if (layers[i].type === 'linear') { lastLinear = layers[i]; break; }
+      }
+      if (lastLinear && lastLinear !== firstInputLayer) {
+        lastLinear.params.out_features = numClasses;
+        changed = true;
       }
     }
+
+    if (changed) {
+      renderLayers();
+
+      // Show the dataset banner with the key numbers
+      var banner = document.getElementById('dataset-banner');
+      var title  = document.getElementById('dataset-banner-title');
+      var sub    = document.getElementById('dataset-banner-sub');
+      if (banner && title && sub) {
+        title.textContent = ds.dataset_name || 'Dataset Connected';
+        var parts = ['Input: ' + numFeatures + ' features'];
+        if (numClasses) parts.push('Output: ' + numClasses + ' classes');
+        if (targetInfo.column_name) parts.push('Target: ' + targetInfo.column_name);
+        sub.textContent = parts.join('  ·  ');
+        banner.style.display = 'flex';
+      }
+    }
+
+    // Refresh IO node labels (may already be set, just ensure they're current)
+    updateCanvasIOLabels();
   }
 
   /* ===================================================================
@@ -1356,15 +2095,12 @@
       tab.addEventListener('click', function() {
         var target = tab.getAttribute('data-tab');
 
-        // If switching away from params with unsaved
-        if (layerLocalUnsaved && target === 'config') {
-          showUnsavedConfirm();
-          pendingSelectLayerId = null;
-          return;
-        }
-
-        document.querySelectorAll('.md-panel-tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.md-panel-tab').forEach(function(t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
         tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
 
         document.getElementById('panel-config').style.display = target === 'config' ? 'block' : 'none';
         document.getElementById('panel-params').style.display = target === 'params' ? 'block' : 'none';
@@ -1382,8 +2118,9 @@
   =================================================================== */
   document.addEventListener('DOMContentLoaded', function() {
 
-    // Initial render
+    // Initial render + compatibility state
     renderLayers();
+    updateLayerPickerCompatibility();
 
     // Panel tabs
     initPanelTabs();
@@ -1397,9 +2134,10 @@
     // LR slider
     initLrSlider();
 
-    // Sidebar layer picker — chips
+    // Sidebar layer picker — chips (ignore if marked incompatible)
     document.querySelectorAll('.md-lp-chip').forEach(function(chip) {
       chip.addEventListener('click', function() {
+        if (chip.classList.contains('md-lp-chip--incompatible')) return;
         addLayer(chip.getAttribute('data-layer-type'));
       });
     });
@@ -1445,8 +2183,16 @@
     // Load
     document.getElementById('load-model-btn').addEventListener('click', openLoadModelModal);
 
-    // Preview JSON
+    // Preview JSON / PyTorch export
     document.getElementById('preview-json-btn').addEventListener('click', showJsonPreview);
+    document.querySelectorAll('.md-export-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        setExportTab(tab.getAttribute('data-export-tab'));
+      });
+    });
+
+    // Presets
+    document.getElementById('presets-btn').addEventListener('click', openPresetsModal);
 
     // Validate
     document.getElementById('validate-model-btn').addEventListener('click', validateModel);
@@ -1462,33 +2208,18 @@
       bootstrap.Modal.getInstance(document.getElementById('clear-confirm-modal')).hide();
     });
 
-    // Unsaved confirm actions
-    document.getElementById('unsaved-discard-btn').addEventListener('click', function() {
-      layerLocalUnsaved = false;
-      hideUnsavedConfirm();
-      if (pendingSelectLayerId) {
-        var id = pendingSelectLayerId;
-        pendingSelectLayerId = null;
-        selectLayer(id);
-      }
-    });
-
-    document.getElementById('unsaved-apply-btn').addEventListener('click', function() {
-      layerLocalUnsaved = false;
-      hideUnsavedConfirm();
-      if (pendingSelectLayerId) {
-        var id = pendingSelectLayerId;
-        pendingSelectLayerId = null;
-        selectLayer(id);
-      }
-    });
-
     // Model name/desc change
     document.getElementById('model-name-input').addEventListener('input', markUnsaved);
     document.getElementById('model-description-input').addEventListener('input', markUnsaved);
 
-    // Dataset from URL param
-    checkForDatasetParameter();
+    // Auto-configure layers from selected datasets (read directly from session context)
+    applySelectedDatasetToLayers();
+
+    // Always update IO node labels from dataset (works even with empty canvas)
+    updateCanvasIOLabels();
+
+    // DP panel — collapse/toggle wiring + Node budget display
+    initDpPanel();
 
     // Icons
     lucide.createIcons();
