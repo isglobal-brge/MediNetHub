@@ -133,6 +133,9 @@
                             {% else %}
                             <span class="status-badge status-completed">Inactive</span>
                             {% endif %}
+                            <span class="api-key-expiry-badge ms-1"
+                                  id="expiry-badge-{{ connection.id }}"
+                                  style="display:none;"></span>
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -951,5 +954,58 @@
             if (dropdownButton) { dropdownButton.disabled = false; dropdownButton.textContent = 'Select Project'; }
         });
     }
+
+    // --- API key expiry check on page load ---
+    // Ping each active connection and show a warning badge if the key expires soon.
+    (function checkApiKeyExpiry() {
+        const WARNING_DAYS = 7;
+        document.querySelectorAll('tr[data-connection-id]').forEach(function(row) {
+            const connectionId = row.dataset.connectionId;
+            const badge = document.getElementById('expiry-badge-' + connectionId);
+            if (!badge) return;
+
+            fetch('/api/test-connection/?connection_id=' + encodeURIComponent(connectionId), {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken')},
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success || !data.api_key) return;
+                const days = parseInt(data.api_key.days_remaining, 10);
+                if (isNaN(days) || days > WARNING_DAYS) return;
+
+                const isUrgent = days <= 2;
+                badge.style.cssText = [
+                    'display:inline-flex',
+                    'align-items:center',
+                    'gap:3px',
+                    'font-size:11px',
+                    'font-weight:600',
+                    'padding:1px 6px',
+                    'border-radius:4px',
+                    isUrgent
+                        ? 'background:#fee2e2;color:#dc2626;border:1px solid #fca5a5'
+                        : 'background:#fef3c7;color:#d97706;border:1px solid #fcd34d'
+                ].join(';');
+                badge.title = 'API key expires in ' + days + ' day' + (days === 1 ? '' : 's') + '. Ask your Node Administrator to regenerate it.';
+
+                // Build badge content safely using DOM API (no innerHTML)
+                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                icon.setAttribute('viewBox', '0 0 24 24');
+                icon.setAttribute('fill', 'none');
+                icon.setAttribute('stroke', 'currentColor');
+                icon.setAttribute('stroke-width', '2.5');
+                icon.style.cssText = 'width:10px;height:10px;flex-shrink:0';
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z');
+                icon.appendChild(path);
+                const label = document.createTextNode('Key expires in ' + days + 'd');
+                badge.textContent = '';
+                badge.appendChild(icon);
+                badge.appendChild(label);
+            })
+            .catch(function() { /* silent — unreachable node already shown as Inactive */ });
+        });
+    })();
 </script>
 {% endblock %}

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
+from django.views.decorators.http import require_POST
 from .models import ModelConfig, TrainingJob, Connection
 from webapp.server_process import run_flower_server_process
 from webapp.server_fn.server import get_ca_certificate, is_ssl_enabled
@@ -747,6 +748,200 @@ def dashboard(request, job_id):
 
 
 @login_required
+@require_POST
+def request_budget_reset_proxy(request):
+    """
+    Proxy a researcher's budget-reset request from Hub to the relevant MediNetNode.
+
+    Expects JSON body:
+        connection_ip   (str)  — Node IP
+        connection_port (int)  — Node port
+        dataset_id      (int)  — Node-side dataset PK (from budget_exhausted_nodes)
+        reason          (str)  — Researcher's justification (max 1000 chars)
+
+    Returns the Node's JSON response verbatim (201 on success, 4xx on error).
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    connection_ip = body.get('connection_ip', '').strip()
+    connection_port = body.get('connection_port')
+    dataset_id = body.get('dataset_id')
+    reason = body.get('reason', '').strip()
+
+    if not connection_ip or not connection_port:
+        return JsonResponse({'error': 'connection_ip and connection_port are required'}, status=400)
+    if not isinstance(dataset_id, int):
+        return JsonResponse({'error': 'dataset_id must be an integer'}, status=400)
+    if not reason:
+        return JsonResponse({'error': 'reason is required'}, status=400)
+    if len(reason) > 1000:
+        return JsonResponse({'error': 'reason must be 1000 characters or fewer'}, status=400)
+
+    # Look up the Connection object so we can authenticate with the Node's API key
+    connection = Connection.objects.filter(
+        ip=connection_ip,
+        port=connection_port,
+        user=request.user,
+        active=True,
+    ).first()
+
+    if not connection:
+        return JsonResponse({'error': 'Connection not found'}, status=404)
+
+    if not connection.api_key:
+        return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
+
+    node_url = f"http://{connection_ip}:{connection_port}/api/v2/budget-reset/"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-API-Key': connection.api_key,
+        'User-Agent': 'MediNet-Hub/1.0',
+    }
+    payload = {'dataset_id': dataset_id, 'reason': reason}
+
+    try:
+        response = requests.post(node_url, json=payload, headers=headers, timeout=10)
+        try:
+            data = response.json()
+        except Exception:
+            data = {'raw': response.text[:500]}
+        return JsonResponse(data, status=response.status_code)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Could not connect to Node'}, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Node request timed out'}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({'error': f'Request failed: {exc}'}, status=502)
+
+
+@login_required
+def budget_status_proxy(request):
+    """
+    Proxy GET /api/v2/budget-status/ from the Hub to the relevant MediNetNode.
+
+    Query parameters:
+        connection_ip   (str)  — Node IP
+        connection_port (int)  — Node port
+
+    Returns the Node's JSON response verbatim (list of per-dataset budgets).
+    """
+    connection_ip = request.GET.get('connection_ip', '').strip()
+    connection_port = request.GET.get('connection_port', '').strip()
+
+    if not connection_ip or not connection_port:
+        return JsonResponse({'error': 'connection_ip and connection_port are required'}, status=400)
+
+    try:
+        connection_port_int = int(connection_port)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'connection_port must be an integer'}, status=400)
+
+    connection = Connection.objects.filter(
+        ip=connection_ip,
+        port=connection_port_int,
+        user=request.user,
+        active=True,
+    ).first()
+
+    if not connection:
+        return JsonResponse({'error': 'Connection not found'}, status=404)
+    if not connection.api_key:
+        return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
+
+    node_url = f"http://{connection_ip}:{connection_port_int}/api/v2/budget-status/"
+    headers = {
+        'X-API-Key': connection.api_key,
+        'User-Agent': 'MediNet-Hub/1.0',
+    }
+
+    try:
+        response = requests.get(node_url, headers=headers, timeout=10)
+        try:
+            data = response.json()
+        except Exception:
+            data = {'raw': response.text[:500]}
+        return JsonResponse(data, status=response.status_code)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Could not connect to Node'}, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Node request timed out'}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({'error': f'Request failed: {exc}'}, status=502)
+
+
+@login_required
+@require_POST
+def estimate_epsilon_proxy(request):
+    """
+    Proxy POST /api/v2/estimate-epsilon/ from the Hub to the relevant MediNetNode.
+
+    Expects JSON body:
+        connection_ip   (str)  — Node IP
+        connection_port (int)  — Node port
+        dataset_name    (str)  — Name of the dataset on the Node
+        model_json      (obj)  — Training config (same shape as start-client)
+
+    Returns the Node's JSON response: {estimated_epsilon, delta, dataset_id, dataset_size}
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    connection_ip = body.get('connection_ip', '').strip()
+    connection_port = body.get('connection_port')
+    dataset_name = body.get('dataset_name', '').strip()
+    model_json = body.get('model_json')
+
+    if not connection_ip or not connection_port:
+        return JsonResponse({'error': 'connection_ip and connection_port are required'}, status=400)
+    if not dataset_name:
+        return JsonResponse({'error': 'dataset_name is required'}, status=400)
+
+    try:
+        connection_port_int = int(connection_port)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'connection_port must be an integer'}, status=400)
+
+    connection = Connection.objects.filter(
+        ip=connection_ip,
+        port=connection_port_int,
+        user=request.user,
+        active=True,
+    ).first()
+
+    if not connection:
+        return JsonResponse({'error': 'Connection not found'}, status=404)
+    if not connection.api_key:
+        return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
+
+    node_url = f"http://{connection_ip}:{connection_port_int}/api/v2/estimate-epsilon/"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-API-Key': connection.api_key,
+        'User-Agent': 'MediNet-Hub/1.0',
+    }
+    payload = {'dataset_name': dataset_name, 'model_json': model_json}
+
+    try:
+        response = requests.post(node_url, json=payload, headers=headers, timeout=10)
+        try:
+            data = response.json()
+        except Exception:
+            data = {'raw': response.text[:500]}
+        return JsonResponse(data, status=response.status_code)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Could not connect to Node'}, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Node request timed out'}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({'error': f'Request failed: {exc}'}, status=502)
+
+
+@login_required
 def delete_job(request, job_id):
     """
     Delete a training job
@@ -1078,6 +1273,7 @@ def activate_clients_for_training(training_job, server_process=None):
         # Track client activation results
         activated_clients = []
         failed_clients = []
+        budget_exhausted_nodes = []
 
         # Get server address for clients (automatically detects Docker vs non-Docker)
         server_ip = get_server_ip_for_clients()
@@ -1176,8 +1372,8 @@ def activate_clients_for_training(training_job, server_process=None):
                 failed_clients.append(f"{conn['name']} (Invalid port)")
                 continue
             
-            # 🚀 NEW API: Use authenticated /api/v1/start-client endpoint
-            client_url = f"http://{conn['ip']}:{conn['port']}/api/v1/start-client"
+            # 🚀 Use authenticated /api/v2/start-client endpoint
+            client_url = f"http://{conn['ip']}:{conn['port']}/api/v2/start-client"
             print(f"🌐 [API] Making authenticated request to: {client_url}")
             print(f"📋 [API] Headers: {auth_config.headers}")
             
@@ -1206,9 +1402,27 @@ def activate_clients_for_training(training_job, server_process=None):
                 else:
                     print(f"❌ [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
                     try:
-                        error_detail = response.json() if response.content else response.text
+                        error_detail = response.json() if response.content else {}
                         print(f"❌ [ERROR] Response detail: {error_detail}")
-                    except:
+                        # Detect Node budget exhaustion so Hub can surface the reset UI
+                        if response.status_code == 403 and error_detail.get('budget_exhausted'):
+                            node_dataset_id = error_detail.get('dataset_id')
+                            # Find dataset_name for this connection from selected_datasets
+                            node_dataset_name = next(
+                                (ds.get('dataset_name', '') for ds in selected_datasets
+                                 if ds.get('connection', {}).get('ip') == conn['ip']
+                                 and ds.get('connection', {}).get('port') == conn['port']),
+                                ''
+                            )
+                            budget_exhausted_nodes.append({
+                                'connection_name': conn['name'],
+                                'connection_ip': conn['ip'],
+                                'connection_port': conn['port'],
+                                'dataset_id': node_dataset_id,
+                                'dataset_name': node_dataset_name,
+                            })
+                            print(f"⚠️ [BUDGET] Budget exhausted for {conn['name']} dataset_id={node_dataset_id}")
+                    except Exception:
                         print(f"❌ [ERROR] Response text: {response.text[:200]}")
                     failed_clients.append(f"{conn['name']} (HTTP {response.status_code})")
                     
@@ -1232,6 +1446,10 @@ def activate_clients_for_training(training_job, server_process=None):
         
         print(f"📊 [SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
         
+        if budget_exhausted_nodes:
+            training_job.budget_exhausted_nodes = budget_exhausted_nodes
+            training_job.save(update_fields=['budget_exhausted_nodes'])
+
         if activated_count == 0:
             # No clients activated - mark as failed and kill server
             training_job.status = 'failed'

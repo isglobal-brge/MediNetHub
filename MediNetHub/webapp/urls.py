@@ -59,6 +59,9 @@ urlpatterns = [
     path('api/update-job-status/<int:job_id>/', training_views.update_job_status, name='update_job_status'),
     path('api/download-model/<int:job_id>/', training_views.download_model, name='download_model'),
     path('api/download-metrics/<int:job_id>/', training_views.download_metrics, name='download_metrics'),
+    path('api/request-budget-reset/', training_views.request_budget_reset_proxy, name='request_budget_reset_proxy'),
+    path('api/budget-status/', training_views.budget_status_proxy, name='budget_status_proxy'),
+    path('api/estimate-epsilon/', training_views.estimate_epsilon_proxy, name='estimate_epsilon_proxy'),
     
     # APIs para client dashboard
     path('api/jobs/<int:job_id>/clients/', training_views.get_clients_data, name='get_clients_data'),

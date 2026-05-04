@@ -173,6 +173,13 @@ class TrainingJob(models.Model):
         help_text="δ value used when computing ε (typically 1e-5).",
     )
 
+    # Budget exhaustion tracking: populated when Node returns 403 budget_exhausted.
+    # Each entry: {connection_name, connection_ip, connection_port, dataset_id, dataset_name}
+    budget_exhausted_nodes = models.JSONField(
+        default=list, blank=True, null=True,
+        help_text="Connections that were rejected due to an exhausted ε budget.",
+    )
+
     def __str__(self):
         return f"{self.name} ({self.status})"
 

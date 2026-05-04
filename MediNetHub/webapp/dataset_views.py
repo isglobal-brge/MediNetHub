@@ -181,7 +181,7 @@ def datasets(request):
                     return redirect('datasets')
                 
                 url_scheme = "http" 
-                fetch_url = f"{url_scheme}://{connection.ip}:{connection.port}/api/v1/get-data-info"
+                fetch_url = f"{url_scheme}://{connection.ip}:{connection.port}/api/v2/get-data-info"
                 
                 # Prepare authentication headers matching test_api_researcher.py format
                 headers = {
@@ -482,36 +482,45 @@ def validate_connection(request):
 @user_rate_limit(rate=settings.RATE_LIMITS['CONNECTION_TEST'], method='POST', block=True)
 def test_connection(request):
     """
-    API endpoint to test connection to a server
+    Ping the Node's /api/v2/ping endpoint using the stored API key for a given
+    connection. Returns reachability status and API key expiry info so the Hub
+    can warn researchers before their key expires.
+
+    GET params:
+        connection_id (int): Hub Connection pk
     """
-    ip = request.GET.get('ip', '')
-    port = request.GET.get('port', '')
-    
-    # This will be implemented to actually test the connection
-    # For now, we just validate the format
-    
-    # Validate IP
-    valid_ip = False
+    connection_id = request.GET.get('connection_id', '').strip()
+    if not connection_id:
+        return JsonResponse({'success': False, 'message': 'Missing connection_id'}, status=400)
+
     try:
-        ipaddress.ip_address(ip)
-        valid_ip = True
-    except ValueError:
-        valid_ip = False
-    
-    # Validate port
-    valid_port = False
+        connection = Connection.objects.get(pk=int(connection_id), user=request.user)
+    except (Connection.DoesNotExist, ValueError):
+        return JsonResponse({'success': False, 'message': 'Connection not found'}, status=404)
+
+    if not connection.api_key:
+        return JsonResponse({'success': False, 'message': 'No API key configured for this connection'})
+
+    node_url = f"http://{connection.ip}:{connection.port}/api/v2/ping"
     try:
-        port_num = int(port)
-        valid_port = 1 <= port_num <= 65535
-    except ValueError:
-        valid_port = False
-    
-    success = valid_ip and valid_port
-    
-    return JsonResponse({
-        'success': success,
-        'message': 'Connection successful!' if success else 'Invalid IP or port'
-    })
+        response = requests.get(
+            node_url,
+            headers={'X-API-Key': connection.api_key, 'User-Agent': 'MediNet-Hub/1.0'},
+            timeout=5,
+        )
+        data = response.json()
+        api_key_info = data.get('api_key')  # {expires_at, days_remaining} or null
+        return JsonResponse({
+            'success': response.status_code == 200,
+            'message': 'Connection successful!' if response.status_code == 200 else f'Node returned {response.status_code}',
+            'api_key': api_key_info,
+        })
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'success': False, 'message': 'Cannot reach node — check IP and port'})
+    except requests.exceptions.Timeout:
+        return JsonResponse({'success': False, 'message': 'Node did not respond within 5 s'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Unexpected error: {str(e)}'})
 
 
 

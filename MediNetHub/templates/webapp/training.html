@@ -353,6 +353,70 @@
                           
                         </div>
                         
+                        <!-- Privacy Budget Panel (shown when production datasets are selected) -->
+                        <div id="budget-panel" class="mt-3 d-none">
+                            <div class="card border-0 shadow-sm" style="border-radius:10px;overflow:hidden;">
+                                <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
+                                     style="background:linear-gradient(135deg,#1a237e 0%,#1976d2 100%);color:#fff;">
+                                    <span class="small fw-semibold">
+                                        <i data-lucide="shield" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>
+                                        Privacy Budget (ε)
+                                    </span>
+                                    <button type="button" class="btn btn-sm py-0 px-2 text-white opacity-75"
+                                            id="refresh-budget-btn" title="Refresh budget from nodes"
+                                            style="border:1px solid rgba(255,255,255,.4);border-radius:5px;background:transparent;">
+                                        <i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle;"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body p-3">
+
+                                    <!-- Loading state -->
+                                    <div id="budget-loading" class="text-center py-2 d-none">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                                        <span class="ms-2 small text-muted">Fetching budget…</span>
+                                    </div>
+
+                                    <!-- Error state -->
+                                    <div id="budget-error" class="alert alert-warning alert-sm py-1 px-2 small mb-0 d-none" role="alert"></div>
+
+                                    <!-- Budget content (hidden until loaded) -->
+                                    <div id="budget-content" class="d-none">
+
+                                        <!-- Ruling budget row -->
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="small text-muted fw-semibold text-uppercase" style="letter-spacing:.4px;font-size:.7rem;">Ruling Budget</span>
+                                            <span id="ruling-budget-value" class="fw-bold small"></span>
+                                        </div>
+                                        <div style="background:#e9ecef;border-radius:6px;height:8px;overflow:hidden;" class="mb-1">
+                                            <div id="ruling-budget-bar" style="height:100%;border-radius:6px;transition:width .4s ease;"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small class="text-muted" id="ruling-budget-spent"></small>
+                                            <small class="text-muted" id="ruling-budget-limit"></small>
+                                        </div>
+
+                                        <!-- ε estimate row -->
+                                        <div id="epsilon-estimate-row" class="d-none">
+                                            <hr class="my-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small text-muted">Estimated ε this job</span>
+                                                <span id="epsilon-estimate-value" class="fw-bold small">—</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small text-muted">Remaining after job</span>
+                                                <span id="epsilon-after-value" class="fw-bold small">—</span>
+                                            </div>
+                                            <div id="epsilon-warning" class="mt-1 small rounded px-2 py-1 d-none"></div>
+                                        </div>
+
+                                        <!-- Per-node expandable details -->
+                                        <div id="per-node-budget" class="mt-2"></div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Botones de acción -->
                         <div class="d-grid gap-2 mt-4">
                             <button type="button" class="btn btn-primary" id="start-training-btn">
@@ -445,6 +509,14 @@
                                                         <a class="dropdown-item" href="{% url 'download_model' job.id %}">
                                                             <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>Download model
                                                         </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% if job.budget_exhausted_nodes %}
+                                                    <li>
+                                                        <button class="dropdown-item text-warning request-budget-reset"
+                                                                data-nodes="{{ job.budget_exhausted_nodes|json_string }}">
+                                                            <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Request budget reset
+                                                        </button>
                                                     </li>
                                                     {% endif %}
                                                     <li><hr class="dropdown-divider"></li>
@@ -556,6 +628,56 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Request Budget Reset -->
+<div class="modal fade" id="budgetResetModal" tabindex="-1" aria-labelledby="budgetResetModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="budgetResetModalLabel">
+                    <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-warning"></i>Request Privacy Budget Reset
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning d-flex align-items-start mb-3" role="alert">
+                    <i data-lucide="shield-alert" style="width:18px;height:18px;flex-shrink:0;" class="me-2 mt-1"></i>
+                    <div>
+                        <strong>Privacy budget exhausted.</strong> The differential-privacy budget (ε) for the selected dataset has been consumed. The Node administrator must approve this request before further training is allowed.
+                    </div>
+                </div>
+
+                <!-- Node selector (only shown when there are multiple exhausted nodes) -->
+                <div class="mb-3" id="budgetResetNodeSelectorWrapper">
+                    <label for="budgetResetNodeSelect" class="form-label">Affected Node &amp; Dataset</label>
+                    <select class="form-select" id="budgetResetNodeSelect"></select>
+                </div>
+
+                <!-- Single-node display (hidden if multiple) -->
+                <div class="mb-3" id="budgetResetNodeInfo">
+                    <label class="form-label">Affected Node &amp; Dataset</label>
+                    <p class="form-control-plaintext fw-semibold" id="budgetResetNodeInfoText"></p>
+                </div>
+
+                <div class="mb-3">
+                    <label for="budgetResetReason" class="form-label">Justification <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="budgetResetReason" rows="4"
+                              placeholder="Describe why additional training is needed and how the privacy budget will be used responsibly..."
+                              maxlength="1000"></textarea>
+                    <div class="form-text"><span id="budgetResetReasonCount">0</span>/1000 characters</div>
+                </div>
+
+                <div id="budgetResetFeedback"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="budgetResetSubmitBtn">
+                    <i data-lucide="send" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Submit Request
+                </button>
             </div>
         </div>
     </div>
@@ -1373,5 +1495,438 @@
         // Initial call on page load
         updateTrainingSummary();
     });
+
+    // ------------------------------------------------------------------ //
+    // Budget Reset Modal
+    // ------------------------------------------------------------------ //
+    (function () {
+        'use strict';
+
+        let _resetNodes = [];      // list of exhausted node objects
+        let _resetModal = null;
+
+        // Open modal when user clicks "Request budget reset" from any job dropdown
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.request-budget-reset');
+            if (!btn) return;
+
+            try {
+                _resetNodes = JSON.parse(btn.dataset.nodes || '[]');
+            } catch (_) {
+                _resetNodes = [];
+            }
+
+            if (!_resetNodes.length) return;
+
+            const nodeSelect = document.getElementById('budgetResetNodeSelect');
+            const nodeInfo   = document.getElementById('budgetResetNodeInfo');
+            const nodeInfoTxt = document.getElementById('budgetResetNodeInfoText');
+            const selectorWrapper = document.getElementById('budgetResetNodeSelectorWrapper');
+
+            // Populate node selector / info text
+            nodeSelect.innerHTML = '';
+            _resetNodes.forEach(function (n, idx) {
+                const label = `${n.connection_name} — ${n.dataset_name || 'dataset #' + n.dataset_id}`;
+                nodeSelect.appendChild(new Option(label, idx));
+            });
+
+            if (_resetNodes.length === 1) {
+                const n = _resetNodes[0];
+                nodeInfoTxt.textContent = `${n.connection_name} — ${n.dataset_name || 'dataset #' + n.dataset_id}`;
+                selectorWrapper.style.display = 'none';
+                nodeInfo.style.display = '';
+            } else {
+                selectorWrapper.style.display = '';
+                nodeInfo.style.display = 'none';
+            }
+
+            // Reset form state
+            document.getElementById('budgetResetReason').value = '';
+            document.getElementById('budgetResetReasonCount').textContent = '0';
+            document.getElementById('budgetResetFeedback').innerHTML = '';
+            document.getElementById('budgetResetSubmitBtn').disabled = false;
+
+            if (!_resetModal) {
+                _resetModal = new bootstrap.Modal(document.getElementById('budgetResetModal'));
+            }
+            _resetModal.show();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+
+        // Character counter
+        document.getElementById('budgetResetReason').addEventListener('input', function () {
+            document.getElementById('budgetResetReasonCount').textContent = this.value.length;
+        });
+
+        // Submit
+        document.getElementById('budgetResetSubmitBtn').addEventListener('click', function () {
+            const reason = document.getElementById('budgetResetReason').value.trim();
+            const feedback = document.getElementById('budgetResetFeedback');
+
+            if (!reason) {
+                feedback.innerHTML = '<div class="alert alert-danger py-2">Please enter a justification.</div>';
+                return;
+            }
+
+            const nodeIdx = parseInt(document.getElementById('budgetResetNodeSelect').value || '0', 10);
+            const node = _resetNodes[nodeIdx] || _resetNodes[0];
+
+            if (!node) return;
+
+            this.disabled = true;
+            feedback.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>Submitting request…</div>';
+
+            fetch('{% url "request_budget_reset_proxy" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({
+                    connection_ip:   node.connection_ip,
+                    connection_port: node.connection_port,
+                    dataset_id:      node.dataset_id,
+                    reason:          reason,
+                }),
+            })
+            .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+            .then(function (res) {
+                if (res.status === 201) {
+                    feedback.innerHTML = '<div class="alert alert-success py-2"><i data-lucide="check-circle" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>Request submitted. The Node administrator will review it shortly.</div>';
+                    document.getElementById('budgetResetSubmitBtn').disabled = true;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                } else if (res.status === 409) {
+                    feedback.innerHTML = '<div class="alert alert-info py-2">A pending request already exists for this dataset.</div>';
+                    document.getElementById('budgetResetSubmitBtn').disabled = false;
+                } else {
+                    const msg = (res.data && res.data.error) ? res.data.error : 'Unexpected error. Please try again.';
+                    feedback.innerHTML = `<div class="alert alert-danger py-2">${msg}</div>`;
+                    document.getElementById('budgetResetSubmitBtn').disabled = false;
+                }
+            })
+            .catch(function (err) {
+                feedback.innerHTML = `<div class="alert alert-danger py-2">Communication error: ${err}</div>`;
+                document.getElementById('budgetResetSubmitBtn').disabled = false;
+            });
+        });
+    }());
+
+    // ─── Privacy Budget Panel ──────────────────────────────────────────────────
+    (function () {
+        'use strict';
+
+        const BUDGET_STATUS_URL  = '{% url "budget_status_proxy" %}';
+        const ESTIMATE_EPS_URL   = '{% url "estimate_epsilon_proxy" %}';
+        const CSRF_TOKEN         = '{{ csrf_token }}';
+
+        // selectedDatasets injected from Django context — each entry has:
+        // { dataset_name, connection: {name, ip, port}, privacy_policy: {is_experimental, ...} }
+        const ALL_DATASETS = {{ selected_datasets|default:'[]'|to_json }};
+
+        // Filter to production-only datasets (experimental ones have no budget tracking)
+        const productionDatasets = ALL_DATASETS.filter(function (ds) {
+            const pp = ds.privacy_policy;
+            return pp && !pp.is_experimental;
+        });
+
+        // Unique connections from production datasets
+        function uniqueConnections(datasets) {
+            const seen = {};
+            const out  = [];
+            datasets.forEach(function (ds) {
+                const key = ds.connection.ip + ':' + ds.connection.port;
+                if (!seen[key]) {
+                    seen[key] = true;
+                    out.push(ds.connection);
+                }
+            });
+            return out;
+        }
+
+        // ── State ──────────────────────────────────────────────────────────────
+        let _budgetByNode = {};      // key "ip:port" → Node's budget-status response
+        let _rulingBudget = null;    // { remaining, lifetime, spent, connection_name, dataset_name }
+        let _epsilonTimer  = null;   // debounce timer
+
+        // ── DOM helpers ────────────────────────────────────────────────────────
+        const $panel    = document.getElementById('budget-panel');
+        const $loading  = document.getElementById('budget-loading');
+        const $error    = document.getElementById('budget-error');
+        const $content  = document.getElementById('budget-content');
+        const $rulingVal   = document.getElementById('ruling-budget-value');
+        const $rulingBar   = document.getElementById('ruling-budget-bar');
+        const $rulingSpent = document.getElementById('ruling-budget-spent');
+        const $rulingLimit = document.getElementById('ruling-budget-limit');
+        const $perNode     = document.getElementById('per-node-budget');
+        const $epsRow      = document.getElementById('epsilon-estimate-row');
+        const $epsVal      = document.getElementById('epsilon-estimate-value');
+        const $epsAfter    = document.getElementById('epsilon-after-value');
+        const $epsWarn     = document.getElementById('epsilon-warning');
+
+        function showLoading() {
+            $loading.classList.remove('d-none');
+            $error.classList.add('d-none');
+            $content.classList.add('d-none');
+        }
+
+        function showError(msg) {
+            $loading.classList.add('d-none');
+            $error.textContent = msg;
+            $error.classList.remove('d-none');
+            $content.classList.add('d-none');
+        }
+
+        function showContent() {
+            $loading.classList.add('d-none');
+            $error.classList.add('d-none');
+            $content.classList.remove('d-none');
+        }
+
+        // ── Fetch budget from one node ─────────────────────────────────────────
+        function fetchNodeBudget(conn) {
+            const qs = '?connection_ip=' + encodeURIComponent(conn.ip) +
+                       '&connection_port=' + encodeURIComponent(conn.port);
+            return fetch(BUDGET_STATUS_URL + qs, {credentials: 'same-origin'})
+                .then(function (r) { return r.json(); })
+                .catch(function () { return {error: 'Network error'}; });
+        }
+
+        // ── Refresh all nodes in parallel ──────────────────────────────────────
+        function refreshBudgets() {
+            const connections = uniqueConnections(productionDatasets);
+            if (!connections.length) return;
+
+            showLoading();
+            const promises = connections.map(function (conn) {
+                return fetchNodeBudget(conn).then(function (data) {
+                    const key = conn.ip + ':' + conn.port;
+                    _budgetByNode[key] = {conn: conn, data: data};
+                });
+            });
+
+            Promise.all(promises).then(function () {
+                renderBudgetPanel();
+                // Trigger epsilon estimate with current params
+                scheduleEpsilonEstimate(0);
+            });
+        }
+
+        // ── Render ruling budget + per-node cards ──────────────────────────────
+        function renderBudgetPanel() {
+            // Collect one budget entry per production dataset
+            const entries = [];
+            productionDatasets.forEach(function (ds) {
+                const key  = ds.connection.ip + ':' + ds.connection.port;
+                const node = _budgetByNode[key];
+                if (!node || node.data.error) return;
+
+                const datasets = node.data.datasets || [];
+                const match = datasets.find(function (d) {
+                    return d.dataset_name === ds.dataset_name && !d.is_experimental;
+                });
+                if (!match) return;
+
+                entries.push({
+                    connection_name: ds.connection.name,
+                    dataset_name:    ds.dataset_name,
+                    remaining:       match.remaining_budget,
+                    lifetime:        match.lifetime_budget,
+                    spent:           match.spent_epsilon,
+                    max_per_job:     match.max_per_job,
+                });
+            });
+
+            if (!entries.length) {
+                showError('No production budget data available from the selected nodes.');
+                return;
+            }
+
+            // Ruling budget = entry with the smallest remaining_budget
+            _rulingBudget = entries.reduce(function (min, e) {
+                return e.remaining < min.remaining ? e : min;
+            });
+
+            const pct = _rulingBudget.lifetime > 0
+                ? Math.min(100, (_rulingBudget.spent / _rulingBudget.lifetime) * 100)
+                : 0;
+
+            // Bar colour: green → amber → red
+            const barColour = pct >= 95 ? '#dc3545' : pct >= 80 ? '#ffc107' : '#28a745';
+
+            $rulingVal.textContent   = _rulingBudget.remaining.toFixed(4) + ' ε remaining';
+            $rulingVal.style.color   = pct >= 95 ? '#dc3545' : pct >= 80 ? '#856404' : '#198754';
+            $rulingBar.style.width   = pct + '%';
+            $rulingBar.style.background = barColour;
+            $rulingSpent.textContent = 'Spent: ' + _rulingBudget.spent.toFixed(4);
+            $rulingLimit.textContent = 'Limit: ' + _rulingBudget.lifetime.toFixed(4);
+
+            // Per-node expandable cards
+            $perNode.innerHTML = '';
+            if (entries.length > 1) {
+                const toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'btn btn-link btn-sm text-muted p-0 mt-1';
+                toggle.style.fontSize = '.75rem';
+                toggle.textContent = 'Show per-node details ▾';
+                const detail = document.createElement('div');
+                detail.className = 'd-none mt-2';
+                detail.id = 'per-node-detail';
+                toggle.addEventListener('click', function () {
+                    const hidden = detail.classList.toggle('d-none');
+                    toggle.textContent = hidden ? 'Show per-node details ▾' : 'Hide per-node details ▴';
+                });
+                entries.forEach(function (e) {
+                    detail.appendChild(buildNodeCard(e));
+                });
+                $perNode.appendChild(toggle);
+                $perNode.appendChild(detail);
+            } else {
+                // Only one node — show inline without toggle
+                $perNode.appendChild(buildNodeCard(entries[0]));
+            }
+
+            showContent();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function buildNodeCard(e) {
+            const pct = e.lifetime > 0 ? Math.min(100, (e.spent / e.lifetime) * 100) : 0;
+            const col  = pct >= 95 ? '#dc3545' : pct >= 80 ? '#ffc107' : '#28a745';
+            const div  = document.createElement('div');
+            div.className = 'border rounded p-2 mb-2';
+            div.style.fontSize = '.78rem';
+            div.innerHTML =
+                '<div class="d-flex justify-content-between"><strong>' + escHtml(e.connection_name) +
+                '</strong><span class="text-muted">' + escHtml(e.dataset_name) + '</span></div>' +
+                '<div style="background:#e9ecef;border-radius:4px;height:5px;overflow:hidden;margin:.3rem 0;">' +
+                  '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:4px;"></div>' +
+                '</div>' +
+                '<div class="d-flex justify-content-between text-muted">' +
+                  '<span>' + e.spent.toFixed(4) + ' spent</span>' +
+                  '<span>' + e.remaining.toFixed(4) + ' left / ' + e.lifetime.toFixed(4) + '</span>' +
+                '</div>';
+            return div;
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        // ── ε Estimate ────────────────────────────────────────────────────────
+        function getCurrentTrainingParams() {
+            const epochs = parseInt(document.getElementById('train-epochs').value) || 3;
+            const rounds = parseInt(document.getElementById('train-rounds').value) || 10;
+            const batch  = parseInt(document.getElementById('train-batch-size').value) || 32;
+            return {epochs: epochs, rounds: rounds, batch_size: batch};
+        }
+
+        function buildModelJson(params) {
+            // Construct a minimal model_json that estimate_job_epsilon can consume.
+            // Total effective epochs for federated training = rounds × local_epochs.
+            return {
+                train: { epochs: params.epochs * params.rounds },
+                model: {
+                    training: {
+                        optimizer: {
+                            differential_privacy: {
+                                noise_multiplier: 1.2   // Node-enforced minimum floor
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        function scheduleEpsilonEstimate(delayMs) {
+            if (_epsilonTimer) clearTimeout(_epsilonTimer);
+            _epsilonTimer = setTimeout(runEpsilonEstimate, delayMs === undefined ? 600 : delayMs);
+        }
+
+        function runEpsilonEstimate() {
+            if (!_rulingBudget || !productionDatasets.length) return;
+
+            const params  = getCurrentTrainingParams();
+            const mj      = buildModelJson(params);
+
+            // Use the first production dataset whose node replied successfully
+            const ds = productionDatasets.find(function (d) {
+                const key = d.connection.ip + ':' + d.connection.port;
+                return _budgetByNode[key] && !_budgetByNode[key].data.error;
+            });
+            if (!ds) return;
+
+            $epsRow.classList.remove('d-none');
+            $epsVal.textContent   = '…';
+            $epsAfter.textContent = '…';
+            $epsWarn.classList.add('d-none');
+
+            fetch(ESTIMATE_EPS_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                },
+                body: JSON.stringify({
+                    connection_ip:   ds.connection.ip,
+                    connection_port: ds.connection.port,
+                    dataset_name:    ds.dataset_name,
+                    model_json:      mj,
+                }),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.estimated_epsilon === undefined) {
+                    $epsVal.textContent   = '—';
+                    $epsAfter.textContent = '—';
+                    return;
+                }
+                const eps   = data.estimated_epsilon;
+                const after = _rulingBudget.remaining - eps;
+
+                $epsVal.textContent   = eps.toFixed(4) + ' ε';
+                $epsAfter.textContent = after.toFixed(4) + ' ε';
+                $epsAfter.style.color = after < 0 ? '#dc3545' : after < _rulingBudget.remaining * 0.2 ? '#856404' : '#198754';
+
+                // Warning badge
+                $epsWarn.classList.remove('d-none');
+                if (after < 0) {
+                    $epsWarn.textContent = '⚠ This job would exceed the ruling budget.';
+                    $epsWarn.style.background = '#f8d7da';
+                    $epsWarn.style.color = '#842029';
+                } else if (eps / _rulingBudget.remaining > 0.8) {
+                    $epsWarn.textContent = '⚠ This job will consume >80 % of the remaining budget.';
+                    $epsWarn.style.background = '#fff3cd';
+                    $epsWarn.style.color = '#856404';
+                } else {
+                    $epsWarn.classList.add('d-none');
+                }
+            })
+            .catch(function () {
+                $epsVal.textContent = '—';
+            });
+        }
+
+        // ── Init ───────────────────────────────────────────────────────────────
+        if (productionDatasets.length > 0) {
+            $panel.classList.remove('d-none');
+            refreshBudgets();
+        }
+
+        // Refresh button
+        document.getElementById('refresh-budget-btn').addEventListener('click', function () {
+            _budgetByNode = {};
+            refreshBudgets();
+        });
+
+        // Debounced ε re-estimate when training params change
+        ['train-epochs', 'train-batch-size', 'train-rounds'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', function () { scheduleEpsilonEstimate(600); });
+            }
+        });
+
+    }());
 </script>
-{% endblock %} 
+{% endblock %}
