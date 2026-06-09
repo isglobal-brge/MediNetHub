@@ -47,7 +47,7 @@ def sanitize_config_for_client(config):
                     'name': dataset['connection'].get('name', 'unknown')
                     # Removed: ip, port, user, password
                 }
-                print(f"🔒 Removed sensitive connection info for dataset: {dataset.get('dataset_name', 'unknown')}")
+                print(f"Removed sensitive connection info for dataset: {dataset.get('dataset_name', 'unknown')}")
     
     return sanitized
 
@@ -58,7 +58,7 @@ def create_center_specific_config(center_datasets, base_config):
     """
     import copy
     
-    print(f"🎯 Creating center-specific config for {len(center_datasets)} datasets")
+    print(f"Creating center-specific config for {len(center_datasets)} datasets")
     
     center_config = copy.deepcopy(base_config)
     
@@ -77,7 +77,7 @@ def create_center_specific_config(center_datasets, base_config):
     
     # Log security compliance
     for ds in center_datasets:
-        print(f"🔐 [FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
+        print(f"[FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
     
     return center_config
 
@@ -92,7 +92,7 @@ def prepare_center_authentication(connection):
     }
     auth = None
     
-    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
+    print(f"[AUTH] Preparing authentication for {connection.name}:")
     print(f"  - IP: {connection.ip}")
     print(f"  - Port: {connection.port}")
     print(f"  - Username: {connection.username if connection.username else 'Not set'}")
@@ -103,12 +103,12 @@ def prepare_center_authentication(connection):
     if connection.api_key:
         headers['X-API-Key'] = connection.api_key
         headers['X-Client-IP'] = '127.0.0.1'  # Using localhost as client IP
-        print(f"🔑 [AUTH] Using API key authentication (X-API-Key header)")
+        print(f"[AUTH] Using API key authentication (X-API-Key header)")
     
     # Basic authentication (secondary/fallback)
     if connection.username and connection.password:
         auth = (connection.username, connection.password)
-        print(f"👤 [AUTH] Using basic authentication with username: {connection.username}")
+        print(f"[AUTH] Using basic authentication with username: {connection.username}")
     
     class AuthConfig:
         def __init__(self, headers, basic_auth):
@@ -269,22 +269,22 @@ def datasets(request):
                     connection = form.save(commit=False)
                     connection.user = request.user
                     connection.project = selected_project
-                    print(f"🔍 [DEBUG] Connection: {connection}")
-                    
+                    print(f"[DEBUG] Connection: {connection}")
+
                     # Assign password from form to encrypted field
                     raw_password = form.cleaned_data.get('password')
                     if raw_password:
                         connection.password = raw_password
-                        print(f"✅ [DEBUG] Password assigned")
-                    
+                        print(f"[DEBUG] Password assigned")
+
                     # Assign API key from form to encrypted field
                     api_key = form.cleaned_data.get('api_key')  # Fixed: use 'api_key' not 'api-key'
                     if api_key:
                         connection.api_key = api_key
-                        print(f"✅ [DEBUG] API Key assigned")
-                    
+                        print(f"[DEBUG] API Key assigned")
+
                     connection.save()
-                    print(f"✅ [DEBUG] Connection saved successfully with ID: {connection.id}")
+                    print(f"[DEBUG] Connection saved successfully with ID: {connection.id}")
                     messages.success(request, f'Connection "{connection.name}" added successfully.')
                 except Exception as e:
                     messages.error(request, f'Error saving connection: {str(e)}')
@@ -388,19 +388,19 @@ def datasets(request):
                 try:
                     response = requests.get(fetch_url, headers=headers, auth=auth, timeout=10)
                     
-                    print(f"📡 [DEBUG] Response status: {response.status_code}")
-                    print(f"📡 [DEBUG] Response headers: {dict(response.headers)}")
-                    
+                    print(f"[DEBUG] Response status: {response.status_code}")
+                    print(f"[DEBUG] Response headers: {dict(response.headers)}")
+
                     if response.content:
                         try:
-                            print(f"📄 [DEBUG] Raw response content: {response.text[:500]}...")
+                            print(f"[DEBUG] Raw response content: {response.text[:500]}...")
                         except:
-                            print(f"📄 [DEBUG] Raw response content: [Could not decode response text]")
-                    
+                            print(f"[DEBUG] Raw response content: [Could not decode response text]")
+
                     response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-                    
+
                     data = response.json()
-                    print(f"✅ [DEBUG] Parsed JSON data from {connection.name}:")
+                    print(f"[DEBUG] Parsed JSON data from {connection.name}:")
                     print(f"  Keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
                     if isinstance(data, dict) and len(data) < 5:  # Only print small responses
                         print(f"  Data: {data}")
@@ -433,16 +433,16 @@ def datasets(request):
                     # Check if we have at least one dataset
                     dataset_count = len(data['dataset_name'])
                     if dataset_count == 0:
-                        print(f"⚠️ [DEBUG] No datasets returned from {connection.name}")
+                        print(f"WARNING: [DEBUG] No datasets returned from {connection.name}")
                         messages.info(request, f'No datasets available from "{connection.name}".')
                     else:
-                        print(f"✅ [DEBUG] Validated {dataset_count} datasets from {connection.name}")
+                        print(f"[DEBUG] Validated {dataset_count} datasets from {connection.name}")
                         request.session['datasets'][str(connection_id)] = data
                         request.session.modified = True
                         messages.success(request, f'Successfully synchronized {dataset_count} dataset(s) from "{connection.name}".')
                         
                 except ValueError as e:
-                    print(f"❌ [DEBUG] Data validation error for {connection.name}: {e}")
+                    print(f"ERROR: [DEBUG] Data validation error for {connection.name}: {e}")
                     messages.error(request, f'Data validation error from "{connection.name}": {str(e)}')
                     
                 except requests.exceptions.HTTPError as e:
@@ -453,26 +453,26 @@ def datasets(request):
                     except:
                         error_msg += f': {response.text[:200]}'
                     
-                    print(f"❌ [DEBUG] HTTP Error for {connection.name}: {error_msg}")
+                    print(f"ERROR: [DEBUG] HTTP Error for {connection.name}: {error_msg}")
                     messages.error(request, f'HTTP Error communicating with "{connection.name}": {error_msg}')
                     
                 except requests.exceptions.ConnectionError as e:
                     error_msg = f'Connection failed - check if server is running on {connection.ip}:{connection.port}'
-                    print(f"❌ [DEBUG] Connection Error for {connection.name}: {str(e)}")
+                    print(f"ERROR: [DEBUG] Connection Error for {connection.name}: {str(e)}")
                     messages.error(request, f'{error_msg}')
                     
                 except requests.exceptions.Timeout as e:
                     error_msg = f'Request timeout after 10 seconds'
-                    print(f"❌ [DEBUG] Timeout Error for {connection.name}: {str(e)}")
+                    print(f"ERROR: [DEBUG] Timeout Error for {connection.name}: {str(e)}")
                     messages.error(request, f'Timeout communicating with "{connection.name}": {error_msg}')
                     
                 except requests.exceptions.RequestException as e:
-                    print(f"❌ [DEBUG] Request Exception for {connection.name}: {str(e)}")
+                    print(f"ERROR: [DEBUG] Request Exception for {connection.name}: {str(e)}")
                     messages.error(request, f'Error communicating with "{connection.name}": {str(e)}')
                     
                 except json.JSONDecodeError as e:
-                    print(f"❌ [DEBUG] JSON Decode Error for {connection.name}: {str(e)}")
-                    print(f"❌ [DEBUG] Response was: {response.text[:200]}")
+                    print(f"ERROR: [DEBUG] JSON Decode Error for {connection.name}: {str(e)}")
+                    print(f"ERROR: [DEBUG] Response was: {response.text[:200]}")
                     messages.error(request, f'Received invalid JSON from "{connection.name}". Check server response format.')
                     
             except Connection.DoesNotExist:
@@ -486,12 +486,12 @@ def datasets(request):
                     corrupted_count = len(request.session['datasets'])
                     request.session['datasets'] = {}
                     request.session.modified = True
-                    print(f"🧹 [DEBUG] Cleared {corrupted_count} dataset entries from session")
+                    print(f"[DEBUG] Cleared {corrupted_count} dataset entries from session")
                     messages.success(request, f'Cleared session data. Re-fetch datasets from connections to reload.')
                 else:
                     messages.info(request, 'No session data to clear.')
             except Exception as e:
-                print(f"❌ [DEBUG] Error clearing session data: {e}")
+                print(f"ERROR: [DEBUG] Error clearing session data: {e}")
                 messages.error(request, f'Error clearing session data: {str(e)}')
             return redirect('datasets')
 
@@ -511,17 +511,17 @@ def datasets(request):
             
             try:
                 # 🔍 Validate data structure before processing
-                print(f"🔍 [DEBUG] Processing data from connection {connection_obj.name}")
-                print(f"📊 [DEBUG] Available keys in conn_data: {list(conn_data.keys())}")
-                print(f"📊 [DEBUG] Raw conn_data structure: {type(conn_data)}")
-                
+                print(f"[DEBUG] Processing data from connection {connection_obj.name}")
+                print(f"[DEBUG] Available keys in conn_data: {list(conn_data.keys())}")
+                print(f"[DEBUG] Raw conn_data structure: {type(conn_data)}")
+
                 # Check if conn_data is valid
                 if not isinstance(conn_data, dict):
-                    print(f"❌ [DEBUG] conn_data is not a dictionary: {type(conn_data)}")
+                    print(f"ERROR: [DEBUG] conn_data is not a dictionary: {type(conn_data)}")
                     continue
-                
+
                 if not conn_data:
-                    print(f"⚠️ [DEBUG] conn_data is empty for connection {connection_obj.name}")
+                    print(f"WARNING: [DEBUG] conn_data is empty for connection {connection_obj.name}")
                     continue
                 
                 # Required fields for datasets (adapted to your API structure)
@@ -536,8 +536,8 @@ def datasets(request):
                         missing_fields.append(f"{field} (not a list)")
                 
                 if missing_fields:
-                    print(f"❌ [DEBUG] Connection {connection_obj.name} has corrupted data. Missing/invalid fields: {', '.join(missing_fields)}")
-                    print(f"❌ [DEBUG] Removing corrupted data from session for connection {connection_obj.name}")
+                    print(f"ERROR: [DEBUG] Connection {connection_obj.name} has corrupted data. Missing/invalid fields: {', '.join(missing_fields)}")
+                    print(f"ERROR: [DEBUG] Removing corrupted data from session for connection {connection_obj.name}")
                     # Remove corrupted data from session
                     if 'datasets' in request.session and conn_id_str in request.session['datasets']:
                         del request.session['datasets'][conn_id_str]
@@ -546,20 +546,20 @@ def datasets(request):
                 
                 # Get lengths and validate consistency
                 lengths = {field: len(conn_data[field]) for field in required_fields}
-                print(f"📏 [DEBUG] Field lengths: {lengths}")
+                print(f"[DEBUG] Field lengths: {lengths}")
                 
                 if len(set(lengths.values())) > 1:
                     raise ValueError(f"Inconsistent array lengths: {lengths}")
                 
                 num_datasets = lengths['dataset_name']
                 if num_datasets == 0:
-                    print(f"⚠️ [DEBUG] No datasets found for connection {connection_obj.name}")
+                    print(f"WARNING: [DEBUG] No datasets found for connection {connection_obj.name}")
                     continue
                 
                 # Process each dataset with robust error handling
                 for i in range(num_datasets):
                     try:
-                        print(f"🔄 [DEBUG] Processing dataset {i+1}/{num_datasets}")
+                        print(f"[DEBUG] Processing dataset {i+1}/{num_datasets}")
                         
                         # Safely get fields from your API structure
                         dataset_id = conn_data['dataset_id'][i] if i < len(conn_data['dataset_id']) else i
@@ -567,7 +567,7 @@ def datasets(request):
                         
                         # Debug specific dataset
                         if 'hr_failure' in dataset_name.lower():
-                            print(f"🔍 [DEBUG-HR] Found hr_failure dataset:")
+                            print(f"[DEBUG-HR] Found hr_failure dataset:")
                             print(f"  - dataset_id: {dataset_id}")
                             print(f"  - dataset_name: {dataset_name}")
                             print(f"  - Connection: {connection_obj.name}")
@@ -589,9 +589,9 @@ def datasets(request):
                                     metadata = json.loads(conn_data['metadata'][i])
                                 elif isinstance(conn_data['metadata'][i], dict):
                                     metadata = conn_data['metadata'][i]
-                                print(f"✅ [DEBUG] Parsed metadata for {dataset_name}")
+                                print(f"[DEBUG] Parsed metadata for {dataset_name}")
                             except (json.JSONDecodeError, TypeError) as e:
-                                print(f"⚠️ [DEBUG] Failed to parse metadata for {dataset_name}: {e}")
+                                print(f"WARNING: [DEBUG] Failed to parse metadata for {dataset_name}: {e}")
                         
                         # Create compatible target_info from your structure
                         target_info = {
@@ -643,20 +643,20 @@ def datasets(request):
                         )
 
                         datasets.append(dataset_info)
-                        print(f"✅ [DEBUG] Successfully processed dataset: {dataset_name}")
-                        
+                        print(f"[DEBUG] Successfully processed dataset: {dataset_name}")
+
                     except Exception as e:
-                        print(f"❌ [DEBUG] Error processing dataset {i}: {e}")
+                        print(f"ERROR: [DEBUG] Error processing dataset {i}: {e}")
                         continue  # Skip this dataset but continue with others
-                        
+
             except Exception as e:
-                print(f"❌ [DEBUG] Error processing connection {connection_obj.name}: {e}")
-                print(f"🧹 [DEBUG] Attempting to clean corrupted data for connection {connection_obj.name}")
+                print(f"ERROR: [DEBUG] Error processing connection {connection_obj.name}: {e}")
+                print(f"[DEBUG] Attempting to clean corrupted data for connection {connection_obj.name}")
                 # Remove corrupted data from session
                 if 'datasets' in request.session and conn_id_str in request.session['datasets']:
                     del request.session['datasets'][conn_id_str]
                     request.session.modified = True
-                    print(f"✅ [DEBUG] Removed corrupted session data for connection {connection_obj.name}")
+                    print(f"[DEBUG] Removed corrupted session data for connection {connection_obj.name}")
                     messages.warning(request, f"Data format error from connection {connection_obj.name}. Corrupted data has been cleaned. Please re-sync the connection.")
                 else:
                     messages.warning(request, f"Data format error from connection {connection_obj.name}: {str(e)}")
@@ -753,8 +753,8 @@ def models_list(request):
         'models_json': models_json,
     }
     
-    logger.error(f"🔍 DEBUG: Rendering template")
-    print(f"🔍 DEBUG: Rendering template")
+    logger.error(f"DEBUG: Rendering template")
+    print(f"DEBUG: Rendering template")
     return render(request, 'webapp/models_list.html', context)
 
 @login_required
@@ -799,7 +799,7 @@ def model_designer(request):
         'created_at': model.created_at.strftime('%Y-%m-%d %H:%M'),
     } for model in model_configs]
     
-    print("🔍 DEBUG: selected_datasets: ", request.session.get('selected_datasets', []))
+    print("DEBUG: selected_datasets: ", request.session.get('selected_datasets', []))
     context = {
         'model_configs': models_list,
         'layer_types': layer_types,
@@ -1018,7 +1018,7 @@ def training(request):
 
     # Get selected datasets from session
     selected_datasets = request.session.get('selected_datasets', [])
-    print("🔍 DEBUG: selected_datasets: ", selected_datasets)
+    print("DEBUG: selected_datasets: ", selected_datasets)
     context = {
         'model_json': json.dumps(model_json),  
         'model_configs': model_configs,
@@ -1477,7 +1477,7 @@ def start_training(request):
             clients_config = {}
             clients_status = {}
             
-            print(f"🎯 START_TRAINING: Generando IDs para {len(selected_datasets)} datasets")
+            print(f"START_TRAINING: Generando IDs para {len(selected_datasets)} datasets")
             
             for i, dataset in enumerate(selected_datasets):
                 connection_info = dataset.get('connection', {})
@@ -1486,7 +1486,7 @@ def start_training(request):
                 import uuid
                 client_id = f"client_{uuid.uuid4().hex[:8]}"
                 
-                print(f"🆔 GENERATED ID: {client_id} → {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
+                print(f"GENERATED ID: {client_id} -> {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
                 
                 # Guardar configuración del cliente
                 clients_config[client_id] = {
@@ -1515,8 +1515,8 @@ def start_training(request):
                     'created_at': timezone.now().isoformat()
                 }
                 
-            print(f"📋 CLIENTS_CONFIG: {clients_config}")
-            print(f"📊 CLIENTS_STATUS initialized with {len(clients_status)} clients")
+            print(f"CLIENTS_CONFIG: {clients_config}")
+            print(f"CLIENTS_STATUS initialized with {len(clients_status)} clients")
             
             training_job = TrainingJob.objects.create(
                 user=request.user,
@@ -1541,16 +1541,16 @@ def start_training(request):
             # Store process PID in training job for cleanup
             training_job.server_pid = server_process.pid
             training_job.save()
-            print(f"🔧 Server process started with PID: {server_process.pid}")
+            print(f"Server process started with PID: {server_process.pid}")
             
             # Monitor process in background thread
             activate_clients_for_training(training_job, server_process)
             def monitor_server_process():
                 try:
                     server_process.join()  # Wait for process to finish
-                    print(f"✅ Flower server process completed")
+                    print(f"Flower server process completed")
                 except Exception as e:
-                    print(f"❌ Error in server process: {str(e)}")
+                    print(f"ERROR in server process: {str(e)}")
                     # Update job status if process fails
                     training_job.refresh_from_db()
                     if training_job.status not in ['completed', 'failed']:
@@ -1559,11 +1559,11 @@ def start_training(request):
                         training_job.save()
                         # Kill the server process if it's still running
                         if server_process.is_alive():
-                            print(f"🔪 Terminating server process PID: {server_process.pid}")
+                            print(f"Terminating server process PID: {server_process.pid}")
                             server_process.terminate()
                             server_process.join(timeout=5)
                             if server_process.is_alive():
-                                print(f"🔪 Force killing server process PID: {server_process.pid}")
+                                print(f"Force killing server process PID: {server_process.pid}")
                                 server_process.kill()
             
             monitor_thread = threading.Thread(target=monitor_server_process)
@@ -1953,17 +1953,17 @@ def delete_job(request, job_id):
                 if psutil.pid_exists(job.server_pid):
                     process = psutil.Process(job.server_pid)
                     if process.is_running():
-                        print(f"🔪 Terminating server process PID: {job.server_pid} for job deletion")
+                        print(f"Terminating server process PID: {job.server_pid} for job deletion")
                         process.terminate()
                         try:
                             process.wait(timeout=5)
                         except psutil.TimeoutExpired:
-                            print(f"🔪 Force killing server process PID: {job.server_pid}")
+                            print(f"Force killing server process PID: {job.server_pid}")
                             process.kill()
             except ImportError:
-                print("⚠️ psutil not available - cannot kill server process")
+                print("WARNING: psutil not available - cannot kill server process")
             except Exception as e:
-                print(f"⚠️ Error killing server process: {e}")
+                print(f"WARNING: Error killing server process: {e}")
         
         job.delete()
         messages.success(request, f"El treball '{job_name}' ha estat eliminat correctament.")
@@ -2135,13 +2135,13 @@ def activate_clients_for_training(training_job, server_process=None):
     """
     try:
         # Wait for server to be ready (with timeout and failure check)
-        print(f"🔍 Waiting for server to be ready. Current status: {training_job.status}")
+        print(f"Waiting for server to be ready. Current status: {training_job.status}")
         timeout = 30  # 30 seconds timeout
         start_time = time.time()
         
         while training_job.status not in ['server_ready', 'failed', 'cancelled']:
             if time.time() - start_time > timeout:
-                print(f"⏰ Timeout waiting for server to be ready")
+                print(f"Timeout waiting for server to be ready")
                 training_job.status = 'failed'
                 training_job.logs = "Timeout waiting for server to start"
                 training_job.save()
@@ -2149,22 +2149,22 @@ def activate_clients_for_training(training_job, server_process=None):
                 
             time.sleep(1)
             training_job.refresh_from_db()
-            print(f"🔍 Checking status: {training_job.status}")
-        
+            print(f"Checking status: {training_job.status}")
+
         # Check if server failed to start
         if training_job.status in ['failed', 'cancelled']:
-            print(f"❌ Server failed to start. Status: {training_job.status}")
+            print(f"ERROR: Server failed to start. Status: {training_job.status}")
             return
-        
+
         # Give additional time for server to fully start listening
-        print(f"🚀 Server ready, waiting additional 5 seconds for full startup...")
+        print(f"Server ready, waiting additional 5 seconds for full startup...")
         time.sleep(5)
-        
-        print(f"🚀 [SECURE] activate_clients_for_training - using new authenticated API")
-        print(f"📋 training_job: {training_job}")
-        
+
+        print(f"[SECURE] activate_clients_for_training - using new authenticated API")
+        print(f"training_job: {training_job}")
+
         if not training_job.dataset_ids:
-            print(f"⚠️ No dataset_ids found in training job")
+            print(f"WARNING: No dataset_ids found in training job")
             return
             
         # Parse selected datasets
@@ -2173,7 +2173,7 @@ def activate_clients_for_training(training_job, server_process=None):
         else:
             selected_datasets = training_job.dataset_ids
             
-        print(f"📋 selected_datasets: {selected_datasets}")
+        print(f"selected_datasets: {selected_datasets}")
         
         unique_connections = {}
         
@@ -2184,8 +2184,8 @@ def activate_clients_for_training(training_job, server_process=None):
             if conn_key not in unique_connections:
                 unique_connections[conn_key] = conn
                 
-        print(f"📋 unique_connections: {unique_connections}")
-        print(f"🔐 [FEDERATED] Will activate {len(unique_connections)} centers with credential isolation")
+        print(f"unique_connections: {unique_connections}")
+        print(f"[FEDERATED] Will activate {len(unique_connections)} centers with credential isolation")
         
         # Track client activation results
         activated_clients = []
@@ -2203,7 +2203,7 @@ def activate_clients_for_training(training_job, server_process=None):
         
         # Activate each client with secure, center-specific configuration
         for conn_key, conn in unique_connections.items():
-            print(f"🔧 [SECURE] Activating client: {conn['name']} ({conn_key})")
+            print(f"[SECURE] Activating client: {conn['name']} ({conn_key})")
             
             # 🆔 FIND CLIENT_ID: Buscar client_id por IP en clients_config  
             client_id = None
@@ -2215,11 +2215,11 @@ def activate_clients_for_training(training_job, server_process=None):
                     break
             
             if not client_id:
-                print(f"❌ CLIENT_ID not found for {conn['name']} ({conn['ip']}:{conn['port']})")
+                print(f"ERROR: CLIENT_ID not found for {conn['name']} ({conn['ip']}:{conn['port']})")
                 failed_clients.append(f"{conn['name']} (No client_id)")
                 continue
                 
-            print(f"🆔 FOUND CLIENT_ID: {conn['name']} → {client_id}")
+            print(f"FOUND CLIENT_ID: {conn['name']} -> {client_id}")
             
             # 🔐 SECURITY: Get center-specific credentials from database
             try:
@@ -2228,9 +2228,9 @@ def activate_clients_for_training(training_job, server_process=None):
                     port=conn['port'], 
                     user=training_job.user
                 )
-                print(f"✅ [AUTH] Retrieved credentials for {connection_obj.name}")
+                print(f"[AUTH] Retrieved credentials for {connection_obj.name}")
             except Connection.DoesNotExist:
-                print(f"❌ [AUTH] No credentials found for {conn['name']} ({conn['ip']}:{conn['port']})")
+                print(f"ERROR: [AUTH] No credentials found for {conn['name']} ({conn['ip']}:{conn['port']})")
                 failed_clients.append(f"{conn['name']} (No credentials in database)")
                 continue
             
@@ -2244,11 +2244,11 @@ def activate_clients_for_training(training_job, server_process=None):
             ]
             
             if not center_datasets:
-                print(f"⚠️ No datasets found for center {conn['name']}")
+                print(f"WARNING: No datasets found for center {conn['name']}")
                 failed_clients.append(f"{conn['name']} (No datasets for this center)")
                 continue
             
-            print(f"🎯 [FEDERATED] Center {conn['name']} will receive {len(center_datasets)} datasets (isolated)")
+            print(f"[FEDERATED] Center {conn['name']} will receive {len(center_datasets)} datasets (isolated)")
             
             # 🔐 SECURITY: Create center-specific config (NO cross-center data)
             center_specific_config = create_center_specific_config(center_datasets, training_job.config_json)
@@ -2262,20 +2262,20 @@ def activate_clients_for_training(training_job, server_process=None):
                 "center_datasets": [ds['dataset_name'] for ds in center_datasets]  # All datasets for this center
             }
             
-            print(f"📋 [SECURE] Client will connect to: {client_server_address}")
-            print(f"📋 [SECURE] Sending center-specific config with {len(center_datasets)} datasets")
-            print(f"📋 [SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
+            print(f"[SECURE] Client will connect to: {client_server_address}")
+            print(f"[SECURE] Sending center-specific config with {len(center_datasets)} datasets")
+            print(f"[SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
 
             # Validate port in allowed range (5000-5099)
             if not (5000 <= int(conn['port']) <= 5099):
-                print(f"❌ Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
+                print(f"ERROR: Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
                 failed_clients.append(f"{conn['name']} (Invalid port)")
                 continue
             
             # 🚀 NEW API: Use authenticated /api/v1/start-client endpoint
             client_url = f"http://{conn['ip']}:{conn['port']}/api/v1/start-client"
-            print(f"🌐 [API] Making authenticated request to: {client_url}")
-            print(f"📋 [API] Headers: {auth_config.headers}")
+            print(f"[API] Making authenticated request to: {client_url}")
+            print(f"[API] Headers: {auth_config.headers}")
             
             try:
                 # Make authenticated request with center-specific credentials
@@ -2287,38 +2287,38 @@ def activate_clients_for_training(training_job, server_process=None):
                     timeout=10
                 )
                 
-                print(f"📡 [API] Response status: {response.status_code}")
-                print(f"📡 [API] Response headers: {dict(response.headers)}")
-                
+                print(f"[API] Response status: {response.status_code}")
+                print(f"[API] Response headers: {dict(response.headers)}")
+
                 if response.content:
                     try:
-                        print(f"📄 [API] Response content: {response.text[:500]}...")
+                        print(f"[API] Response content: {response.text[:500]}...")
                     except:
-                        print(f"📄 [API] Response content: [Could not decode]")
-                
+                        print(f"[API] Response content: [Could not decode]")
+
                 if response.status_code == 200:
-                    print(f"✅ [SUCCESS] Client {conn['name']} activated with secure API")
+                    print(f"[SUCCESS] Client {conn['name']} activated with secure API")
                     activated_clients.append(conn['name'])
                 else:
-                    print(f"❌ [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
+                    print(f"ERROR: [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
                     try:
                         error_detail = response.json() if response.content else response.text
-                        print(f"❌ [ERROR] Response detail: {error_detail}")
+                        print(f"ERROR: [ERROR] Response detail: {error_detail}")
                     except:
-                        print(f"❌ [ERROR] Response text: {response.text[:200]}")
+                        print(f"ERROR: [ERROR] Response text: {response.text[:200]}")
                     failed_clients.append(f"{conn['name']} (HTTP {response.status_code})")
-                    
+
             except requests.exceptions.HTTPError as e:
-                print(f"❌ [HTTP] HTTP error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [HTTP] HTTP error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (HTTP Error: {str(e)})")
             except requests.exceptions.ConnectionError as e:
-                print(f"❌ [CONN] Connection error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [CONN] Connection error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Connection Error)")
             except requests.exceptions.Timeout as e:
-                print(f"❌ [TIMEOUT] Request timeout for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [TIMEOUT] Request timeout for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Timeout)")
             except requests.exceptions.RequestException as e:
-                print(f"❌ [REQUEST] Request error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [REQUEST] Request error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Request Error: {str(e)})")
         
         # Update training job status based on client activation results
@@ -2326,47 +2326,47 @@ def activate_clients_for_training(training_job, server_process=None):
         activated_count = len(activated_clients)
         failed_count = len(failed_clients)
         
-        print(f"📊 [SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
-        
+        print(f"[SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
+
         if activated_count == 0:
             # No clients activated - mark as failed and kill server
             training_job.status = 'failed'
             training_job.logs = f"Failed to activate any federated learning centers. Errors: {'; '.join(failed_clients)}"
             training_job.save()
-            print(f"❌ Training job marked as FAILED - no centers activated")
-            
+            print(f"ERROR: Training job marked as FAILED - no centers activated")
+
             # Kill the server process since no clients can connect
             if server_process and server_process.is_alive():
-                print(f"🔪 Terminating server process due to center activation failure")
+                print(f"Terminating server process due to center activation failure")
                 server_process.terminate()
                 server_process.join(timeout=5)
                 if server_process.is_alive():
-                    print(f"🔪 Force killing server process")
+                    print(f"Force killing server process")
                     server_process.kill()
-            
+
         elif failed_count > 0:
             # Some clients failed - add warning to logs but continue
             warning_msg = f"Warning: {failed_count}/{total_clients} centers failed to activate: {'; '.join(failed_clients)}"
             training_job.logs = warning_msg
             training_job.save()
-            print(f"⚠️ Federated training continuing with {activated_count} centers. {warning_msg}")
-            
+            print(f"WARNING: Federated training continuing with {activated_count} centers. {warning_msg}")
+
         else:
             # All clients activated successfully
             success_msg = f"All {activated_count} federated learning centers activated successfully: {', '.join(activated_clients)}"
             training_job.logs = success_msg
             training_job.save()
-            print(f"✅ All federated learning centers activated with secure authentication")
-                
+            print(f"All federated learning centers activated with secure authentication")
+
     except Exception as e:
-        print(f"❌ Error activating federated learning clients: {str(e)}")
+        print(f"ERROR activating federated learning clients: {str(e)}")
         import traceback
-        print(f"❌ Full traceback: {traceback.format_exc()}")
+        print(f"Full traceback: {traceback.format_exc()}")
         # Mark training job as failed due to client activation error
         training_job.status = 'failed'
         training_job.logs = f"Federated client activation failed: {str(e)}"
         training_job.save()
-        print(f"❌ Training job marked as FAILED due to client activation error")
+        print(f"ERROR: Training job marked as FAILED due to client activation error")
 
 @login_required
 def switch_project_api(request):
@@ -2483,18 +2483,18 @@ def client_dashboard(request, job_id):
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
         
         # 🔍 DEBUG: Log real data from database
-        print(f"🌐 CLIENT_DASHBOARD: Job {job_id} requested")
-        print(f"📋 Job status: {job.status}")
-        print(f"📋 Job clients_status type: {type(job.clients_status)}")
-        print(f"📋 Job clients_status: {job.clients_status}")
-        print(f"📋 Job clients_config: {job.clients_config}")
+        print(f"CLIENT_DASHBOARD: Job {job_id} requested")
+        print(f"Job status: {job.status}")
+        print(f"Job clients_status type: {type(job.clients_status)}")
+        print(f"Job clients_status: {job.clients_status}")
+        print(f"Job clients_config: {job.clients_config}")
         
         # 📊 Get real client data from database
         clients = []
         clients_status = job.clients_status or {}
         clients_config = job.clients_config or {}
         
-        print(f"📊 Processing {len(clients_status)} clients from database")
+        print(f"Processing {len(clients_status)} clients from database")
         
         for client_id, status_data in clients_status.items():
             # Get connection info from clients_config
@@ -2526,9 +2526,9 @@ def client_dashboard(request, job_id):
             }
             
             clients.append(client_data)
-            print(f"📊 Client processed: {client_id} → {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
-        
-        print(f"📊 Total clients processed: {len(clients)}")
+            print(f"Client processed: {client_id} -> {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
+
+        print(f"Total clients processed: {len(clients)}")
         
         # Estadísticas generales usando datos reales
         total_clients = len(clients)
@@ -2575,7 +2575,7 @@ def client_dashboard(request, job_id):
                     performance_chart_data['accuracy'].append(sum(round_accuracies) / len(round_accuracies))
                     performance_chart_data['loss'].append(sum(round_losses) / len(round_losses))
         
-        print(f"📊 PERFORMANCE_CHART_DATA: {len(performance_chart_data['labels'])} rounds of real data")
+        print(f"PERFORMANCE_CHART_DATA: {len(performance_chart_data['labels'])} rounds of real data")
         
         context = {
             'job': job,
@@ -2586,9 +2586,9 @@ def client_dashboard(request, job_id):
             'total_rounds': job.total_rounds or 10
         }
         
-        print(f"📊 CONTEXT SENT: {len(clients)} clients, avg_accuracy: {avg_accuracy:.1f}%")
-        print(f"📊 SAMPLE CLIENT DATA: {clients[0] if clients else 'No clients'}")
-        print(f"📊 CHART DATA SAMPLE: Accuracy R1: {performance_chart_data['accuracy'][0] if performance_chart_data['accuracy'] else 'No data'}")
+        print(f"CONTEXT SENT: {len(clients)} clients, avg_accuracy: {avg_accuracy:.1f}%")
+        print(f"SAMPLE CLIENT DATA: {clients[0] if clients else 'No clients'}")
+        print(f"CHART DATA SAMPLE: Accuracy R1: {performance_chart_data['accuracy'][0] if performance_chart_data['accuracy'] else 'No data'}")
         
         return render(request, 'webapp/client_dashboard.html', context)
         
@@ -2604,8 +2604,8 @@ def get_clients_data(request, job_id):
         job = TrainingJob.objects.get(id=job_id, user=request.user)
         clients_status = job.clients_status or {}
         
-        print(f"🌐 API_CLIENTS_DATA: Job {job_id} has {len(clients_status)} clients in status")
-        print(f"📋 Available clients: {list(clients_status.keys())}")
+        print(f"API_CLIENTS_DATA: Job {job_id} has {len(clients_status)} clients in status")
+        print(f"Available clients: {list(clients_status.keys())}")
         
         clients_data = []
         for client_id, client_info in clients_status.items():
@@ -2627,7 +2627,7 @@ def get_clients_data(request, job_id):
                 'last_seen': client_info['last_seen'],
             }
             clients_data.append(client_data)
-            print(f"📊 Client: {client_info['connection_name']} | Status: {client_info['status']} | Round: {client_info['current_round']} | Acc: {client_info['accuracy']}")
+            print(f"Client: {client_info['connection_name']} | Status: {client_info['status']} | Round: {client_info['current_round']} | Acc: {client_info['accuracy']}")
         
         # Calcular estadísticas generales
         overview_stats = {
@@ -2637,7 +2637,7 @@ def get_clients_data(request, job_id):
             'avg_accuracy': sum(c['accuracy'] for c in clients_data if c['accuracy']) / len([c for c in clients_data if c['accuracy']]) if any(c['accuracy'] for c in clients_data) else 0
         }
         
-        print(f"📈 Overview: {overview_stats}")
+        print(f"Overview: {overview_stats}")
         
         return JsonResponse({
             'success': True,
@@ -2646,7 +2646,7 @@ def get_clients_data(request, job_id):
         })
         
     except TrainingJob.DoesNotExist:
-        print(f"❌ API_ERROR: Job {job_id} not found")
+        print(f"ERROR: API_ERROR: Job {job_id} not found")
         return JsonResponse({'success': False, 'error': 'Job not found'}, status=404)
 
 @login_required
@@ -2695,7 +2695,7 @@ def dataset_detail_view(request, dataset_id):
     logger = logging.getLogger(__name__)
     
     try:
-        print(f"🔍 [DEBUG-DETAIL] Received dataset_id: {dataset_id}")
+        print(f"[DEBUG-DETAIL] Received dataset_id: {dataset_id}")
         
         # Parse new dataset_id format: ds-connection_id-dataset_name
         if not dataset_id.startswith('ds-'):
@@ -2711,7 +2711,7 @@ def dataset_detail_view(request, dataset_id):
             return redirect('datasets')
         
         conn_id_str, safe_dataset_name = parts
-        print(f"🔍 [DEBUG-DETAIL] Parsed conn_id: {conn_id_str}, safe_dataset_name: {safe_dataset_name}")
+        print(f"[DEBUG-DETAIL] Parsed conn_id: {conn_id_str}, safe_dataset_name: {safe_dataset_name}")
         
         # We need to find the actual dataset name from session data
         # since we converted it to safe format
@@ -2740,7 +2740,7 @@ def dataset_detail_view(request, dataset_id):
         
         try:
             dataset_names = conn_data.get('dataset_name', [])
-            print(f"🔍 [DEBUG-DETAIL] Available datasets: {dataset_names}")
+            print(f"[DEBUG-DETAIL] Available datasets: {dataset_names}")
             
             # Find the dataset by converting each name to safe format and comparing
             import re
@@ -2749,28 +2749,28 @@ def dataset_detail_view(request, dataset_id):
                 safe_name = name.replace(' ', '-').replace('_', '-').lower()
                 safe_name = re.sub(r'[^a-z0-9-]', '', safe_name)
                 
-                print(f"🔍 [DEBUG-DETAIL] Comparing '{safe_name}' with '{safe_dataset_name}'")
+                print(f"[DEBUG-DETAIL] Comparing '{safe_name}' with '{safe_dataset_name}'")
                 
                 if safe_name == safe_dataset_name:
                     dataset_index = i
                     actual_dataset_name = name
-                    print(f"✅ [DEBUG-DETAIL] Found match: {actual_dataset_name} at index {i}")
+                    print(f"[DEBUG-DETAIL] Found match: {actual_dataset_name} at index {i}")
                     break
             
             if dataset_index is None:
-                print(f"❌ [DEBUG-DETAIL] No match found for safe_dataset_name: {safe_dataset_name}")
+                print(f"ERROR: [DEBUG-DETAIL] No match found for safe_dataset_name: {safe_dataset_name}")
                 messages.error(request, f"Dataset with identifier '{safe_dataset_name}' not found in connection data")
                 return redirect('datasets')
                 
         except (KeyError, ValueError) as e:
-            print(f"❌ [DEBUG-DETAIL] Error finding dataset: {e}")
+            print(f"ERROR: [DEBUG-DETAIL] Error finding dataset: {e}")
             messages.error(request, "Invalid dataset data structure")
             return redirect('datasets')
         
         # Build dataset object from session data (adapted for new API structure)
         try:
-            print(f"🔍 [DEBUG] Session data structure: {list(conn_data.keys())}")
-            print(f"🔍 [DEBUG] Dataset index: {dataset_index}")
+            print(f"[DEBUG] Session data structure: {list(conn_data.keys())}")
+            print(f"[DEBUG] Dataset index: {dataset_index}")
             
             # Extract data using the new API structure
             dataset_id_val = conn_data.get('dataset_id', [None])[dataset_index] if isinstance(conn_data.get('dataset_id', []), list) else conn_data.get('dataset_id')
@@ -2783,7 +2783,7 @@ def dataset_detail_view(request, dataset_id):
             file_size = conn_data.get('file_size', [0])[dataset_index] if isinstance(conn_data.get('file_size', []), list) else conn_data.get('file_size', 0)
             metadata = conn_data.get('metadata', [{}])[dataset_index] if isinstance(conn_data.get('metadata', []), list) else conn_data.get('metadata', {})
             
-            print(f"📊 [DEBUG] Extracted values: patient_count={patient_count}, num_columns={num_columns}, file_size={file_size}")
+            print(f"[DEBUG] Extracted values: patient_count={patient_count}, num_columns={num_columns}, file_size={file_size}")
             
             # Create basic features and target info
             features_info = {
@@ -2818,7 +2818,7 @@ def dataset_detail_view(request, dataset_id):
                 'class_label': target_info.get('name', 'unknown')
             }
             
-            print(f"✅ [DEBUG] Dataset info created successfully with metadata: {'Yes' if metadata else 'No'}")
+            print(f"[DEBUG] Dataset info created successfully with metadata: {'Yes' if metadata else 'No'}")
             
             # Check if dataset is selected
             dataset_info['is_selected'] = any(
@@ -2829,8 +2829,8 @@ def dataset_detail_view(request, dataset_id):
             
         except (IndexError, KeyError, TypeError) as e:
             logger.error(f"Error parsing dataset data: {str(e)}")
-            print(f"❌ [DEBUG] Error details: {e}")
-            print(f"❌ [DEBUG] Available keys: {list(conn_data.keys()) if conn_data else 'No data'}")
+            print(f"ERROR: [DEBUG] Error details: {e}")
+            print(f"ERROR: [DEBUG] Available keys: {list(conn_data.keys()) if conn_data else 'No data'}")
             messages.error(request, f"Error parsing dataset information: {str(e)}")
             return redirect('datasets')
         
@@ -2839,10 +2839,10 @@ def dataset_detail_view(request, dataset_id):
         detailed_metrics = calculator.calculate_metrics_from_session(dataset_info)
         
         # Log for debugging
-        print(f"🔍 Dataset details requested for: {actual_dataset_name} from {connection.name}")
-        print(f"📊 Dataset info: {dataset_info['num_rows']} rows, {dataset_info['num_columns']} columns")
+        print(f"Dataset details requested for: {actual_dataset_name} from {connection.name}")
+        print(f"Dataset info: {dataset_info['num_rows']} rows, {dataset_info['num_columns']} columns")
         if detailed_metrics.get('is_dummy'):
-            print(f"⚠️ Using dummy data for dataset type: {dataset_info['dataset_type']}")
+            print(f"WARNING: Using dummy data for dataset type: {dataset_info['dataset_type']}")
         
         context = {
             'dataset': dataset_info,  # Session-based dataset object

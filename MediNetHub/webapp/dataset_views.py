@@ -180,8 +180,7 @@ def datasets(request):
                     messages.error(request, f'Port {connection.port} is not a valid port number (1–65535).')
                     return redirect('datasets')
                 
-                url_scheme = "http" 
-                fetch_url = f"{url_scheme}://{connection.ip}:{connection.port}/api/v2/get-data-info"
+                fetch_url = f"{settings.MEDINET_NODE_SCHEME}://{connection.ip}:{connection.port}/api/v2/get-data-info"
                 
                 # Prepare authentication headers matching test_api_researcher.py format
                 headers = {
@@ -263,13 +262,13 @@ def datasets(request):
             return redirect('datasets')
             
         elif action == 'clear_session_data':
-            # 🧹 Clear corrupted session data
+            # Clear corrupted session data
             try:
                 if 'datasets' in request.session:
                     corrupted_count = len(request.session['datasets'])
                     request.session['datasets'] = {}
                     request.session.modified = True
-                    print(f"🧹 [DEBUG] Cleared {corrupted_count} dataset entries from session")
+                    print(f"[DEBUG] Cleared {corrupted_count} dataset entries from session")
                     messages.success(request, f'Cleared session data. Re-fetch datasets from connections to reload.')
                 else:
                     messages.info(request, 'No session data to clear.')
@@ -345,7 +344,7 @@ def datasets(request):
                                 elif isinstance(conn_data['metadata'][i], dict):
                                     metadata = conn_data['metadata'][i]
                             except (json.JSONDecodeError, TypeError) as e:
-                              messages.error(request,"⚠️ [DEBUG] Failed to parse metadata for {dataset_name}: {e}")
+                              messages.error(request,"WARNING: [DEBUG] Failed to parse metadata for {dataset_name}: {e}")
                         
                         # Extract target_info from metadata or create default structure
                         target_info = {
@@ -369,7 +368,7 @@ def datasets(request):
                                 'recommended_loss': target_metadata.get('recommended_loss', 'CrossEntropyLoss')
                             }
 
-                        print(f"📊 [DEBUG] Dataset: {dataset_name}, Target Info: {target_info}")
+                        print(f"[DEBUG] Dataset: {dataset_name}, Target Info: {target_info}")
                         # Create features_info from metadata if available
                         features_info = {'input_features': num_columns - 1, 'feature_types': {'numeric': num_columns - 1, 'categorical': 0}}
                         if metadata and 'statistical_summary' in metadata and 'column_types' in metadata['statistical_summary']:
@@ -501,7 +500,7 @@ def test_connection(request):
     if not connection.api_key:
         return JsonResponse({'success': False, 'message': 'No API key configured for this connection'})
 
-    node_url = f"http://{connection.ip}:{connection.port}/api/v2/ping"
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection.ip}:{connection.port}/api/v2/ping"
     try:
         response = requests.get(
             node_url,

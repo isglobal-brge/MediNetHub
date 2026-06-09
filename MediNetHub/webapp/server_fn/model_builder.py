@@ -10,6 +10,13 @@ from typing import Dict, List, Any, Union
 # The UI uses snake_case / prefixed names; PyTorch uses PascalCase.
 _UI_TO_PYTORCH: dict = {
     'linear':               'Linear',
+    # Activation aliases — lowercase UI names used by the test/API configs
+    'relu':                 'ReLU',
+    'sigmoid':              'Sigmoid',
+    'tanh':                 'Tanh',
+    'softmax':              'Softmax',
+    'leakyrelu':            'LeakyReLU',
+    # Conv layers
     'conv1d':               'Conv1d',
     'conv2d':               'Conv2d',
     'conv3d':               'Conv3d',
@@ -167,9 +174,32 @@ class DynamicModel(nn.Module):
         
     def _create_layers(self):
         """Create all layers defined in the configuration"""
-        # Get layers from unified structure
+        # Get layers from unified structure — same search order as forward()
         layers = self.cleaned_config.get("architecture", {}).get("layers", [])
-            
+        if not layers:
+            layers = self.cleaned_config.get("layers", [])
+        if not layers and "model" in self.cleaned_config:
+            layers = self.cleaned_config["model"].get("layers", [])
+
+        # Auto-assign IDs and inputs for flat-format layers (no "id" field).
+        for i, layer_config in enumerate(layers):
+            if "id" not in layer_config:
+                ltype = layer_config.get("type", "").lower()
+                if ltype == "input":
+                    layer_config["id"] = "input_data"
+                elif i == len(layers) - 1:
+                    layer_config["id"] = "output_layer"
+                else:
+                    layer_config["id"] = f"layer_{i}"
+            if "inputs" not in layer_config:
+                if i == 0:
+                    # Input-type layers are pure pass-throughs; everything else
+                    # must connect to "input_data" (the tensor injected by forward()).
+                    ltype = layer_config.get("type", "").lower()
+                    layer_config["inputs"] = [] if ltype == "input" else ["input_data"]
+                else:
+                    layer_config["inputs"] = [layers[i - 1]["id"]]
+
         for layer_config in layers:
             layer_id = layer_config.get("id")
             if not layer_id:

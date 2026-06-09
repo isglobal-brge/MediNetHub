@@ -95,7 +95,7 @@ class ModelConfigCleaner:
         
         layers = model_config.get('layers', [])
         if not layers:
-            print("✅ Model config cleaning finished: No layers found.")
+            print("Model config cleaning finished: No layers found.")
             return cleaned_config
 
         cleaned_layers = []
@@ -128,6 +128,6 @@ class ModelConfigCleaner:
         # Overwrite only the layers part, keeping everything else from the original config
         cleaned_config['layers'] = cleaned_layers
         
-        print(f"✅ Model config cleaning finished: {len(layers)} layers processed")
+        print(f"Model config cleaning finished: {len(layers)} layers processed")
         return cleaned_config
 

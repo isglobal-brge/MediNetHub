@@ -14,8 +14,19 @@ from .model_builder import DynamicModel, SequentialModel
 from sklearn.svm import SVC
 from sklearn.kernel_approximation import RBFSampler
 import logging
-import pickle
 import base64
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    """JSON encoder that converts numpy scalars/arrays to native Python types."""
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +48,11 @@ def update_client_tracking(server_manager, server_round, results):
     try:
         clients_status = server_manager.job.clients_status or {}
         
-        print(f"🔄 CLIENT_TRACKING: Round {server_round} - Processing {len(results)} client results")
-        print(f"📋 Available mappings: {list(clients_status.keys())}")
+        print(f"CLIENT_TRACKING: Round {server_round} - Processing {len(results)} client results")
+        print(f"Available mappings: {list(clients_status.keys())}")
         
         if not clients_status:
-            print(f"❌ WARNING: No client mappings in job {server_manager.job.id}")
+            print(f"WARNING: No client mappings in job {server_manager.job.id}")
             logger.warning(f"No client mappings in job {server_manager.job.id}")
             return
         
@@ -50,12 +61,12 @@ def update_client_tracking(server_manager, server_round, results):
             # Obtener client_id desde las métricas del cliente
             client_id = fit_res.metrics.get('client_id')
             
-            print(f"📥 Client {i+1}: client_id='{client_id}', metrics_keys={list(fit_res.metrics.keys())}")
+            print(f"Client {i+1}: client_id='{client_id}', metrics_keys={list(fit_res.metrics.keys())}")
             
             if client_id and client_id in clients_status:
                 # Actualizar métricas ACTUALES (estado current)
-                old_status = clients_status[client_id]['status']
-                old_round = clients_status[client_id]['current_round']
+                old_status = clients_status[client_id].get('status', 'unknown')
+                old_round = clients_status[client_id].get('current_round', 0)
                 
                 clients_status[client_id].update({
                     'current_round': server_round,
@@ -83,20 +94,20 @@ def update_client_tracking(server_manager, server_round, results):
                     'timestamp': timezone.now().isoformat()
                 }
                 
-                print(f"✅ UPDATED: {client_id} → {clients_status[client_id]['connection_name']} | {old_status}→training | Round {old_round}→{server_round} | Acc: {fit_res.metrics.get('accuracy', 0):.3f}")
+                print(f"UPDATED: {client_id} -> {clients_status[client_id]['connection_name']} | {old_status}->training | Round {old_round}->{server_round} | Acc: {fit_res.metrics.get('accuracy', 0):.3f}")
                 logger.info(f"Updated client {client_id} (→ {clients_status[client_id]['connection_name']}) - Round {server_round}")
             else:
-                print(f"❌ MISSING: Client ID '{client_id}' not found in mappings {list(clients_status.keys())}")
+                print(f"MISSING: Client ID '{client_id}' not found in mappings {list(clients_status.keys())}")
                 logger.warning(f"Client ID {client_id} not found in mappings")
         
         # Una sola escritura a BD por round
-        print(f"💾 SAVING: clients_status to database for job {server_manager.job.id}")
+        print(f"SAVING: clients_status to database for job {server_manager.job.id}")
         server_manager.job.clients_status = clients_status
         server_manager.job.save(update_fields=['clients_status'])
-        print(f"✅ SAVED: clients_status updated successfully")
+        print("SAVED: clients_status updated successfully")
         
     except Exception as e:
-        print(f"❌ ERROR in update_client_tracking: {e}")
+        print(f"ERROR in update_client_tracking: {e}")
         logger.error(f"Error updating client tracking: {e}")
 
 
@@ -127,6 +138,9 @@ class ServerManager:
             layers_config = self.model_config.get('architecture', {}).get('layers', [])
             if not layers_config:
                 layers_config = self.model_config.get('model', {}).get('architecture', {}).get('layers', [])
+            # Flat structure: layers directly under the config root
+            if not layers_config:
+                layers_config = self.model_config.get('layers', [])
 
             # Check model type from both possible locations
             model_type = self.model_config.get('metadata', {}).get('model_type', '')
@@ -220,10 +234,10 @@ class ServerManager:
             self.job.clients_status = current_clients
             self.job.save()
             
-            print(f"📡 Updated client status: {len(current_clients)} clients")
-            
+            print(f"Updated client status: {len(current_clients)} clients")
+
         except Exception as e:
-            print(f"❌ Error updating client status: {e}")
+            print(f"ERROR updating client status: {e}")
     
     def _get_empty_metrics_structure(self):
         """Get empty metrics structure with all possible metrics"""
@@ -323,20 +337,20 @@ class ServerManager:
                 self.job.model_file_path = model_path
                 self.job.save()
                 
-                print(f"✅ Model saved successfully for round {round_number}")
-                
+                print(f"Model saved successfully for round {round_number}")
+
             else:
                 raise ValueError(f"Framework {self.framework} not supported")
-                
+
         except Exception as e:
-            print(f"❌ Error saving model for round {round_number}: {e}")
-            
+            print(f"ERROR saving model for round {round_number}: {e}")
+
             # Mark training as failed
             self.job.status = 'failed'
             self.job.logs = f"Model save failed at round {round_number}: {str(e)}"
             self.job.save()
-            
-            print(f"❌ Training job marked as FAILED due to model save error")
+
+            print(f"Training job marked as FAILED due to model save error")
             
             # Re-raise the exception to stop training
             raise e
@@ -379,29 +393,33 @@ class FedAvgModelStrategy(FedAvg):
         if self.round_start_time is None:
             self.round_start_time = self.server_manager.job.started_at or timezone.now()
         
+        # Filter out any results with num_examples=0 before calling FedAvg.
+        # A client returning 0 examples (e.g. due to an exception in fit()) causes
+        # FedAvg's weighted average to divide by zero and crash the whole server.
+        # Filtering here means: bad clients are simply excluded from aggregation for
+        # this round while the server stays alive for remaining clients.
+        valid_results = [(cp, fr) for cp, fr in results if fr.num_examples > 0]
+        if not valid_results:
+            print(f"WARNING: Round {server_round}: all {len(results)} client(s) returned 0 examples — skipping aggregation, retaining current parameters")
+            return None, {}
+        if len(valid_results) < len(results):
+            dropped = len(results) - len(valid_results)
+            print(f"WARNING: Round {server_round}: dropped {dropped} client result(s) with num_examples=0")
+
         try:
-            aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, results, failures)
+            aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, valid_results, failures)
         except ZeroDivisionError as e:
-            print(f"❌ ZeroDivisionError in aggregate_fit: {e}")
-            print(f"❌ This usually means clients are not reporting num_examples correctly")
-            print(f"❌ Results: {[(client_proxy.cid if hasattr(client_proxy, 'cid') else 'unknown', fit_res.num_examples) for client_proxy, fit_res in results]}")
-            
-            # Mark training as failed
-            self.server_manager.job.status = 'failed'
-            self.server_manager.job.logs = f"Training failed at round {server_round}: Division by zero error - clients not reporting examples correctly"
-            self.server_manager.job.save()
-            
-            # Return None to stop training
+            print(f"ERROR: ZeroDivisionError in aggregate_fit (round {server_round}): {e}")
+            print(f"ERROR: Results: {[(cp.cid if hasattr(cp, 'cid') else 'unknown', fr.num_examples) for cp, fr in valid_results]}")
+            # Skip this round — do NOT mark the job as failed.  The server stays
+            # alive so other clients (including the DP production run) can connect
+            # in subsequent rounds.
+            print(f"WARNING: Skipping round {server_round} aggregation; server continues to next round")
             return None, {}
         except Exception as e:
-            print(f"❌ Unexpected error in aggregate_fit: {e}")
-            
-            # Mark training as failed
-            self.server_manager.job.status = 'failed'
-            self.server_manager.job.logs = f"Training failed at round {server_round}: {str(e)}"
-            self.server_manager.job.save()
-            
-            # Return None to stop training
+            print(f"ERROR: Unexpected error in aggregate_fit (round {server_round}): {e}")
+            # Same: skip round, keep server alive.
+            print(f"WARNING: Skipping round {server_round} aggregation; server continues to next round")
             return None, {}
         
         print(f"DEBUG aggregate_fit - Round {server_round} completed")
@@ -411,13 +429,13 @@ class FedAvgModelStrategy(FedAvg):
             # Save model
             parameters_as_ndarrays: List[np.ndarray] = parameters_to_ndarrays(aggregated_parameters)
             self.server_manager.save_model(parameters_as_ndarrays, server_round)            
-            print(f"✅ Model saved for round {server_round}")
-        
+            print(f"Model saved for round {server_round}")
+
         update_client_tracking(self.server_manager, server_round, results)
-        
+
         # Check if this is the last round - signal completion and calculate total training time
         if server_round >= self.server_manager.job.total_rounds:
-            print(f"🏁 Final round {server_round} completed - marking job as completed")
+            print(f"Final round {server_round} completed - marking job as completed")
             
             # Calculate total training duration
             if self.training_start_time:
@@ -521,7 +539,7 @@ class FedSVMStrategy(Strategy):
         """Configure the next round of federated training"""
         
 
-        print(f"🔧 FedSVM configure_fit - Round {server_round}")
+        print(f"FedSVM configure_fit - Round {server_round}")
 
         # Sample clients for this round
         sample_size, min_num_clients = self.num_fit_clients(
@@ -559,13 +577,13 @@ class FedSVMStrategy(Strategy):
 
                     # Pack into Parameters
                     params = ndarrays_to_parameters([svs_array, labels_array])
-                    print(f"📤 Sending {len(all_svs)} SVs to client {client.cid}")
+                    print(f"Sending {len(all_svs)} SVs to client {client.cid}")
                 else:
                     params = Parameters(tensors=[], tensor_type="")
             else:
                 # No support vectors to send (first round)
                 params = Parameters(tensors=[], tensor_type="")
-                print(f"📤 No SVs to send to client {client.cid} (first round or no other clients)")
+                print(f"No SVs to send to client {client.cid} (first round or no other clients)")
 
             # Config only contains scalar metadata
             config = {
@@ -610,13 +628,13 @@ class FedSVMStrategy(Strategy):
         if self.round_start_time is None:
             self.round_start_time = self.server_manager.job.started_at or timezone.now()
 
-        print(f"🔄 FedSVM aggregate_fit - Round {server_round}")
-        print(f"📊 Received {len(results)} results, {len(failures)} failures")
+        print(f"FedSVM aggregate_fit - Round {server_round}")
+        print(f"Received {len(results)} results, {len(failures)} failures")
 
         if failures:
-            print(f"🚨 ===== FAILURE DETAILS FOR ROUND {server_round} =====")
+            print(f"CRITICAL: ===== FAILURE DETAILS FOR ROUND {server_round} =====")
             for i, failure in enumerate(failures):
-                print(f"❌ Failure {i+1}/{len(failures)}:")
+                print(f"ERROR: Failure {i+1}/{len(failures)}:")
 
                 # Check if it's a tuple (ClientProxy, Exception) or just Exception
                 if isinstance(failure, tuple):
@@ -640,7 +658,7 @@ class FedSVMStrategy(Strategy):
 
 
         if not results:
-            print("❌ No results to aggregate")
+            print("ERROR: No results to aggregate")
             return None, {}
 
         # Collect support vectors from all clients
@@ -675,9 +693,9 @@ class FedSVMStrategy(Strategy):
 
                     total_svs_exchanged += len(svs)
 
-                    print(f"✅ Client {client_id}: received {len(svs)} SVs ({new_svs_count} new)")
+                    print(f"Client {client_id}: received {len(svs)} SVs ({new_svs_count} new)")
 
-        print(f"📦 Total SVs in pool: {sum(len(svs) for svs in self.support_vectors_pool.values())}")
+        print(f"Total SVs in pool: {sum(len(svs) for svs in self.support_vectors_pool.values())}")
 
         # Update client tracking
         update_client_tracking(self.server_manager, server_round, results)
@@ -697,7 +715,7 @@ class FedSVMStrategy(Strategy):
 
         # Check convergence
         if new_svs_count == 0 and not self.converged:
-            print(f"🏁 Convergence achieved - no new support vectors")
+            print(f"Convergence achieved - no new support vectors")
             print(f" Setting converged flag - remaining rounds will be no-ops")
 
             # Set convergence flag (clients will skip training in next rounds)
@@ -719,7 +737,7 @@ class FedSVMStrategy(Strategy):
 
         # Check if final round
         if server_round >= self.server_manager.job.total_rounds:
-            print(f"🏁 Final round {server_round} completed")
+            print(f"Final round {server_round} completed")
 
             if self.training_start_time:
                 total_duration = (round_end_time - self.training_start_time).total_seconds()
@@ -809,7 +827,7 @@ class FedSVMStrategy(Strategy):
             for metric in weighted_metrics.keys():
                 weighted_metrics[metric] /= total_examples
 
-        print(f"📊 Aggregated metrics: {weighted_metrics}")
+        print(f"Aggregated metrics: {weighted_metrics}")
         return weighted_metrics
 
 
@@ -828,11 +846,11 @@ def serialize_trees(trees: List[dict]) -> np.ndarray:
     if not trees:
         return np.array([], dtype=np.uint8)
 
-    # 1. Pickle dumps
-    pickled = pickle.dumps(trees)
+    # 1. JSON encode (safe: no code execution on the receiving end)
+    json_bytes = json.dumps(trees, cls=_NumpyEncoder).encode('utf-8')
 
     # 2. Base64 encode
-    encoded = base64.b64encode(pickled)
+    encoded = base64.b64encode(json_bytes)
 
     # 3. Convertir a numpy array
     serialized_array = np.frombuffer(encoded, dtype=np.uint8)
@@ -857,10 +875,10 @@ def deserialize_trees(serialized_array: np.ndarray) -> List[dict]:
     encoded_bytes = serialized_array.tobytes()
 
     # 2. Base64 decode
-    pickled = base64.b64decode(encoded_bytes)
+    json_bytes = base64.b64decode(encoded_bytes)
 
-    # 3. Unpickle
-    trees = pickle.loads(pickled)
+    # 3. JSON decode (safe: no arbitrary code execution)
+    trees = json.loads(json_bytes.decode('utf-8'))
 
     return trees
 

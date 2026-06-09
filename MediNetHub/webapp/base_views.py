@@ -37,7 +37,7 @@ def sanitize_config_for_client(config):
                     'name': dataset['connection'].get('name', 'unknown')
                     # Removed: ip, port, user, password
                 }
-                print(f"🔒 Removed sensitive connection info for dataset: {dataset.get('dataset_name', 'unknown')}")
+                print(f"Removed sensitive connection info for dataset: {dataset.get('dataset_name', 'unknown')}")
     
     return sanitized
 

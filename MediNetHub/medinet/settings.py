@@ -62,6 +62,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*'] # TODO: Restrict this to specific domains in production
 
+# Scheme used when the Hub calls MediNetNode REST endpoints.
+# 'http' is fine for local dev; set MEDINET_NODE_SCHEME=https (or rely on
+# DEBUG=False) to enforce HTTPS in production.
+MEDINET_NODE_SCHEME = os.getenv('MEDINET_NODE_SCHEME', 'http' if DEBUG else 'https')
+
 
 # Application definition
 

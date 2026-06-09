@@ -104,7 +104,7 @@ def create_center_specific_config(center_datasets, base_config):
     """
     import copy
     
-    print(f"🎯 Creating center-specific config for {len(center_datasets)} datasets")
+    print(f"Creating center-specific config for {len(center_datasets)} datasets")
     
     center_config = copy.deepcopy(base_config)
     
@@ -117,13 +117,13 @@ def create_center_specific_config(center_datasets, base_config):
             'num_columns': ds.get('num_columns', 0),
             'num_rows': ds.get('num_rows', 0),
             'size': ds.get('size', 0),
-            # ✅ SECURITY: NO connection info included to prevent credential leakage
+            # SECURITY: NO connection info included to prevent credential leakage
         } for ds in center_datasets]
     }
     
     # Log security compliance
     for ds in center_datasets:
-        print(f"🔐 [FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
+        print(f"[FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
     
     return center_config
 
@@ -139,25 +139,25 @@ def prepare_center_authentication(connection):
     }
     auth = None
     
-    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
+    print(f"[AUTH] Preparing authentication for {connection.name}:")
     print(f"  - IP: {connection.ip}")
     print(f"  - Port: {connection.port}")
     print(f"  - Username: {connection.username if connection.username else 'Not set'}")
     print(f"  - Password: {'Set' if connection.password else 'Not set'}")
     print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
-    
+
     # API Key authentication (preferred for external APIs)
     if connection.api_key:
         headers['Authorization'] = f'Bearer {connection.api_key}'
-        print("🔑 [AUTH] Using API Key authentication")
-    
+        print("[AUTH] Using API Key authentication")
+
     # Basic HTTP authentication fallback
     elif connection.username and connection.password:
         auth = (connection.username, connection.password)
-        print("🔐 [AUTH] Using Basic HTTP authentication")
-    
+        print("[AUTH] Using Basic HTTP authentication")
+
     else:
-        print("⚠️ [AUTH] No authentication method available")
+        print("WARNING: [AUTH] No authentication method available")
     
     return headers, auth
 
@@ -237,10 +237,10 @@ def get_server_ip_for_clients():
             try:
                 s.connect(('8.8.8.8', 80))
                 local_ip = s.getsockname()[0]
-                print(f"✅ [LOCAL] Using local network IP: {local_ip}")
+                print(f"[LOCAL] Using local network IP: {local_ip}")
                 return local_ip
             except Exception:
-                print("⚠️ [LOCAL] Using fallback: 127.0.0.1")
+                print("WARNING: [LOCAL] Using fallback: 127.0.0.1")
                 return '127.0.0.1'
             finally:
                 s.close()
@@ -625,7 +625,7 @@ def start_training(request):
             clients_config = {}
             clients_status = {}
             
-            print(f"🎯 START_TRAINING: Generating IDs for {len(selected_datasets)} datasets")
+            print(f"START_TRAINING: Generating IDs for {len(selected_datasets)} datasets")
             
             for i, dataset in enumerate(selected_datasets):
                 connection_info = dataset.get('connection', {})
@@ -634,7 +634,7 @@ def start_training(request):
                 import uuid
                 client_id = f"client_{uuid.uuid4().hex[:8]}"
                 
-                print(f"🆔 GENERATED ID: {client_id} → {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
+                print(f"GENERATED ID: {client_id} -> {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
                 
                 # Guardar configuración del cliente
                 clients_config[client_id] = {
@@ -662,8 +662,8 @@ def start_training(request):
                     'created_at': timezone.now().isoformat()
                 }
                 
-            print(f"📋 CLIENTS_CONFIG: {clients_config}")
-            print(f"📊 CLIENTS_STATUS initialized with {len(clients_status)} clients")
+            print(f"CLIENTS_CONFIG: {clients_config}")
+            print(f"CLIENTS_STATUS initialized with {len(clients_status)} clients")
             
             model_config = clean_model_json_for_ml(model_config)
             
@@ -689,16 +689,22 @@ def start_training(request):
             # Store process PID in training job for cleanup
             training_job.server_pid = server_process.pid
             training_job.save()
-            print(f"🔧 Server process started with PID: {server_process.pid}")
+            print(f"Server process started with PID: {server_process.pid}")
             
-            # Monitor process in background thread
-            activate_clients_for_training(training_job, server_process)
+            # Activate clients in background thread (non-blocking — returns HTTP response immediately)
+            activation_thread = threading.Thread(
+                target=activate_clients_for_training,
+                args=(training_job, server_process),
+                daemon=True,
+            )
+            activation_thread.start()
+
             def monitor_server_process():
                 try:
                     server_process.join()  # Wait for process to finish
-                    print(f"✅ Flower server process completed")
+                    print("[INFO] Flower server process completed")
                 except Exception as e:
-                    print(f"❌ Error in server process: {str(e)}")
+                    print(f"[ERROR] server process: {str(e)}")
                     # Update job status if process fails
                     training_job.refresh_from_db()
                     if training_job.status not in ['completed', 'failed']:
@@ -707,11 +713,11 @@ def start_training(request):
                         training_job.save()
                         # Kill the server process if it's still running
                         if server_process.is_alive():
-                            print(f"🔪 Terminating server process PID: {server_process.pid}")
+                            print(f"[INFO] Terminating server process PID: {server_process.pid}")
                             server_process.terminate()
                             server_process.join(timeout=5)
                             if server_process.is_alive():
-                                print(f"🔪 Force killing server process PID: {server_process.pid}")
+                                print(f"[INFO] Force killing server process PID: {server_process.pid}")
                                 server_process.kill()
             
             monitor_thread = threading.Thread(target=monitor_server_process)
@@ -794,7 +800,7 @@ def request_budget_reset_proxy(request):
     if not connection.api_key:
         return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
 
-    node_url = f"http://{connection_ip}:{connection_port}/api/v2/budget-reset/"
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection_ip}:{connection_port}/api/v2/budget-reset/"
     headers = {
         'Content-Type': 'application/json',
         'X-API-Key': connection.api_key,
@@ -851,7 +857,7 @@ def budget_status_proxy(request):
     if not connection.api_key:
         return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
 
-    node_url = f"http://{connection_ip}:{connection_port_int}/api/v2/budget-status/"
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection_ip}:{connection_port_int}/api/v2/budget-status/"
     headers = {
         'X-API-Key': connection.api_key,
         'User-Agent': 'MediNet-Hub/1.0',
@@ -918,7 +924,7 @@ def estimate_epsilon_proxy(request):
     if not connection.api_key:
         return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
 
-    node_url = f"http://{connection_ip}:{connection_port_int}/api/v2/estimate-epsilon/"
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection_ip}:{connection_port_int}/api/v2/estimate-epsilon/"
     headers = {
         'Content-Type': 'application/json',
         'X-API-Key': connection.api_key,
@@ -1036,19 +1042,19 @@ def client_dashboard(request, job_id):
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
         
-        # 🔍 DEBUG: Log real data from database
-        print(f"🌐 CLIENT_DASHBOARD: Job {job_id} requested")
-        print(f"📋 Job status: {job.status}")
-        print(f"📋 Job clients_status type: {type(job.clients_status)}")
-        print(f"📋 Job clients_status: {job.clients_status}")
-        print(f"📋 Job clients_config: {job.clients_config}")
-        
-        # 📊 Get real client data from database
+        # DEBUG: Log real data from database
+        print(f"CLIENT_DASHBOARD: Job {job_id} requested")
+        print(f"Job status: {job.status}")
+        print(f"Job clients_status type: {type(job.clients_status)}")
+        print(f"Job clients_status: {job.clients_status}")
+        print(f"Job clients_config: {job.clients_config}")
+
+        # Get real client data from database
         clients = []
         clients_status = job.clients_status or {}
         clients_config = job.clients_config or {}
         
-        print(f"📊 Processing {len(clients_status)} clients from database")
+        print(f"Processing {len(clients_status)} clients from database")
         
         for client_id, status_data in clients_status.items():
             # Get connection info from clients_config
@@ -1080,9 +1086,9 @@ def client_dashboard(request, job_id):
             }
             
             clients.append(client_data)
-            print(f"📊 Client processed: {client_id} → {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
+            print(f"Client processed: {client_id} -> {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
         
-        print(f"📊 Total clients processed: {len(clients)}")
+        print(f"Total clients processed: {len(clients)}")
         
         # Estadísticas generales usando datos reales
         total_clients = len(clients)
@@ -1129,7 +1135,7 @@ def client_dashboard(request, job_id):
                     performance_chart_data['accuracy'].append(sum(round_accuracies) / len(round_accuracies))
                     performance_chart_data['loss'].append(sum(round_losses) / len(round_losses))
         
-        print(f"📊 PERFORMANCE_CHART_DATA: {len(performance_chart_data['labels'])} rounds of real data")
+        print(f"PERFORMANCE_CHART_DATA: {len(performance_chart_data['labels'])} rounds of real data")
         
         context = {
             'job': job,
@@ -1140,9 +1146,9 @@ def client_dashboard(request, job_id):
             'total_rounds': job.total_rounds or 10
         }
         
-        print(f"📊 CONTEXT SENT: {len(clients)} clients, avg_accuracy: {avg_accuracy:.1f}%")
-        print(f"📊 SAMPLE CLIENT DATA: {clients[0] if clients else 'No clients'}")
-        print(f"📊 CHART DATA SAMPLE: Accuracy R1: {performance_chart_data['accuracy'][0] if performance_chart_data['accuracy'] else 'No data'}")
+        print(f"CONTEXT SENT: {len(clients)} clients, avg_accuracy: {avg_accuracy:.1f}%")
+        print(f"SAMPLE CLIENT DATA: {clients[0] if clients else 'No clients'}")
+        print(f"CHART DATA SAMPLE: Accuracy R1: {performance_chart_data['accuracy'][0] if performance_chart_data['accuracy'] else 'No data'}")
         
         return render(request, 'webapp/client_dashboard.html', context)
         
@@ -1218,13 +1224,13 @@ def activate_clients_for_training(training_job, server_process=None):
     """
     try:
         # Wait for server to be ready (with timeout and failure check)
-        print(f"🔍 Waiting for server to be ready. Current status: {training_job.status}")
+        print(f"Waiting for server to be ready. Current status: {training_job.status}")
         timeout = 60  # 30 seconds timeout
         start_time = time.time()
         
         while training_job.status not in ['server_ready', 'failed', 'cancelled']:
             if time.time() - start_time > timeout:
-                print(f"⏰ Timeout waiting for server to be ready")
+                print(f"Timeout waiting for server to be ready")
                 training_job.status = 'failed'
                 training_job.logs = "Timeout waiting for server to start"
                 training_job.save()
@@ -1232,22 +1238,22 @@ def activate_clients_for_training(training_job, server_process=None):
                 
             time.sleep(5)
             training_job.refresh_from_db()
-            print(f"🔍 Checking status: {training_job.status}")
+            print(f"Checking status: {training_job.status}")
         
         # Check if server failed to start
         if training_job.status in ['failed', 'cancelled']:
-            print(f"❌ Server failed to start. Status: {training_job.status}")
+            print(f"ERROR: Server failed to start. Status: {training_job.status}")
             return
         
         # Give additional time for server to fully start listening
         print(f"Server ready, waiting additional 5 seconds for full startup...")
         time.sleep(5)
         
-        print(f"[SECURE] activate_clients_for_training - using new authenticated API")
+        print("[SECURE] activate_clients_for_training - using new authenticated API")
         print(f"training_job: {training_job}")
         
         if not training_job.dataset_ids:
-            print(f"⚠️ No dataset_ids found in training job")
+            print("WARNING: No dataset_ids found in training job")
             return
         
         # Parse selected datasets
@@ -1284,7 +1290,7 @@ def activate_clients_for_training(training_job, server_process=None):
             server_port = server_config.get('port', 8080)
 
         client_server_address = f"{server_ip}:{server_port}"
-        print(f"🌐 [SERVER_ADDRESS] Clients will connect to: {client_server_address}")
+        print(f"[SERVER_ADDRESS] Clients will connect to: {client_server_address}")
 
         # Activate each client with secure, center-specific configuration
         for conn_key, conn in unique_connections.items():
@@ -1300,11 +1306,11 @@ def activate_clients_for_training(training_job, server_process=None):
                     break
             
             if not client_id:
-                print(f"❌ CLIENT_ID not found for {conn['name']} ({conn['ip']}:{conn['port']})")
+                print(f"ERROR: CLIENT_ID not found for {conn['name']} ({conn['ip']}:{conn['port']})")
                 failed_clients.append(f"{conn['name']} (No client_id)")
                 continue
                 
-            print(f"🆔 FOUND CLIENT_ID: {conn['name']} → {client_id}")
+            print(f"FOUND CLIENT_ID: {conn['name']} -> {client_id}")
             
             # 🔐 SECURITY: Get center-specific credentials from database
             try:
@@ -1313,9 +1319,9 @@ def activate_clients_for_training(training_job, server_process=None):
                     port=conn['port'], 
                     user=training_job.user
                 )
-                print(f"✅ [AUTH] Retrieved credentials for {connection_obj.name}")
+                print(f"[AUTH] Retrieved credentials for {connection_obj.name}")
             except Connection.DoesNotExist:
-                print(f"❌ [AUTH] No credentials found for {conn['name']} ({conn['ip']}:{conn['port']})")
+                print(f"ERROR: [AUTH] No credentials found for {conn['name']} ({conn['ip']}:{conn['port']})")
                 failed_clients.append(f"{conn['name']} (No credentials in database)")
                 continue
             
@@ -1353,29 +1359,29 @@ def activate_clients_for_training(training_job, server_process=None):
                 if ca_cert:
                     client_config["ca_cert"] = ca_cert
                     client_config["ssl_enabled"] = True
-                    print(f"🔐 [SSL] Including CA certificate for secure connection")
+                    print("[SSL] Including CA certificate for secure connection")
                 else:
                     client_config["ssl_enabled"] = False
-                    print(f"⚠️ [SSL] SSL enabled but CA certificate not available")
+                    print("WARNING: [SSL] SSL enabled but CA certificate not available")
             else:
                 client_config["ssl_enabled"] = False
-                print(f"🔓 [SSL] SSL disabled, client will connect without TLS")
+                print("[SSL] SSL disabled, client will connect without TLS")
 
-            print(f"📋 [SECURE] Client will connect to: {client_server_address}")
-            print(f"📋 [SECURE] Sending center-specific config with {len(center_datasets)} datasets")
-            print(f"📋 [SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
-            print(f"📋 [SECURE] SSL enabled: {client_config.get('ssl_enabled', False)}")
+            print(f"[SECURE] Client will connect to: {client_server_address}")
+            print(f"[SECURE] Sending center-specific config with {len(center_datasets)} datasets")
+            print(f"[SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
+            print(f"[SECURE] SSL enabled: {client_config.get('ssl_enabled', False)}")
 
             # Validate port in allowed range (8000-8099)
             if not (8000 <= int(conn['port']) <= 8099):
-                print(f"❌ Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
+                print(f"ERROR: Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
                 failed_clients.append(f"{conn['name']} (Invalid port)")
                 continue
             
             # 🚀 Use authenticated /api/v2/start-client endpoint
-            client_url = f"http://{conn['ip']}:{conn['port']}/api/v2/start-client"
-            print(f"🌐 [API] Making authenticated request to: {client_url}")
-            print(f"📋 [API] Headers: {auth_config.headers}")
+            client_url = f"{settings.MEDINET_NODE_SCHEME}://{conn['ip']}:{conn['port']}/api/v2/start-client"
+            print(f"[API] Making authenticated request to: {client_url}")
+            print(f"[API] Headers: {auth_config.headers}")
             
             try:
                 # Make authenticated request with center-specific credentials
@@ -1387,23 +1393,23 @@ def activate_clients_for_training(training_job, server_process=None):
                     timeout=10
                 )
                 
-                print(f"📡 [API] Response status: {response.status_code}")
-                print(f"📡 [API] Response headers: {dict(response.headers)}")
+                print(f"[API] Response status: {response.status_code}")
+                print(f"[API] Response headers: {dict(response.headers)}")
                 
                 if response.content:
                     try:
-                        print(f"📄 [API] Response content: {response.text[:500]}...")
+                        print(f"[API] Response content: {response.text[:500]}...")
                     except:
-                        print(f"📄 [API] Response content: [Could not decode]")
+                        print("[API] Response content: [Could not decode]")
                 
                 if response.status_code == 200:
-                    print(f"✅ [SUCCESS] Client {conn['name']} activated with secure API")
+                    print(f"[SUCCESS] Client {conn['name']} activated with secure API")
                     activated_clients.append(conn['name'])
                 else:
-                    print(f"❌ [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
+                    print(f"ERROR: [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
                     try:
                         error_detail = response.json() if response.content else {}
-                        print(f"❌ [ERROR] Response detail: {error_detail}")
+                        print(f"ERROR: [ERROR] Response detail: {error_detail}")
                         # Detect Node budget exhaustion so Hub can surface the reset UI
                         if response.status_code == 403 and error_detail.get('budget_exhausted'):
                             node_dataset_id = error_detail.get('dataset_id')
@@ -1421,22 +1427,22 @@ def activate_clients_for_training(training_job, server_process=None):
                                 'dataset_id': node_dataset_id,
                                 'dataset_name': node_dataset_name,
                             })
-                            print(f"⚠️ [BUDGET] Budget exhausted for {conn['name']} dataset_id={node_dataset_id}")
+                            print(f"WARNING: [BUDGET] Budget exhausted for {conn['name']} dataset_id={node_dataset_id}")
                     except Exception:
-                        print(f"❌ [ERROR] Response text: {response.text[:200]}")
+                        print(f"ERROR: [ERROR] Response text: {response.text[:200]}")
                     failed_clients.append(f"{conn['name']} (HTTP {response.status_code})")
                     
             except requests.exceptions.HTTPError as e:
-                print(f"❌ [HTTP] HTTP error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [HTTP] HTTP error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (HTTP Error: {str(e)})")
             except requests.exceptions.ConnectionError as e:
-                print(f"❌ [CONN] Connection error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [CONN] Connection error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Connection Error)")
             except requests.exceptions.Timeout as e:
-                print(f"❌ [TIMEOUT] Request timeout for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [TIMEOUT] Request timeout for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Timeout)")
             except requests.exceptions.RequestException as e:
-                print(f"❌ [REQUEST] Request error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [REQUEST] Request error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Request Error: {str(e)})")
         
         # Update training job status based on client activation results
@@ -1444,7 +1450,7 @@ def activate_clients_for_training(training_job, server_process=None):
         activated_count = len(activated_clients)
         failed_count = len(failed_clients)
         
-        print(f"📊 [SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
+        print(f"[SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
         
         if budget_exhausted_nodes:
             training_job.budget_exhausted_nodes = budget_exhausted_nodes
@@ -1455,15 +1461,15 @@ def activate_clients_for_training(training_job, server_process=None):
             training_job.status = 'failed'
             training_job.logs = f"Failed to activate any federated learning centers. Errors: {'; '.join(failed_clients)}"
             training_job.save()
-            print(f"❌ Training job marked as FAILED - no centers activated")
-            
+            print("ERROR: Training job marked as FAILED - no centers activated")
+
             # Kill the server process since no clients can connect
             if server_process and server_process.is_alive():
-                print(f"🔪 Terminating server process due to center activation failure")
+                print("Terminating server process due to center activation failure")
                 server_process.terminate()
                 server_process.join(timeout=5)
                 if server_process.is_alive():
-                    print(f"🔪 Force killing server process")
+                    print("Force killing server process")
                     server_process.kill()
             
         elif failed_count > 0:
@@ -1471,24 +1477,24 @@ def activate_clients_for_training(training_job, server_process=None):
             warning_msg = f"Warning: {failed_count}/{total_clients} centers failed to activate: {'; '.join(failed_clients)}"
             training_job.logs = warning_msg
             training_job.save()
-            print(f"⚠️ Federated training continuing with {activated_count} centers. {warning_msg}")
+            print(f"WARNING: Federated training continuing with {activated_count} centers. {warning_msg}")
             
         else:
             # All clients activated successfully
             success_msg = f"All {activated_count} federated learning centers activated successfully: {', '.join(activated_clients)}"
             training_job.logs = success_msg
             training_job.save()
-            print(f"✅ All federated learning centers activated with secure authentication")
+            print("All federated learning centers activated with secure authentication")
                 
     except Exception as e:
-        print(f"❌ Error activating federated learning clients: {str(e)}")
+        print(f"ERROR: Error activating federated learning clients: {str(e)}")
         import traceback
-        print(f"❌ Full traceback: {traceback.format_exc()}")
+        print(f"ERROR: Full traceback: {traceback.format_exc()}")
         # Mark training job as failed due to client activation error
         training_job.status = 'failed'
         training_job.logs = f"Federated client activation failed: {str(e)}"
         training_job.save()
-        print(f"❌ Training job marked as FAILED due to client activation error")
+        print("ERROR: Training job marked as FAILED due to client activation error")
         
         
 def prepare_center_authentication(connection):
@@ -1502,22 +1508,22 @@ def prepare_center_authentication(connection):
     }
     auth = None
     
-    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
+    print(f"[AUTH] Preparing authentication for {connection.name}:")
     print(f"  - IP: {connection.ip}")
     print(f"  - Port: {connection.port}")
     print(f"  - Username: {connection.username if connection.username else 'Not set'}")
     print(f"  - Password: {'Set' if connection.password else 'Not set'}")
     print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
-    
+
     # API Key authentication (primary)
     if connection.api_key:
         headers['X-API-Key'] = connection.api_key
-        print(f"🔑 [AUTH] Using API key authentication (X-API-Key header)")
-    
+        print(f"[AUTH] Using API key authentication (X-API-Key header)")
+
     # Basic authentication (secondary/fallback)
     if connection.username and connection.password:
         auth = (connection.username, connection.password)
-        print(f"👤 [AUTH] Using basic authentication with username: {connection.username}")
+        print(f"[AUTH] Using basic authentication with username: {connection.username}")
     
     class AuthConfig:
         def __init__(self, headers, basic_auth):
