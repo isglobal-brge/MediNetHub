@@ -777,6 +777,108 @@
   transform: none;
 }
 
+/* Insert connector — + button on connector line */
+.md-insert-connector {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.md-insert-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.10);
+  border-radius: 1px;
+  transition: background 0.15s ease;
+}
+
+.md-insert-connector:hover .md-insert-line,
+.md-insert-connector.armed .md-insert-line {
+  background: var(--color-accent);
+}
+
+.md-insert-btn {
+  position: relative;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px dashed #4b5563;
+  background: var(--color-surface);
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+}
+
+.md-insert-connector:hover .md-insert-btn,
+.md-insert-connector.armed .md-insert-btn {
+  opacity: 1;
+}
+
+.md-insert-connector:hover .md-insert-btn {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.md-insert-btn.armed {
+  opacity: 1;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #022c22;
+  font-size: 16px;
+  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.2);
+}
+
+/* Sidebar insert banner */
+#lp-insert-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-accent);
+}
+
+#lp-insert-banner button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+#lp-insert-banner button:hover { opacity: 1; }
+
+/* Chips pulse animation when sidebar is armed */
+#lp-body.insert-armed .md-lp-chip:not(.md-lp-chip--incompatible) {
+  border-color: rgba(20, 184, 166, 0.45);
+  color: var(--color-accent);
+  background: rgba(20, 184, 166, 0.06);
+}
+
 /* ============================================================
    7. Smart Panel (right column)
    ============================================================ */
