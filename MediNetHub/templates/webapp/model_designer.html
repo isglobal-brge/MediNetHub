@@ -66,6 +66,13 @@
         <input type="text" class="md-lp-search" id="lp-search" placeholder="Search..." autocomplete="off">
       </div>
 
+      <!-- Insert mode banner (hidden by default) -->
+      <div id="lp-insert-banner" style="display:none;">
+        <i data-lucide="arrow-down-to-line" style="width:12px;height:12px;flex-shrink:0;"></i>
+        <span>Clica una capa per inserir</span>
+        <button onclick="disarmInsert()" title="Cancel·lar (Esc)">×</button>
+      </div>
+
       <div class="md-lp-body" id="lp-body">
 
         <!-- Dense -->
@@ -234,9 +241,6 @@
 
           <!-- Dynamic layers will be inserted here -->
           <div id="dynamic-layers-container" aria-live="polite" aria-label="Model layer stack"></div>
-
-          <!-- Connector to output -->
-          <div class="md-layer-connector" id="pre-output-connector"></div>
 
           <!-- Output layer (always present) -->
           <div class="md-layer-card md-layer-card--io" id="output-layer-card" data-layer-id="output">
@@ -599,6 +603,7 @@
   var selectedLayerId = null;
   var layerCounter = 0;
   var isUnsaved = false;      // model-level unsaved
+  var insertAtIndex = null;   // null = append; number = insert before that index
   var currentModelId = null;
   var _dsHintsApplied = false; // guard: apply dataset hints only once per canvas session
 
@@ -1128,15 +1133,18 @@
     emptyState.style.display = layers.length === 0 ? 'flex' : 'none';
 
     layers.forEach(function(layer, idx) {
-      // Connector before this layer
-      var conn = document.createElement('div');
-      conn.className = 'md-layer-connector';
-      container.appendChild(conn);
+      // Interactive connector before this layer
+      container.appendChild(buildInsertConnector(idx));
 
       // Layer card
       var card = buildLayerCard(layer, idx);
       container.appendChild(card);
     });
+
+    // Final connector after last layer (insert at end = layers.length)
+    if (layers.length > 0) {
+      container.appendChild(buildInsertConnector(layers.length));
+    }
 
     // Update count badge
     var badge = document.getElementById('layer-count-badge');
@@ -1148,6 +1156,32 @@
 
     // Re-render icons
     lucide.createIcons();
+  }
+
+  function buildInsertConnector(idx) {
+    var isArmed = (insertAtIndex === idx);
+    var wrap = document.createElement('div');
+    wrap.className = 'md-insert-connector' + (isArmed ? ' armed' : '');
+
+    var line = document.createElement('div');
+    line.className = 'md-insert-line';
+    wrap.appendChild(line);
+
+    var btn = document.createElement('button');
+    btn.className = 'md-insert-btn' + (isArmed ? ' armed' : '');
+    btn.title = isArmed ? 'Cancel insert (Esc)' : 'Insert layer here';
+    btn.textContent = isArmed ? '×' : '+';
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (isArmed) {
+        disarmInsert();
+      } else {
+        armInsert(idx);
+      }
+    });
+    wrap.appendChild(btn);
+
+    return wrap;
   }
 
   function buildLayerCard(layer, idx) {
@@ -1306,15 +1340,21 @@
       if (type === 'checkbox') {
         var wrap = document.createElement('div');
         wrap.className = 'md-toggle-row';
+        var toggleDiv = document.createElement('div');
+        toggleDiv.className = 'md-toggle';
         var chk = document.createElement('input');
         chk.type = 'checkbox';
-        chk.className = 'md-toggle';
         chk.id = 'param-' + key;
         chk.checked = !!p[key];
         chk.addEventListener('change', function() {
           updateLayerParam(layer.id, key, chk.checked);
         });
-        wrap.appendChild(chk);
+        var slider = document.createElement('span');
+        slider.className = 'md-toggle-slider';
+        slider.addEventListener('click', function() { chk.click(); });
+        toggleDiv.appendChild(chk);
+        toggleDiv.appendChild(slider);
+        wrap.appendChild(toggleDiv);
         group.appendChild(wrap);
       } else if (type === 'select') {
         var sel = document.createElement('select');
@@ -1449,9 +1489,16 @@
       category: getCategory(type),
       params: getDefaultParams(type)
     };
-    layers.push(layer);
-    autoFillInputDim(layer);   // pre-fill input dim from previous layer output
-    applySelectedDatasetToLayers(); // apply dataset hints (runs once per canvas session)
+
+    if (insertAtIndex !== null) {
+      layers.splice(insertAtIndex, 0, layer);
+      disarmInsert(); // clears insertAtIndex and re-renders
+    } else {
+      layers.push(layer);
+    }
+
+    autoFillInputDim(layer);
+    applySelectedDatasetToLayers();
     markUnsaved();
     renderLayers();
     selectLayer(layer.id);
@@ -1474,6 +1521,25 @@
     markUnsaved();
     renderLayers();
     renderLayerParams(null);
+  }
+
+  /* ===================================================================
+     INSERT MODE
+  =================================================================== */
+  function armInsert(idx) {
+    insertAtIndex = idx;
+    var banner = document.getElementById('lp-insert-banner');
+    if (banner) banner.style.display = 'flex';
+    document.getElementById('lp-body').classList.add('insert-armed');
+    renderLayers();
+  }
+
+  function disarmInsert() {
+    insertAtIndex = null;
+    var banner = document.getElementById('lp-insert-banner');
+    if (banner) banner.style.display = 'none';
+    document.getElementById('lp-body').classList.remove('insert-armed');
+    renderLayers();
   }
 
   /* ===================================================================
@@ -2223,6 +2289,20 @@
 
     // Icons
     lucide.createIcons();
+
+    // Esc cancels insert mode
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && insertAtIndex !== null) {
+        disarmInsert();
+      }
+    });
+
+    // Click on canvas background (not on a card or connector btn) cancels insert mode
+    document.getElementById('dynamic-layers-container').addEventListener('click', function(e) {
+      if (insertAtIndex !== null && !e.target.closest('.md-insert-btn') && !e.target.closest('.md-layer-card')) {
+        disarmInsert();
+      }
+    });
   });
 
 })();
