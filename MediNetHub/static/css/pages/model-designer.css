@@ -793,7 +793,7 @@
   transform: translateX(-50%);
   width: 2px;
   height: 100%;
-  background: rgba(15, 23, 42, 0.10);
+  background: rgba(15, 23, 42, 0.25);
   border-radius: 1px;
   transition: background 0.15s ease;
 }
@@ -2540,25 +2540,6 @@ details[open] .md-collapsible-chevron {
   padding: 4px 0;
 }
 
-.md-insert-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 14px;
-  border-radius: 20px;
-  background: rgba(8, 145, 178, 0.08);
-  border: 1px dashed rgba(8, 145, 178, 0.35);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-accent);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.md-insert-btn:hover {
-  background: rgba(8, 145, 178, 0.14);
-  border-color: rgba(8, 145, 178, 0.55);
-}
 
 /* ============================================================
    33. Load Model Modal List
