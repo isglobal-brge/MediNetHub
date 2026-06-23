@@ -275,28 +275,8 @@
   padding: 12px 12px 10px;
   position: relative;
 }
-.adv-vgrid-output-row::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  height: 10px;
-  background: var(--color-border-light, #334155);
-}
-.adv-vgrid-output-row::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid var(--color-border-light, #334155);
-}
+/* The connector into OUTPUT is drawn by the SVG overlay (renderConnectionLines),
+   anchored under the main branch (B1). No CSS nub needed here. */
 
 /* ── Base slot ── */
 .adv-stage-slot {

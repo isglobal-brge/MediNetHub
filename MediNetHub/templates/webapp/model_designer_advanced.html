@@ -1375,7 +1375,7 @@
     // ── Output row: always at the bottom ──
     var outputRow = document.createElement('div');
     outputRow.className = 'adv-vgrid-output-row';
-    outputRow.style.gridColumn = '1 / -1';
+    outputRow.style.gridColumn = '1';   // align under the main branch (B1)
     outputRow.appendChild(buildIOSlot('output'));
     grid.appendChild(outputRow);
 
@@ -1407,14 +1407,44 @@
     var old = document.getElementById('adv-fork-svg');
     if (old) old.remove();
 
-    if (branches.length <= 1) return;
-
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.id = 'adv-fork-svg';
     svg.setAttribute('aria-hidden', 'true');
     svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible;';
 
     var gridRect = grid.getBoundingClientRect();
+
+    // ── Output connector: end of the main branch (B1) → OUTPUT node ──
+    // Always drawn (even with a single branch) so the flow visibly terminates.
+    // B1 is never consumed by a merge, so its bottom cell is the empty "+" slot.
+    (function() {
+      var outNode = grid.querySelector('.adv-slot-io-output');
+      var b1Cell  = grid.querySelector('[data-branch-idx="0"][data-depth="' + branchLayerCount(0) + '"]');
+      var b1Slot  = b1Cell ? b1Cell.querySelector('.adv-stage-slot') : null;
+      if (!outNode || !b1Slot) return;
+
+      var bs = b1Slot.getBoundingClientRect();
+      var on = outNode.getBoundingClientRect();
+      var ox  = bs.left + bs.width / 2 - gridRect.left;
+      var oy1 = bs.bottom - gridRect.top;
+      var oy2 = on.top - gridRect.top;
+
+      var oLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      oLine.setAttribute('d', 'M ' + ox.toFixed(1) + ' ' + oy1.toFixed(1) + ' V ' + oy2.toFixed(1));
+      oLine.setAttribute('stroke', '#0891B2');
+      oLine.setAttribute('stroke-width', '2');
+      oLine.setAttribute('fill', 'none');
+      oLine.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(oLine);
+
+      // Arrowhead pointing into the OUTPUT node
+      var ah = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      ah.setAttribute('d', 'M ' + (ox - 4).toFixed(1) + ' ' + (oy2 - 6).toFixed(1) +
+                           ' L ' + ox.toFixed(1) + ' ' + oy2.toFixed(1) +
+                           ' L ' + (ox + 4).toFixed(1) + ' ' + (oy2 - 6).toFixed(1) + ' Z');
+      ah.setAttribute('fill', '#0891B2');
+      svg.appendChild(ah);
+    })();
 
     for (var bIdx = 1; bIdx < branches.length; bIdx++) {
       var fl = branchForkLevels[bIdx];
