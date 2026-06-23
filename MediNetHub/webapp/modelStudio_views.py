@@ -216,12 +216,14 @@ def model_designer_advanced(request, model_id=None):
         'created_at': config.created_at.strftime('%Y-%m-%d %H:%M'),
     } for config in model_configs]
 
+    selected_datasets = request.session.get('selected_datasets', [])
     context = {
         'model_configs': models_list,
         'edit_mode': edit_mode,
         'edit_model': model,
         'edit_model_json': json.dumps(edit_model_json) if edit_model_json else 'null',
-        'selected_datasets': request.session.get('selected_datasets', [])
+        'selected_datasets': selected_datasets,
+        'selected_datasets_json': json.dumps(selected_datasets),
     }
 
     return render(request, 'webapp/model_designer_advanced.html', context)
