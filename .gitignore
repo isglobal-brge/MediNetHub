@@ -202,3 +202,5 @@ MediNetHub/staticfiles/
 config/fernet_keys.txt
 config/secret_key.txt
 .superpowers/
+.playwright-mcp/
+.claude/
