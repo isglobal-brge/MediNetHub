@@ -46,6 +46,12 @@
       <i data-lucide="save" style="width:14px;height:14px;"></i>
       Save Model
     </button>
+    <button class="btn btn-gradient btn-sm" id="go-to-training-btn"
+            style="display:none;"
+            data-url-template="{% url 'go_to_training' 0 %}">
+      Continue to Training
+      <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+    </button>
   </div>
 </div>
 
@@ -1555,6 +1561,23 @@
     isUnsaved = false;
     var badge = document.getElementById('unsaved-badge');
     if (badge) badge.style.display = 'none';
+
+    var trainBtn = document.getElementById('go-to-training-btn');
+    if (trainBtn && currentModelId) {
+      trainBtn.style.display = 'inline-flex';
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  function goToTraining() {
+    if (!currentModelId) {
+      showToast('Please save the model before continuing to Training.', 'warning');
+      return;
+    }
+    var btn = document.getElementById('go-to-training-btn');
+    var template = btn ? btn.getAttribute('data-url-template') : '/go-to-training/0/';
+    // Template renders as .../go-to-training/0/ — swap the placeholder id.
+    window.location.href = template.replace(/0\/$/, currentModelId + '/');
   }
 
   /* ===================================================================
@@ -1592,7 +1615,7 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
-        currentModelId = data.config_id || currentModelId;
+        currentModelId = data.model_id || data.config_id || currentModelId;
         markSaved();
         showToast('Model saved successfully.', 'success');
       } else {
@@ -2245,6 +2268,7 @@
 
     // Save
     document.getElementById('save-model-btn').addEventListener('click', saveModel);
+    document.getElementById('go-to-training-btn').addEventListener('click', goToTraining);
 
     // Load
     document.getElementById('load-model-btn').addEventListener('click', openLoadModelModal);

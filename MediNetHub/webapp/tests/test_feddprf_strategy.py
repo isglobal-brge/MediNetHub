@@ -161,7 +161,7 @@ class TestTreeValidation(TestCase):
     def test_invalid_leaf_node(self):
         """Test validation fails with leaf missing label"""
         invalid_tree = self.valid_tree.copy()
-        invalid_tree['tree_structure']['left'] = {'type': 'leaf'}  # Missing 'label'
+        invalid_tree['tree_structure']['left'] = {'type': 'leaf'}
         result = validate_tree_format(invalid_tree)
         self.assertFalse(result)
 
@@ -171,7 +171,6 @@ class TestTreeValidation(TestCase):
         invalid_tree['tree_structure'] = {
             'type': 'split',
             'feature': 0,
-            # Missing 'threshold'
             'left': {'type': 'leaf', 'label': 0},
             'right': {'type': 'leaf', 'label': 1}
         }
@@ -181,14 +180,14 @@ class TestTreeValidation(TestCase):
     def test_invalid_n_classes_type(self):
         """Test validation fails with wrong type for n_classes"""
         invalid_tree = self.valid_tree.copy()
-        invalid_tree['n_classes'] = "2"  # Should be int
+        invalid_tree['n_classes'] = "2"
         result = validate_tree_format(invalid_tree)
         self.assertFalse(result)
 
     def test_invalid_epsilon_type(self):
         """Test validation fails with wrong type for epsilon"""
         invalid_tree = self.valid_tree.copy()
-        invalid_tree['epsilon'] = "0.1"  # Should be numeric
+        invalid_tree['epsilon'] = "0.1"
         result = validate_tree_format(invalid_tree)
         self.assertFalse(result)
 
@@ -421,7 +420,7 @@ class TestFedDPRandomForestStrategy(TestCase):
 
         num_clients, min_clients = strategy.num_fit_clients(10)
 
-        self.assertEqual(num_clients, 5)  # 50% of 10
+        self.assertEqual(num_clients, 5)
         self.assertEqual(min_clients, strategy.min_available_clients)
 
     def test_aggregate_metrics(self):
@@ -430,7 +429,6 @@ class TestFedDPRandomForestStrategy(TestCase):
             server_manager=self.mock_server_manager
         )
 
-        # Create mock results
         mock_fit_res_1 = Mock()
         mock_fit_res_1.num_examples = 100
         mock_fit_res_1.metrics = {
@@ -458,7 +456,6 @@ class TestFedDPRandomForestStrategy(TestCase):
 
         aggregated = strategy._aggregate_metrics(results)
 
-        # Weighted average
         expected_accuracy = (100 * 0.9 + 200 * 0.85) / 300
         self.assertAlmostEqual(aggregated['accuracy'], expected_accuracy, places=4)
 
@@ -468,7 +465,6 @@ class TestFedDPRandomForestStrategy(TestCase):
             server_manager=self.mock_server_manager
         )
 
-        # Add some trees to global forest
         strategy.global_forest = [{'tree': 'dummy'}] * 50
 
         report = strategy.get_privacy_report()
@@ -589,7 +585,6 @@ class TestEpsilonValidation(TestCase):
             strategy = FedDPRandomForestStrategy(server_manager=server_manager)
             self.assertEqual(strategy.epsilon_total, 6.0)
 
-            # Check that warning was logged
             self.assertTrue(any("High epsilon value detected" in message for message in log.output))
             self.assertTrue(any("limited privacy protection" in message for message in log.output))
 

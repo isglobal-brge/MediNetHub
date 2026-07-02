@@ -37,8 +37,7 @@ def sanitize_config_for_client(config):
     """
     import copy
     sanitized = copy.deepcopy(config)
-    
-    # Remove connection information from datasets
+
     if 'dataset' in sanitized and 'selected_datasets' in sanitized['dataset']:
         for dataset in sanitized['dataset']['selected_datasets']:
             if 'connection' in dataset:
@@ -61,7 +60,7 @@ def create_center_specific_config(center_datasets, base_config):
     print(f"Creating center-specific config for {len(center_datasets)} datasets")
     
     center_config = copy.deepcopy(base_config)
-    
+
     # Include only datasets from this specific center (NO other center data)
     center_config['dataset'] = {
         'selected_datasets': [{
@@ -134,14 +133,12 @@ def register(request):
             try:
                 user = form.save()
                 # UserProfile is automatically created by the signal, no need to create it manually
-                
-                # Set additional user fields
+
                 user.first_name = form.cleaned_data.get('first_name', '')
                 user.last_name = form.cleaned_data.get('last_name', '')
                 user.email = form.cleaned_data.get('email', '')
                 user.save()
-                
-                # Log the user in
+
                 username = form.cleaned_data.get('username')
                 password = form.cleaned_data.get('password1')
                 user = authenticate(username=username, password=password)
@@ -162,7 +159,6 @@ def profile(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == 'POST':
-        # Determine which form is being submitted
         if 'update_profile' in request.POST:
             user_form = UserUpdateForm(request.POST, instance=request.user)
             profile_form = ProfileUpdateForm(request.POST, instance=profile)
@@ -182,7 +178,6 @@ def profile(request):
             else:
                 messages.error(request, 'Please correct the error below.')
 
-    # For GET request, instantiate the forms with current user data
     user_form = UserUpdateForm(instance=request.user)
     profile_form = ProfileUpdateForm(instance=profile)
     password_form = CustomPasswordChangeForm(request.user)
@@ -203,10 +198,8 @@ def datasets(request):
     Connections are now stored in the database.
     Discovered datasets are temporarily stored in session.
     """
-    # Get user's projects 
     projects = Project.objects.filter(user=request.user).order_by('name')
-    
-    # Get selected project from session
+
     selected_project_id = request.session.get('selected_project_id')
     selected_project = None
     
@@ -214,20 +207,16 @@ def datasets(request):
         try:
             selected_project = Project.objects.get(id=selected_project_id, user=request.user)
         except Project.DoesNotExist:
-            # Clear invalid project from session
             del request.session['selected_project_id']
             selected_project_id = None
-    
-    
-    # Fetch connections belonging to the current user and selected project
+
     if selected_project:
         connections = Connection.objects.filter(user=request.user, project=selected_project).order_by('name')
     else:
         # Si no hay proyecto seleccionado, muestra conexiones sin proyecto
         connections = Connection.objects.filter(user=request.user, project__isnull=True).order_by('name')
     selected_datasets = request.session.get('selected_datasets', [])
-    
-    # Use forms for adding/editing connections
+
     connection_form = ConnectionForm()
     edit_connection_form = None
     connection_to_edit_id = request.GET.get('edit_id')
@@ -254,7 +243,6 @@ def datasets(request):
                     description=description if description else None,
                     color=color
                 )
-                # Auto-select the new project
                 request.session['selected_project_id'] = project.id
                 
                 messages.success(request, f'Project "{name}" created successfully')
@@ -271,13 +259,11 @@ def datasets(request):
                     connection.project = selected_project
                     print(f"[DEBUG] Connection: {connection}")
 
-                    # Assign password from form to encrypted field
                     raw_password = form.cleaned_data.get('password')
                     if raw_password:
                         connection.password = raw_password
                         print(f"[DEBUG] Password assigned")
 
-                    # Assign API key from form to encrypted field
                     api_key = form.cleaned_data.get('api_key')  # Fixed: use 'api_key' not 'api-key'
                     if api_key:
                         connection.api_key = api_key
@@ -339,11 +325,9 @@ def datasets(request):
                 # Actualitzar la sessió amb els datasets filtrats
                 request.session['selected_datasets'] = updated_datasets
                 request.session.modified = True
-                
-                # Eliminar la connexió
+
                 connection.delete()
-                
-                # Eliminar datasets de la sessió de datasets disponibles
+
                 if 'datasets' in request.session:
                     request.session['datasets'].pop(str(connection_id), None)
                     request.session.modified = True
@@ -495,7 +479,6 @@ def datasets(request):
                 messages.error(request, f'Error clearing session data: {str(e)}')
             return redirect('datasets')
 
-    # Prepare datasets list from session data for rendering
     datasets = []
     session_datasets = request.session.get('datasets', {})
     # Use the same connection filtering logic as above
@@ -684,11 +667,9 @@ def models_list(request):
     """
     import logging
     logger = logging.getLogger(__name__)
-    
-    # Get user's model configurations
+
     model_configs = ModelConfig.objects.filter(user=request.user).order_by('-created_at')
-    
-    # Handle model deletion
+
     if request.method == 'POST':
         action = request.POST.get('action')
 
@@ -704,11 +685,10 @@ def models_list(request):
                 messages.error(request, f'Error deleting model: {str(e)}')
             return redirect('models_list')
     
-    # Process model configs to extract useful info for display
     processed_models = []
     for model in model_configs:
         config = model.config_json or {}
-        
+
         # Extract layer count (excluding input/output if they exist)
         # Try different possible locations for layers
         layers = []
@@ -716,11 +696,10 @@ def models_list(request):
             layers = config['layers']
         elif 'model' in config and 'layers' in config['model']:
             layers = config['model']['layers']
-        
+
         # Simple count: total layers minus input and output (first and last)
         layer_count = max(0, len(layers) - 2) if len(layers) >= 2 else 0
-        
-        # Extract optimizer and loss info
+
         optimizer_type = config.get('optimizer', {}).get('type', 'N/A')
         loss_type = config.get('loss', {}).get('type', 'N/A')
         
@@ -762,21 +741,19 @@ def model_designer(request):
     """
     Model designer view - allows creating and editing model configurations
     """
-    # Check if we're in edit mode
     edit_model_id = request.GET.get('edit')
     edit_model = None
     edit_mode = False
-    edit_model_json = {}  # Initialize as an empty dictionary
+    edit_model_json = {}
 
     if edit_model_id:
         try:
             edit_model = ModelConfig.objects.get(id=edit_model_id, user=request.user)
             edit_mode = True
-            
+
             config_to_parse = edit_model.config_json
             if config_to_parse:
                 try:
-                    # Ensure we have a dictionary
                     config_dict = json.loads(config_to_parse) if isinstance(config_to_parse, str) else config_to_parse
                     edit_model_json = sanitize_config_for_client(config_dict)
                 except json.JSONDecodeError:
@@ -790,15 +767,15 @@ def model_designer(request):
     model_configs = ModelConfig.objects.filter(
         user=request.user.id
     ).exclude(
-        model_type='ml'  # Exclude ML models
+        model_type='ml'
     ).order_by('-created_at')
-    
+
     models_list = [{
         'id': model.id,
         'name': model.name,
         'created_at': model.created_at.strftime('%Y-%m-%d %H:%M'),
     } for model in model_configs]
-    
+
     print("DEBUG: selected_datasets: ", request.session.get('selected_datasets', []))
     context = {
         'model_configs': models_list,
@@ -813,7 +790,6 @@ def model_designer(request):
         'edit_model_json': edit_model_json,
     }
     
-    # Añadir todos los textos de ayuda al contexto
     context.update(parameter_helpers)
     
     return render(request, 'webapp/model_designer.html', context)
@@ -830,7 +806,6 @@ def ml_model_designer(request, model_id=None):
 
     model_configs_qs = ModelConfig.objects.filter(user=request.user, model_type='ml').order_by('-updated_at')
 
-    # Create a list of dicts for JSON serialization
     models_json_list = [
         {
             'id': config.id,
@@ -841,12 +816,12 @@ def ml_model_designer(request, model_id=None):
     ]
 
     context = {
-        'model_configs': model_configs_qs, # For looping in template's modal
-        'models_json': json.dumps(models_json_list), # For use in javascript
+        'model_configs': model_configs_qs,
+        'models_json': json.dumps(models_json_list),
         'edit_mode': model is not None,
         'edit_model': model,
         'edit_model_json': json.dumps(model.config_json) if model and model.config_json else 'null',
-        'selected_datasets': request.session.get('selected_datasets', [])  # Add selected datasets
+        'selected_datasets': request.session.get('selected_datasets', [])
     }
     return render(request, 'webapp/ml_model_designer.html', context)
 
@@ -855,17 +830,13 @@ def model_studio(request):
     """
     Model Studio view - unified interface for browsing, designing, and comparing models
     """
-    # Get user's model configurations for the browse tab
     model_configs = ModelConfig.objects.filter(user=request.user).order_by('-created_at')
-            
-    # Model Comparison functionality
-    # Get only completed training jobs for the current user
+
     available_jobs = TrainingJob.objects.filter(
         user_id=request.user.id,
         status='completed'
     ).order_by('-created_at')
-    
-    # Get selected job IDs from URL parameters
+
     selected_job_ids = request.GET.getlist('job_ids', [])
     selected_job_ids = [int(id) for id in selected_job_ids if id.isdigit()]
     
@@ -876,21 +847,17 @@ def model_studio(request):
     if selected_job_ids:
         for job_id in selected_job_ids:
             try:
-                # Get job ensuring it belongs to current user
                 job = TrainingJob.objects.get(id=job_id, user_id=request.user.id)
-                
-                # Get latest metrics
+
                 metrics = {}
                 if job.metrics_json:
                     try:
                         all_metrics = json.loads(job.metrics_json)
-                        # Keep the raw metrics for the table
                         metrics = all_metrics[-1] if all_metrics else {}
-                                
+
                     except (json.JSONDecodeError, IndexError):
                         metrics = {}
-                
-                # Get full configuration
+
                 config = {}
                 if job.config_json:
                     try:
@@ -901,18 +868,14 @@ def model_studio(request):
                     except json.JSONDecodeError:
                         config = {}
                 
-                # Get model architecture (from config)
                 model_architecture = []
                 if isinstance(config, dict) and 'model' in config:
                     model_config = config.get('model', {})
-                    # Get layers if they exist
                     if isinstance(model_config, dict) and 'layers' in model_config:
                         model_architecture = model_config.get('layers', [])
-                
-                # Get training parameters
+
                 training_params = {}
                 if isinstance(config, dict):
-                    # Get relevant training parameters
                     training_params = {
                         'optimizer': config.get('optimizer', {}),
                         'loss': config.get('loss', {}),
@@ -920,7 +883,6 @@ def model_studio(request):
                         'fed_config': config.get('fed_config', {})
                     }
                 
-                # Calculate training time
                 training_time = "N/A"
                 if job.completed_at and job.started_at:
                     duration = job.completed_at - job.started_at
@@ -944,7 +906,6 @@ def model_studio(request):
     context = {
         'models': model_configs,
         'total_models': model_configs.count(),
-        # Model comparison data
         'available_jobs': available_jobs,
         'selected_job_ids': selected_job_ids,
         'selected_models': selected_models
@@ -957,9 +918,7 @@ def training(request):
     """
     Training view - allows configuring and starting federated training jobs
     """
-    # Get user's model configurations
     model_configs = ModelConfig.objects.filter(user=request.user)
-    # Recuperar el modelo guardado desde la sesión (solución clara)
     model_id = request.session.get('model_id')
 
     model_json = {}
@@ -973,12 +932,10 @@ def training(request):
             
     connections = Connection.objects.filter(user=request.user, active=True)
 
-    # Obtener los trabajos de entrenamiento del usuario
     training_jobs = TrainingJob.objects.filter(
         user=request.user
     ).order_by('-created_at')[:10]
 
-    # Helpers with detailed descriptions
     NUM_ROUNDS_HELPER = "Number of federated learning rounds to perform. Each round involves training on selected clients and aggregating their models."
     FRACTION_FIT_HELPER = "Fraction of available clients that will be selected for training in each round (0.1 = 10%, 1.0 = 100%)."
     FRACTION_EVALUATE_HELPER = "Fraction of available clients that will be selected for evaluation in each round (0.1 = 10%, 1.0 = 100%)."
@@ -1016,17 +973,16 @@ def training(request):
         {'name': 'mape', 'description': 'Mean Absolute Percentage Error', 'category': 'regression'},
     ]
 
-    # Get selected datasets from session
     selected_datasets = request.session.get('selected_datasets', [])
     print("DEBUG: selected_datasets: ", selected_datasets)
     context = {
-        'model_json': json.dumps(model_json),  
+        'model_json': json.dumps(model_json),
         'model_configs': model_configs,
         'connections': connections,
-        'selected_datasets': selected_datasets,  
+        'selected_datasets': selected_datasets,
         'training_jobs': training_jobs,
         'available_metrics': available_metrics,
-        'model_id': model_id,  # ✅ Agregar model_id al context
+        'model_id': model_id,
         'NUM_ROUNDS_HELPER': NUM_ROUNDS_HELPER,
         'FRACTION_FIT_HELPER': FRACTION_FIT_HELPER,
         'FRACTION_EVALUATE_HELPER': FRACTION_EVALUATE_HELPER,
@@ -1038,7 +994,6 @@ def training(request):
 
     return render(request, 'webapp/training.html', context)
 
-# Diccionari per guardar informació de simulació d'entrenament
 
 def create_notification(user, title, message, link=None):
     """
@@ -1073,10 +1028,8 @@ def update_job_status(request, job_id):
                     'error': 'Invalid status'
                 })
             
-            # Actualitzar estat
             job.status = new_status
-            
-            # Actualitzar timestamps
+
             if new_status == 'running' and not job.started_at:
                 job.started_at = timezone.now()
             elif new_status in ['completed', 'failed', 'cancelled'] and not job.completed_at:
@@ -1107,8 +1060,7 @@ def get_job_metrics(request, job_id):
     """
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # Obtenir mètriques
+
         metrics = []
         if job.metrics_json:
             if isinstance(job.metrics_json, str):
@@ -1145,8 +1097,7 @@ def client_status(request, job_id):
     """
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # Obtenir estat de clients
+
         clients = job.clients_status or {}
         #clients = json.loads(job.clients_status) if job.clients_status else {}
         
@@ -1367,16 +1318,13 @@ def save_model_config(request):
             if not name:
                 return JsonResponse({'success': False, 'error': 'Model name is required'})
 
-            # Check if updating existing model
             model_id = data.get('id')
             if model_id:
-                # Update existing model
                 try:
                     model_config = ModelConfig.objects.get(id=model_id, user=request.user)
                     model_config.name = name
                     model_config.description = description
                     model_config.config_json = config_json
-                    # Use extracted framework and model_type
                     model_config.framework = framework
                     model_config.model_type = model_type
                     model_config.save()
@@ -1384,14 +1332,12 @@ def save_model_config(request):
                 except ModelConfig.DoesNotExist:
                     return JsonResponse({'success': False, 'error': 'Model not found or access denied'})
             else:
-                # Create new model config
                 model_config, created = ModelConfig.objects.update_or_create(
                     user=request.user,
                     name=name,
                     defaults={
                         'description': description,
                         'config_json': config_json,
-                        # Use extracted framework and model_type
                         'framework': framework,
                         'model_type': model_type
                     }
@@ -1411,10 +1357,9 @@ def save_model_config(request):
 @login_required
 def get_model_config(request, model_id):
     config = get_object_or_404(ModelConfig, pk=model_id)
-    # Check ownership
     if config.user != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
+
     config_data = {
         'id': config.id,
         'name': config.name,
@@ -1430,11 +1375,10 @@ def get_model_config(request, model_id):
 @login_required
 def delete_model_config(request, model_id):
     config = get_object_or_404(ModelConfig, pk=model_id)
-    # Check ownership
     if config.user != request.user:
         return JsonResponse({'error': 'Permission denied'}, status=403)
-    
-    if request.method == 'POST': # Ensure it's a POST request for deletion
+
+    if request.method == 'POST':
         try:
             config_name = config.name
             config.delete()
@@ -1463,8 +1407,7 @@ def start_training(request):
             
             if not name:
                 return JsonResponse({'success': False, 'error': 'Job name is required'})
-            
-            # Get model config
+
             model_config = get_object_or_404(ModelConfig, id=model_config_id, user=request.user)
             
             if 'model' not in config:
@@ -1524,16 +1467,15 @@ def start_training(request):
                 name=name,
                 description=description,
                 dataset_id=dataset_id,
-                dataset_ids=selected_datasets,  # Store selected datasets
-                config_json=config,             # Store full config
-                total_rounds=total_rounds,      # Store total rounds
-                status='pending',               # Initial status
-                progress=0,                     # Initial progress
-                clients_config=clients_config,  # NUEVO: Configuración de clientes
-                clients_status=clients_status   # NUEVO: Estado inicial de clientes
+                dataset_ids=selected_datasets,
+                config_json=config,
+                total_rounds=total_rounds,
+                status='pending',
+                progress=0,
+                clients_config=clients_config,
+                clients_status=clients_status
             )
-            
-            # Use real Flower server in separate process
+
             from webapp.server_process import run_flower_server_process
             server_process = Process(target=run_flower_server_process, args=(training_job.id,))
             server_process.start()
@@ -1646,8 +1588,7 @@ def save_model(request):
             data = json.loads(request.body)
             name = data.get('name', 'Untitled Model')
             config = data.get('config', '{}')
-            
-            # Guardar el model a la base de dades
+
             model = Model.objects.create(
                 user=request.user,
                 name=name,
@@ -1684,10 +1625,9 @@ def logout_view(request):
 def go_to_training(request, model_id):
     try:
         model_config = get_object_or_404(ModelConfig, id=model_id, user=request.user)
-        # Aquí guardas claramente el model_id en sesión
         request.session['model_id'] = model_id
         messages.success(request, f'Model "{model_config.name}" carregat correctament')
-        return redirect('training')  # Limpio, sin parámetros GET
+        return redirect('training')
     except:
         messages.error(request, 'The specified model does not exist or you do not have permission to access it')
         return redirect('model_studio')
@@ -1699,13 +1639,10 @@ def get_model_configs(request):
         model_type_filter = request.GET.get('type', 'dl')  # Default to DL for backwards compatibility
         
         if model_type_filter == 'ml':
-            # Only ML models
             models = ModelConfig.objects.filter(user=request.user, model_type='ml').order_by('-created_at')
         elif model_type_filter == 'dl':
-            # Only DL models (exclude ML models)
             models = ModelConfig.objects.filter(user=request.user).exclude(model_type='ml').order_by('-created_at')
         else:
-            # All models (fallback)
             models = ModelConfig.objects.filter(user=request.user).order_by('-created_at')
         
         models_list = [{
@@ -1813,19 +1750,15 @@ def user_dashboard(request):
     """
     Main user dashboard view - shows overview of user activity and quick actions
     """
-    # Get recent training jobs
     recent_jobs = TrainingJob.objects.filter(user=request.user).order_by('-created_at')[:5]
-    
-    # Get recent notifications
+
     recent_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:3]
-    
-    # Get user statistics
+
     total_models = ModelConfig.objects.filter(user=request.user).count()
     total_jobs = TrainingJob.objects.filter(user=request.user).count()
     completed_jobs = TrainingJob.objects.filter(user=request.user, status='completed').count()
     active_connections = Connection.objects.filter(user=request.user, active=True).count()
-    
-    # Get current active training jobs
+
     active_jobs = TrainingJob.objects.filter(
         user=request.user, 
         status__in=['pending', 'running', 'server_ready']
@@ -1854,13 +1787,11 @@ def dashboard(request, job_id):
     """
     try:
         job = TrainingJob.objects.get(id=job_id)
-        
-        # Check that the user has access to this job
+
         if job.user != request.user:
             messages.error(request, "No tens permís per accedir a aquest treball d'entrenament.")
             return redirect('training')
-        
-        # Prepare the context
+
         context = {
             'job_id': job_id,
             'job': job,
@@ -1882,20 +1813,17 @@ def notifications(request):
     Display all notifications for a user
     """
     notifications = Notification.objects.filter(user=request.user)
-    
-    # Mark all as read
+
     if request.method == 'POST' and 'mark_all_read' in request.POST:
         notifications.update(is_read=True)
         messages.success(request, "Totes les notificacions han estat marcades com a llegides.")
         return redirect('notifications')
-    
-    # Delete all
+
     if request.method == 'POST' and 'delete_all' in request.POST:
         notifications.delete()
         messages.success(request, "Totes les notificacions han estat eliminades.")
         return redirect('notifications')
-    
-    # Mark individual as read
+
     if request.method == 'POST' and 'mark_read' in request.POST:
         notification_id = request.POST.get('notification_id')
         try:
@@ -1905,8 +1833,7 @@ def notifications(request):
         except Notification.DoesNotExist:
             pass
         return redirect('notifications')
-    
-    # Delete individual
+
     if request.method == 'POST' and 'delete' in request.POST:
         notification_id = request.POST.get('notification_id')
         try:
@@ -1918,7 +1845,6 @@ def notifications(request):
     
     return render(request, 'webapp/notifications.html', {'notifications': notifications})
 
-# Afegim un processador de context per a les notificacions
 def notifications_processor(request):
     """
     Context processor that adds unread notification count to all templates
@@ -1936,9 +1862,8 @@ def delete_job(request, job_id):
     """
     Delete a training job, ensuring the user owns it.
     """
-    job = get_object_or_404(TrainingJob, pk=job_id) # Get the job first
-    
-    # Check ownership
+    job = get_object_or_404(TrainingJob, pk=job_id)
+
     if job.user != request.user:
         messages.error(request, "You do not have permission to delete this job.")
         return redirect('training') # Or wherever appropriate
@@ -2001,8 +1926,7 @@ def get_recent_notifications(request):
 def api_job_details(request, job_id):
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # Obtenim les últimes mètriques si existeixen
+
         last_metrics = {}
         if job.metrics_json:
             try:
@@ -2046,11 +1970,9 @@ def check_dataset_status(request):
     try:
         data = json.loads(request.body)
         dataset_info = data.get('dataset', {})
-        
-        # Get selected datasets from session
+
         selected_datasets = request.session.get('selected_datasets', [])
-        
-        # Check if dataset is already selected
+
         is_selected = any(
             ds['dataset_name'] == dataset_info['dataset_name'] and
             ds['connection']['name'] == dataset_info['connection']['name'] and
@@ -2075,10 +1997,9 @@ def remove_selected_dataset(request):
     try:
         data = json.loads(request.body)
         dataset_info = data.get('dataset', {})
-        
-        # Get current selected datasets
+
         selected_datasets = request.session.get('selected_datasets', [])
-        
+
         # Remove the dataset if it exists using all comparison fields
         selected_datasets = [
             ds for ds in selected_datasets
@@ -2089,11 +2010,10 @@ def remove_selected_dataset(request):
                 ds['connection']['port'] == dataset_info['connection']['port']
             )
         ]
-        
-        # Update session
+
         request.session['selected_datasets'] = selected_datasets
         request.session.modified = True
-        
+
         # Update any active training jobs
         active_jobs = TrainingJob.objects.filter(
             user=request.user,
@@ -2167,17 +2087,15 @@ def activate_clients_for_training(training_job, server_process=None):
             print(f"WARNING: No dataset_ids found in training job")
             return
             
-        # Parse selected datasets
         if isinstance(training_job.dataset_ids, str):
             selected_datasets = json.loads(training_job.dataset_ids)
         else:
             selected_datasets = training_job.dataset_ids
-            
+
         print(f"selected_datasets: {selected_datasets}")
-        
+
         unique_connections = {}
-        
-        # Extract unique connections
+
         for dataset in selected_datasets:
             conn = dataset['connection']
             conn_key = f"{conn['ip']}:{conn['port']}"
@@ -2481,23 +2399,20 @@ def client_dashboard(request, job_id):
     """
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # 🔍 DEBUG: Log real data from database
+
         print(f"CLIENT_DASHBOARD: Job {job_id} requested")
         print(f"Job status: {job.status}")
         print(f"Job clients_status type: {type(job.clients_status)}")
         print(f"Job clients_status: {job.clients_status}")
         print(f"Job clients_config: {job.clients_config}")
-        
-        # 📊 Get real client data from database
+
         clients = []
         clients_status = job.clients_status or {}
         clients_config = job.clients_config or {}
-        
+
         print(f"Processing {len(clients_status)} clients from database")
-        
+
         for client_id, status_data in clients_status.items():
-            # Get connection info from clients_config
             config_data = clients_config.get(client_id, {})
             connection_name = config_data.get('connection_name', 'Unknown')
             connection_ip = config_data.get('connection_ip', 'unknown')
@@ -2529,8 +2444,7 @@ def client_dashboard(request, job_id):
             print(f"Client processed: {client_id} -> {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
 
         print(f"Total clients processed: {len(clients)}")
-        
-        # Estadísticas generales usando datos reales
+
         total_clients = len(clients)
         active_clients = len([c for c in clients if c['status'] != 'offline'])
         warning_clients = len([c for c in clients if c['status'] == 'warning'])
@@ -2580,7 +2494,7 @@ def client_dashboard(request, job_id):
         context = {
             'job': job,
             'job_id': job_id,
-            'clients': clients,  # Use real clients instead of dummy
+            'clients': clients,
             'overview_stats': overview_stats,
             'performance_chart_data': performance_chart_data,
             'total_rounds': job.total_rounds or 10
@@ -2702,9 +2616,8 @@ def dataset_detail_view(request, dataset_id):
             messages.error(request, "Invalid dataset identifier format")
             return redirect('datasets')
         
-        # Remove 'ds-' prefix and split by '-'
-        id_without_prefix = dataset_id[3:]  # Remove 'ds-'
-        parts = id_without_prefix.split('-', 1)  # Split on first dash
+        id_without_prefix = dataset_id[3:]
+        parts = id_without_prefix.split('-', 1)
         
         if len(parts) != 2:
             messages.error(request, "Invalid dataset identifier format")

@@ -23,14 +23,12 @@ def load_ssl_certificates():
     Returns:
         tuple: (ca_cert, server_cert, server_key) as bytes, or None if SSL is disabled/unavailable
     """
-    # Check if SSL is enabled via environment variable
     ssl_enabled = os.environ.get('FLOWER_SSL_ENABLED', 'true').lower() == 'true'
 
     if not ssl_enabled:
         print("SSL disabled via FLOWER_SSL_ENABLED=false")
         return None
 
-    # Check if all certificate files exist
     if not all([CA_CERT_PATH.exists(), SERVER_CERT_PATH.exists(), SERVER_KEY_PATH.exists()]):
         print(f"WARNING: SSL certificates not found in {CERTS_DIR}")
         print(f"   CA cert exists: {CA_CERT_PATH.exists()}")
@@ -99,7 +97,6 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
             print("WARNING: No metrics to aggregate")
             return {}
         
-        # Extract metrics and weights (number of examples)
         import math
         accuracies = []
         losses = []
@@ -112,7 +109,6 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
         for num_examples, client_metrics in metrics:
             total_examples += num_examples
 
-            # Get metrics with defaults
             accuracies.append(num_examples * client_metrics.get("accuracy", 0.0))
             losses.append(num_examples * client_metrics.get("loss", 1.0))
             precisions.append(num_examples * client_metrics.get("precision", 0.0))
@@ -133,7 +129,6 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
             print("WARNING: No examples found in metrics")
             return {}
 
-        # Calculate weighted averages
         aggregated = {
             "accuracy": sum(accuracies) / total_examples,
             "loss": sum(losses) / total_examples,
@@ -156,8 +151,6 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
                 print(f"[DP] Saved job privacy_epsilon={worst_case_eps:.4f} (δ=1e-5, {len(epsilon_values)} clients)")
             except Exception as dp_save_exc:
                 print(f"[DP] Could not save privacy_epsilon to job: {dp_save_exc}")
-
-        # saving metrics to database
 
         current_round = getattr(strategy_instance, 'current_round', 0)
         if current_round > 0:
@@ -185,7 +178,6 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
                 real_client_id = client_metrics.get('client_id')
                 
                 if real_client_id:
-                    # Use real client_id from metrics
                     client_id = real_client_id
                     client_name = client_metrics.get('client_name', f'Client {real_client_id}')
                     client_ip = client_metrics.get('client_ip', 'unknown')
@@ -203,7 +195,7 @@ def create_fit_metrics_aggregation_fn(server_manager: ServerManager, strategy_in
                     'status': 'training',
                     'train_samples': num_examples,
                     'test_samples': num_examples // 4,  # Estimate
-                    'metrics': client_metrics  # Pass all metrics to the new structure
+                    'metrics': client_metrics
                 }
             
             server_manager.update_client_status(client_status_info)
@@ -219,19 +211,17 @@ def evaluate_metrics_aggregation_fn(metrics: List[Tuple[int, Dict]]) -> Dict:
     if not metrics:
         print("WARNING: No evaluation metrics to aggregate")
         return {}
-    
-    # Extract metrics and weights (number of examples)
+
     accuracies = []
     losses = []
     precisions = []
     recalls = []
     f1_scores = []
     total_examples = 0
-    
+
     for num_examples, client_metrics in metrics:
         total_examples += num_examples
-        
-        # Get metrics with defaults
+
         accuracies.append(num_examples * client_metrics.get("accuracy", 0.0))
         losses.append(num_examples * client_metrics.get("loss", 1.0))
         precisions.append(num_examples * client_metrics.get("precision", 0.0))
@@ -241,8 +231,7 @@ def evaluate_metrics_aggregation_fn(metrics: List[Tuple[int, Dict]]) -> Dict:
     if total_examples == 0:
         print("WARNING: No examples found in evaluation metrics")
         return {}
-    
-    # Calculate weighted averages
+
     aggregated = {
         "accuracy": sum(accuracies) / total_examples,
         "loss": sum(losses) / total_examples,
@@ -257,12 +246,10 @@ def evaluate_metrics_aggregation_fn(metrics: List[Tuple[int, Dict]]) -> Dict:
 def get_strategy(server_manager: ServerManager, config: Dict):
     """Create Flower strategy based on model type"""
 
-    # Check if it's a Machine Learning (SVM) model
     model_config = server_manager.model_config
     model_type = model_config.get('metadata', {}).get('model_type', 'dl')
     framework = model_config.get('metadata', {}).get('framework', 'pytorch')
 
-    # Check for specific ML algorithm type
     ml_algorithm = model_config.get('algorithm', {}).get('ml_algorithm', {}).get('type', '')
 
     print(f"Detecting strategy: model_type='{model_type}', framework='{framework}', ml_algorithm='{ml_algorithm}'")
@@ -306,7 +293,6 @@ def get_strategy(server_manager: ServerManager, config: Dict):
         evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation_fn,
     )
 
-    # Add fit metrics aggregation function
     strategy.fit_metrics_aggregation_fn = create_fit_metrics_aggregation_fn(server_manager, strategy)
 
     return strategy
@@ -318,22 +304,18 @@ def start_flower_server(training_job):
         print(f"training_job: {training_job}")
         print(f"training_job.id: {training_job.id}")
 
-        # Initialize server manager
         print("Creating ServerManager...")
         server_manager = ServerManager(training_job, training_job.model_config.config_json)
         print("ServerManager created successfully")
- 
+
         fed_config = training_job.config_json.get('federated', {}).get('parameters', {})
-       
-        # Create strategy
+
         print("Creating strategy...")
         strategy = get_strategy(server_manager, fed_config)
         print(f"Strategy created: {strategy}")
         print("Keeping job status as 'pending' until server is ready...")
-        # Configure server address from config or use default
         server_host = "0.0.0.0"  # Bind to all interfaces by default
         server_port = 8080       # Default port
-        # Check if server config exists in training job config
         round_timeout = 300.0  # Default: 5 minutes per round (covers slow Windows subprocess startup)
         if 'server' in training_job.config_json:
             server_config_data = training_job.config_json['server']
@@ -347,14 +329,11 @@ def start_flower_server(training_job):
 
         print("Starting Flower server with manual control...")
 
-        # Create server components manually
         client_manager = SimpleClientManager()
         server = fl.server.Server(client_manager=client_manager, strategy=strategy)
 
-        # Start server in background thread with proper network binding
         print(f"Starting Flower server on {server_address}...")
 
-        # Load SSL certificates
         ssl_certificates = load_ssl_certificates()
         ssl_mode = "SSL/TLS" if ssl_certificates else "insecure"
 
@@ -364,7 +343,6 @@ def start_flower_server(training_job):
         training_job.save()
         print(f"Job status updated to 'server_ready' - clients can now connect ({ssl_mode})")
 
-        # Simply start the server (blocking call)
         fl.server.start_server(
             server_address=server_address,
             config=fl.server.ServerConfig(
@@ -376,7 +354,6 @@ def start_flower_server(training_job):
         )
 
     except Exception as e:
-        # Handle errors
         print(f"[ERROR] start_flower_server: {str(e)}")
         training_job.status = 'failed'
         training_job.logs = f"Error during training: {str(e)}"

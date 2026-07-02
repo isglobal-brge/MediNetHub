@@ -54,23 +54,18 @@ class ModelConfigCleaner:
     @staticmethod
     def clean_layer_params(layer_config: Dict[str, Any]) -> Dict[str, Any]:
         """Clean parameters for a single layer"""
-        # Make a complete copy of the layer config first
         cleaned_layer = layer_config.copy()
-        
-        # Get params and clean them
+
         params = layer_config.get('params', {}).copy()
-        
-        # Remove non-PyTorch parameters
+
         for key in ModelConfigCleaner.REMOVE_PARAMS:
             if key in params:
                 params.pop(key)
-        
-        # Convert incompatible values
+
         params = ModelConfigCleaner.clean_padding(params)
-        
-        # Update only the params in the layer config
+
         cleaned_layer['params'] = params
-        
+
         return cleaned_layer
     
     @staticmethod
@@ -101,10 +96,8 @@ class ModelConfigCleaner:
         cleaned_layers = []
         
         for i, layer in enumerate(layers):
-            # Clean the layer's parameters
             cleaned_layer = ModelConfigCleaner.clean_layer_params(layer)
-            
-            # Add ID if missing
+
             if 'id' not in cleaned_layer:
                 layer_type = cleaned_layer.get('type', '').lower()
                 if layer_type == 'input':

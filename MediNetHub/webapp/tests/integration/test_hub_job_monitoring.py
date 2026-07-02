@@ -42,10 +42,6 @@ DL_CONFIG_JSON = {
 }
 
 
-# ---------------------------------------------------------------------------
-# TrainingJob model tests
-# ---------------------------------------------------------------------------
-
 class TestTrainingJobCreation(TestCase):
     """TrainingJob model creation and field validation."""
 
@@ -147,10 +143,6 @@ class TestTrainingJobCreation(TestCase):
         self.assertAlmostEqual(dp["noise_multiplier"], 1.0)
         self.assertAlmostEqual(dp["max_grad_norm"], 1.0)
 
-
-# ---------------------------------------------------------------------------
-# Hub monitoring API endpoint tests
-# ---------------------------------------------------------------------------
 
 class TestJobMetricsEndpoint(TestCase):
     """Hub's monitoring API endpoints return correct data for authenticated users."""

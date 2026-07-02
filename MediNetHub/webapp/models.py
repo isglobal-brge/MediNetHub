@@ -16,7 +16,6 @@ class EncryptedTextField(models.TextField):
     def get_fernet(self):
         """Get Fernet cipher instance using the key from settings"""
         key = settings.FERNET_KEYS[0]
-        # Ensure key is bytes
         if isinstance(key, str):
             key = key.encode()
         return Fernet(key)
@@ -56,11 +55,11 @@ class Project(models.Model):
     Project model to organize hospital connections and datasets
     """
     COLOR_CHOICES = [
-        ('#1976d2', 'Blue'),      # Material Blue
-        ('#2e7d32', 'Green'),     # Material Green  
-        ('#f57c00', 'Orange'),    # Material Orange
-        ('#0288d1', 'Light Blue'), # Material Light Blue
-        ('#7b1fa2', 'Purple'),    # Material Purple
+        ('#1976d2', 'Blue'),
+        ('#2e7d32', 'Green'),
+        ('#f57c00', 'Orange'),
+        ('#0288d1', 'Light Blue'),
+        ('#7b1fa2', 'Purple'),
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
@@ -140,21 +139,20 @@ class TrainingJob(models.Model):
     dataset_id = models.CharField(max_length=255, blank=True, null=True)  # Mantenim el camp original
     dataset_ids = models.JSONField(default=list, blank=True, null=True)  # Nou camp per múltiples datasets
     metrics_file = models.CharField(max_length=255, blank=True, null=True)
-    metrics_json = models.JSONField(default=list, blank=True, null=True)  # Emmagatzemar les mètriques en JSON
+    metrics_json = models.JSONField(default=list, blank=True, null=True)
     model_file_path = models.CharField(max_length=255, blank=True, null=True)
-    config_json = models.JSONField(default=dict, blank=True, null=True)  # Configuració en JSON
+    config_json = models.JSONField(default=dict, blank=True, null=True)
     progress = models.IntegerField(default=0)  # Progrés en percentatge (0-100)
-    current_round = models.IntegerField(default=0)  # Ronda actual d'entrenament
-    total_rounds = models.IntegerField(default=0)  # Total de rondes a completar
+    current_round = models.IntegerField(default=0)
+    total_rounds = models.IntegerField(default=0)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     # Estat simulat dels clients
-    clients_status = models.JSONField(default=dict, blank=True, null=True)  # Estat dels clients en JSON
-    # Configuración de clientes para el job (mapeo de IDs)
+    clients_status = models.JSONField(default=dict, blank=True, null=True)
     clients_config = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración de clientes para este job")
-    logs = models.TextField(blank=True, null=True)  # Logs de l'entrenament
+    logs = models.TextField(blank=True, null=True)
     server_pid = models.IntegerField(null=True, blank=True, help_text='PID of the Flower server process')
     training_duration = models.FloatField(null=True, blank=True, help_text='Total training duration in seconds')
     
@@ -246,7 +244,6 @@ class Notification(models.Model):
         return f"{self.title} - {self.user.username}"
 
 
-# Función para generar la ruta de subida dinámicamente
 def get_artifact_upload_path(instance, filename):
     user_id = instance.job.user.id
     job_id = instance.job.id
@@ -261,14 +258,12 @@ class ModelArtifact(models.Model):
     # Para checkpoints, el número de ronda correspondiente.
     round_number = models.PositiveIntegerField(null=True, blank=True)
 
-    # El archivo físico en el sistema de archivos.
     file = models.FileField(upload_to=get_artifact_upload_path)
     file_size = models.BigIntegerField(help_text="Size of the file in bytes.") # Se calculará en bytes al guardar.
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Lógica para calcular y guardar file_size antes de guardar
         if self.file and hasattr(self.file, 'size'):
             self.file_size = self.file.size
         super().save(*args, **kwargs)
@@ -363,13 +358,11 @@ class Experiment(models.Model):
         Update best_job_id and best_accuracy based on completed jobs.
         Should be called whenever a job completes.
         """
-        # Find the best completed job
         best_job = self.get_jobs().filter(
             status='completed'
         ).order_by('-metrics_json__best_accuracy').first()
 
         if best_job:
-            # Extract best accuracy from metrics_json
             # Assuming metrics_json has a structure like: {"best_accuracy": 92.34, ...}
             if best_job.metrics_json and 'best_accuracy' in best_job.metrics_json:
                 self.best_job_id = best_job.id

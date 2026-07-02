@@ -28,7 +28,7 @@ class ConnectionForm(forms.ModelForm):
         fields = ['name', 'ip', 'port', 'username', 'password', 'api_key', 'active']
         widgets = {
             'ip': forms.TextInput(attrs={'placeholder': 'e.g., 192.168.1.100'}),
-            'port': forms.NumberInput(attrs={'placeholder': 'e.g., 8000'}),
+            'port': forms.NumberInput(attrs={'placeholder': 'e.g., 5001'}),
             'username': forms.TextInput(attrs={'placeholder': 'Enter username for API access'}),
         }
 
@@ -53,7 +53,6 @@ class ConnectionForm(forms.ModelForm):
         self.fields['ip'].validators.append(validate_ipv46_address)
         self.fields['port'].validators.append(lambda value: forms.IntegerField(min_value=1, max_value=65535).clean(value))
 
-# Forms for the new profile page
 class UserUpdateForm(forms.ModelForm):
     email = forms.EmailField()
 

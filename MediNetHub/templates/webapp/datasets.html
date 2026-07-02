@@ -749,27 +749,12 @@
             lucide.createIcons();
         }
 
-        function checkDatasetStatus(button) {
-            var datasetInfo = {
-                dataset_name: button.getAttribute('data-dataset-name'),
-                connection: {
-                    name: button.getAttribute('data-connection-name'),
-                    ip: button.getAttribute('data-connection-ip'),
-                    port: button.getAttribute('data-connection-port')
-                }
-            };
-            fetch('/api/check-dataset-status/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ dataset: datasetInfo })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) { updateButtonState(button, data.is_selected); })
-            .catch(function(err) { console.error('Error:', err); });
-        }
-
+        // The initial Added/Add state is rendered server-side (dataset.is_selected).
+        // We deliberately do NOT re-fetch status on load: an async status check can
+        // resolve *after* the user clicks and overwrite the button back to a stale
+        // state, making the toggle look "stuck" (add works, but clicking again does
+        // not visibly remove it). The click handlers below keep the state in sync.
         document.querySelectorAll('.add-to-training-btn').forEach(function(button) {
-            checkDatasetStatus(button);
             button.addEventListener('click', function() {
                 var self = this;
                 var isSelected = self.classList.contains('btn-training-added');

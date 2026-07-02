@@ -16,14 +16,12 @@ class RateLimitMiddleware:
 
     def process_exception(self, request, exception):
         if isinstance(exception, Ratelimited):
-            # Check if it's an AJAX request
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'error': 'Rate limit exceeded. Please try again later.',
                     'rate_limited': True
                 }, status=429)
             else:
-                # For regular HTTP requests, render a template
                 return render(request, 'webapp/rate_limit_exceeded.html', {
                     'message': 'Too many requests. Please try again later.'
                 }, status=429)

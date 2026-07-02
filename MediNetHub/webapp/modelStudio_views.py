@@ -19,11 +19,9 @@ def models_list(request):
     Models management view - shows list of user's models with actions
     """
     logger = logging.getLogger(__name__)
-    
-    # Get user's model configurations
+
     model_configs = ModelConfig.objects.filter(user=request.user).order_by('-created_at')
-    
-    # Handle model deletion
+
     if request.method == 'POST':
         action = request.POST.get('action')
 
@@ -39,12 +37,10 @@ def models_list(request):
                 messages.error(request, f'Error deleting model: {str(e)}')
             return redirect('models_list')
     
-    # Process model configs to extract useful info for display
     processed_models = []
     for model in model_configs:
         config = model.config_json or {}
-        
-        # Extract layer count (excluding input/output if they exist)
+
         # Try different possible locations for layers
         layers = []
         if 'layers' in config:
@@ -54,8 +50,7 @@ def models_list(request):
         
         # Simple count: total layers minus input and output (first and last)
         layer_count = max(0, len(layers) - 2) if len(layers) >= 2 else 0
-        
-        # Extract optimizer and loss info
+
         optimizer_type = config.get('optimizer', {}).get('type', 'N/A')
         loss_type = config.get('loss', {}).get('type', 'N/A')
         
@@ -96,11 +91,10 @@ def model_designer(request):
     """
     Model designer view - allows creating and editing model configurations
     """
-    # Check if we're in edit mode
     edit_model_id = request.GET.get('edit')
     edit_model = None
     edit_mode = False
-    edit_model_json = {}  # Initialize as an empty dictionary
+    edit_model_json = {}
 
     if edit_model_id:
         try:
@@ -110,7 +104,6 @@ def model_designer(request):
             config_to_parse = edit_model.config_json
             if config_to_parse:
                 try:
-                    # Ensure we have a dictionary
                     config_dict = json.loads(config_to_parse) if isinstance(config_to_parse, str) else config_to_parse
                     edit_model_json = sanitize_config_for_client(config_dict)
                 except json.JSONDecodeError:
@@ -124,7 +117,7 @@ def model_designer(request):
     model_configs = ModelConfig.objects.filter(
         user=request.user.id
     ).exclude(
-        model_type='ml'  # Exclude ML models
+        model_type='ml'
     ).order_by('-created_at')
 
     models_list = [{
@@ -149,7 +142,6 @@ def model_designer(request):
         'edit_model_json': edit_model_json,
     }
 
-    # Añadir todos los textos de ayuda al contexto
     context.update(parameter_helpers)
 
     return render(request, 'webapp/model_designer.html', context)
@@ -183,7 +175,7 @@ def ml_model_designer(request, model_id=None):
         'edit_mode': model is not None,
         'edit_model': model,
         'edit_model_json': json.dumps(model.config_json) if model and model.config_json else 'null',
-        'selected_datasets': request.session.get('selected_datasets', [])  # Add selected datasets
+        'selected_datasets': request.session.get('selected_datasets', [])
     }
     return render(request, 'webapp/ml_model_designer.html', context)
 
@@ -203,7 +195,6 @@ def model_designer_advanced(request, model_id=None):
         if model.config_json:
             edit_model_json = model.config_json if isinstance(model.config_json, dict) else json.loads(model.config_json)
 
-    # Get user's advanced model configurations
     model_configs = ModelConfig.objects.filter(
         user=request.user
     ).exclude(
@@ -234,17 +225,13 @@ def model_studio(request):
     """
     Model Studio view - unified interface for browsing, designing, and comparing models
     """
-    # Get user's model configurations for the browse tab
     model_configs = ModelConfig.objects.filter(user=request.user).order_by('-created_at')
-            
-    # Model Comparison functionality
-    # Get only completed training jobs for the current user
+
     available_jobs = TrainingJob.objects.filter(
         user_id=request.user.id,
         status='completed'
     ).order_by('-created_at')
-    
-    # Get selected job IDs from URL parameters
+
     selected_job_ids = request.GET.getlist('job_ids', [])
     selected_job_ids = [int(id) for id in selected_job_ids if id.isdigit()]
     
@@ -258,18 +245,15 @@ def model_studio(request):
                 # Get job ensuring it belongs to current user
                 job = TrainingJob.objects.get(id=job_id, user_id=request.user.id)
                 
-                # Get latest metrics
                 metrics = {}
                 if job.metrics_json:
                     try:
                         all_metrics = json.loads(job.metrics_json)
-                        # Keep the raw metrics for the table
                         metrics = all_metrics[-1] if all_metrics else {}
-                                
+
                     except (json.JSONDecodeError, IndexError):
                         metrics = {}
-                
-                # Get full configuration
+
                 config = {}
                 if job.config_json:
                     try:
@@ -280,18 +264,14 @@ def model_studio(request):
                     except json.JSONDecodeError:
                         config = {}
                 
-                # Get model architecture (from config)
                 model_architecture = []
                 if isinstance(config, dict) and 'model' in config:
                     model_config = config.get('model', {})
-                    # Get layers if they exist
                     if isinstance(model_config, dict) and 'layers' in model_config:
                         model_architecture = model_config.get('layers', [])
-                
-                # Get training parameters
+
                 training_params = {}
                 if isinstance(config, dict):
-                    # Get relevant training parameters
                     training_params = {
                         'optimizer': config.get('optimizer', {}),
                         'loss': config.get('loss', {}),
@@ -299,7 +279,6 @@ def model_studio(request):
                         'fed_config': config.get('fed_config', {})
                     }
                 
-                # Calculate training time
                 training_time = "N/A"
                 if job.completed_at and job.started_at:
                     duration = job.completed_at - job.started_at
@@ -323,7 +302,6 @@ def model_studio(request):
     context = {
         'models': model_configs,
         'total_models': model_configs.count(),
-        # Model comparison data
         'available_jobs': available_jobs,
         'selected_job_ids': selected_job_ids,
         'selected_models': selected_models
@@ -341,8 +319,7 @@ def save_model_config(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            
-            # Get config from unified structure
+
             config_json = data.get('config', {})
 
             # Accept both payload shapes:
@@ -367,16 +344,13 @@ def save_model_config(request):
             if not name:
                 return JsonResponse({'success': False, 'error': 'Model name is required'})
 
-            # Check if updating existing model
             model_id = data.get('id')
             if model_id:
-                # Update existing model
                 try:
                     model_config = ModelConfig.objects.get(id=model_id, user=request.user)
                     model_config.name = name
                     model_config.description = description
                     model_config.config_json = config_json
-                    # Use extracted framework and model_type
                     model_config.framework = framework
                     model_config.model_type = model_type
                     model_config.save()
@@ -384,14 +358,12 @@ def save_model_config(request):
                 except ModelConfig.DoesNotExist:
                     return JsonResponse({'success': False, 'error': 'Model not found or access denied'})
             else:
-                # Create new model config
                 model_config, created = ModelConfig.objects.update_or_create(
                     user=request.user,
                     name=name,
                     defaults={
                         'description': description,
                         'config_json': config_json,
-                        # Use extracted framework and model_type
                         'framework': framework,
                         'model_type': model_type
                     }
@@ -450,8 +422,7 @@ def save_model(request):
             data = json.loads(request.body)
             name = data.get('name', 'Untitled Model')
             config = data.get('config', '{}')
-            
-            # Guardar el model a la base de dades
+
             model = Model.objects.create(
                 user=request.user,
                 name=name,
@@ -478,10 +449,9 @@ def save_model(request):
 def go_to_training(request, model_id):
     try:
         model_config = get_object_or_404(ModelConfig, id=model_id, user=request.user)
-        # Aquí guardas claramente el model_id en sesión
         request.session['model_id'] = model_id
         messages.success(request, f'Model "{model_config.name}" carregat correctament')
-        return redirect('training')  # Limpio, sin parámetros GET
+        return redirect('training')
     except:
         messages.error(request, 'The specified model does not exist or you do not have permission to access it')
         return redirect('model_studio')
@@ -490,17 +460,13 @@ def go_to_training(request, model_id):
 @login_required
 def get_model_configs(request):
     try:
-        # Get filter parameter for model type compatibility
         model_type_filter = request.GET.get('type', 'dl')  # Default to DL for backwards compatibility
-        
+
         if model_type_filter == 'ml':
-            # Only ML models
             models = ModelConfig.objects.filter(user=request.user, model_type='ml').order_by('-created_at')
         elif model_type_filter == 'dl':
-            # Only DL models (exclude ML models)
             models = ModelConfig.objects.filter(user=request.user).exclude(model_type='ml').order_by('-created_at')
         else:
-            # All models (fallback)
             models = ModelConfig.objects.filter(user=request.user).order_by('-created_at')
         
         models_list = [{

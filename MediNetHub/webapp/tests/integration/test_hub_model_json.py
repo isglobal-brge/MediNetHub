@@ -23,10 +23,6 @@ from webapp.models import ModelConfig
 from webapp.training_views import clean_model_json_for_ml, create_center_specific_config
 
 
-# ---------------------------------------------------------------------------
-# Shared test fixtures (module-level constants)
-# ---------------------------------------------------------------------------
-
 DL_MODEL_JSON = {
     "model": {
         "metadata": {"model_type": "dl", "framework": "pytorch"},
@@ -93,10 +89,6 @@ SVM_MODEL_JSON = {
 }
 
 
-# ---------------------------------------------------------------------------
-# DL model JSON structure tests
-# ---------------------------------------------------------------------------
-
 class TestDLModelJsonConstruction(TestCase):
     """Verify DL model JSON has all required fields before being sent to Node."""
 
@@ -142,10 +134,6 @@ class TestDLModelJsonConstruction(TestCase):
         self.assertEqual(cleaned["train"]["batch_size"], DL_MODEL_JSON["train"]["batch_size"])
 
 
-# ---------------------------------------------------------------------------
-# SVM model JSON structure tests
-# ---------------------------------------------------------------------------
-
 class TestSVMModelJsonConstruction(TestCase):
     """Verify SVM model JSON has all required fields and DL fields are stripped."""
 
@@ -173,10 +161,6 @@ class TestSVMModelJsonConstruction(TestCase):
         cleaned = clean_model_json_for_ml(ml_json)
         self.assertEqual(cleaned["train"]["rounds"], 3)
 
-
-# ---------------------------------------------------------------------------
-# ModelConfig DB persistence tests
-# ---------------------------------------------------------------------------
 
 class TestModelConfigPersistence(TestCase):
     """ModelConfig objects can be created and retrieved with JSON intact."""

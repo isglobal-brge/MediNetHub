@@ -846,14 +846,33 @@
 }
 
 /* ===== Model Type Selection Modal ===== */
-.model-type-selection .btn:hover *,
-.model-type-selection .btn:focus * {
-  color: #fff !important;
+.model-type-selection .btn {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.model-type-selection .btn:hover,
+.model-type-selection .btn:focus {
+  background-color: var(--color-surface-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.model-type-selection .btn-outline-primary:hover *,
+.model-type-selection .btn-outline-primary:focus * {
+  color: var(--color-secondary) !important;
+}
+.model-type-selection .btn-outline-info:hover *,
+.model-type-selection .btn-outline-info:focus * {
+  color: var(--color-accent) !important;
+}
+.model-type-selection .btn-outline-success:hover *,
+.model-type-selection .btn-outline-success:focus * {
+  color: var(--color-success) !important;
 }
 
 .model-type-selection .btn:hover .text-muted,
 .model-type-selection .btn:focus .text-muted {
-  color: rgba(255, 255, 255, 0.85) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 /* ===== Training param tabs (compare panel inner) ===== */

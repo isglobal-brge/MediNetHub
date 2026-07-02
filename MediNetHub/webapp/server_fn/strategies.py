@@ -426,7 +426,6 @@ class FedAvgModelStrategy(FedAvg):
         print(f"DEBUG results: {len(results)} success, {len(failures)} failures")
         
         if aggregated_parameters is not None:
-            # Save model
             parameters_as_ndarrays: List[np.ndarray] = parameters_to_ndarrays(aggregated_parameters)
             self.server_manager.save_model(parameters_as_ndarrays, server_round)            
             print(f"Model saved for round {server_round}")
@@ -831,8 +830,6 @@ class FedSVMStrategy(Strategy):
         return weighted_metrics
 
 
-# ==================== FedDP Random Forest Helpers ====================
-
 def serialize_trees(trees: List[dict]) -> np.ndarray:
     """
     Serializa lista de estados de árboles para transmisión.
@@ -1054,8 +1051,6 @@ def compute_global_bounds_from_clients(client_datasets: Dict[str, dict]) -> dict
         'max': global_max
     }
 
-
-# ==================== FedDP Random Forest Strategy ====================
 
 class FedDPRandomForestStrategy(Strategy):
     """

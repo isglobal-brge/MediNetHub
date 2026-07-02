@@ -255,9 +255,7 @@ def training(request):
     """
     Training view - allows configuring and starting federated training jobs
     """
-    # Get user's model configurations
     model_configs = ModelConfig.objects.filter(user=request.user)
-    # Recuperar el modelo guardado desde la sesión (solución clara)
     model_id = request.session.get('model_id')
 
     model_json = {}
@@ -271,13 +269,11 @@ def training(request):
             
     connections = Connection.objects.filter(user=request.user, active=True)
 
-    # Obtener los trabajos de entrenamiento del usuario
     training_jobs = TrainingJob.objects.filter(
         user=request.user
     ).order_by('-created_at')[:10]
 
-    # Helpers with detailed descriptions
-    NUM_ROUNDS_HELPER = "Number of federated learning rounds to perform. Each round involves training on selected clients and aggregating their models."
+    NUM_ROUNDS_HELPER ="Number of federated learning rounds to perform. Each round involves training on selected clients and aggregating their models."
     FRACTION_FIT_HELPER = "Fraction of available clients that will be selected for training in each round (0.1 = 10%, 1.0 = 100%)."
     FRACTION_EVALUATE_HELPER = "Fraction of available clients that will be selected for evaluation in each round (0.1 = 10%, 1.0 = 100%)."
     MIN_FIT_CLIENTS_HELPER = "Minimum number of clients required to participate in training for each round to proceed."
@@ -314,10 +310,9 @@ def training(request):
         {'name': 'mape', 'description': 'Mean Absolute Percentage Error', 'category': 'regression'},
     ]
 
-    # Get selected datasets from session
     selected_datasets = request.session.get('selected_datasets', [])
     context = {
-        'model_json': json.dumps(model_json),  
+        'model_json': json.dumps(model_json),
         'model_configs': model_configs,
         'connections': connections,
         'selected_datasets': selected_datasets,  
@@ -353,10 +348,8 @@ def update_job_status(request, job_id):
                     'error': 'Invalid status'
                 })
             
-            # Actualitzar estat
             job.status = new_status
-            
-            # Actualitzar timestamps
+
             if new_status == 'running' and not job.started_at:
                 job.started_at = timezone.now()
             elif new_status in ['completed', 'failed', 'cancelled'] and not job.completed_at:
@@ -392,7 +385,6 @@ def get_job_metrics(request, job_id):
         return JsonResponse({'error': 'Job not found'}, status=404)
 
     try:
-        # Obtenir mètriques
         metrics = []
         if job.metrics_json:
             if isinstance(job.metrics_json, str):
@@ -433,7 +425,6 @@ def client_status(request, job_id):
         return JsonResponse({'error': 'Job not found'}, status=404)
 
     try:
-        # Obtenir estat de clients
         clients = job.clients_status or {}
         #clients = json.loads(job.clients_status) if job.clients_status else {}
 
@@ -441,7 +432,7 @@ def client_status(request, job_id):
             'success': True,
             'clients': clients,
             'client_count': len(clients),
-            'job_status': job.status,  # Inclou l'estat per saber si ha acabat
+            'job_status': job.status,
             'is_complete': job.status in ['completed', 'failed', 'cancelled']
         })
     except Exception as e:
@@ -518,22 +509,18 @@ def download_model(request, job_id):
     """
     try:
         job = TrainingJob.objects.get(id=job_id)
-        
-        # Check that the user has access to this job
+
         if job.user != request.user:
             messages.error(request, "You don't have permission to access this model.")
             return redirect('training')
-        
-        # Check that the job is completed
+
         if job.status != 'completed':
             messages.error(request, "This model has not yet completed training.")
             return redirect('job_detail', job_id=job_id)
-        
-        # Generate a simple model file with the configuration and metrics
+
         response = HttpResponse(content_type='application/json')
         response['Content-Disposition'] = f'attachment; filename="medinet_model_{job_id}.json"'
-        
-        # Create a model representation with metadata and metrics
+
         model_data = {
             'model_id': job_id,
             'name': job.name,
@@ -593,6 +580,28 @@ def download_metrics(request, job_id):
         return redirect('job_detail', job_id=job_id)
 
 
+def find_free_flower_port(start=8080, end=8099):
+    """Pick a free Flower-server port, skipping ports claimed by active jobs and
+    ports with a live listener. Returns None if the whole range is in use."""
+    claimed = set()
+    for job in TrainingJob.objects.filter(status__in=['pending', 'server_ready', 'running']):
+        try:
+            p = (job.config_json or {}).get('server', {}).get('port')
+            if p:
+                claimed.add(int(p))
+        except (TypeError, ValueError, AttributeError):
+            pass
+    for port in range(start, end + 1):
+        if port in claimed:
+            continue
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.2)
+            if probe.connect_ex(('127.0.0.1', port)) == 0:
+                continue  # already listening
+        return port
+    return None
+
+
 @login_required
 @user_rate_limit(rate=settings.RATE_LIMITS['START_TRAINING'], method='POST', block=True)
 def start_training(request):
@@ -612,7 +621,6 @@ def start_training(request):
             if not name:
                 return JsonResponse({'success': False, 'error': 'Job name is required'})
             
-            # Get model config
             model_config = get_object_or_404(ModelConfig, id=model_config_id, user=request.user)
             
             if 'model' not in config:
@@ -629,22 +637,19 @@ def start_training(request):
             
             for i, dataset in enumerate(selected_datasets):
                 connection_info = dataset.get('connection', {})
-                
-                # Generar ID único para el cliente
+
                 import uuid
                 client_id = f"client_{uuid.uuid4().hex[:8]}"
-                
+
                 print(f"GENERATED ID: {client_id} -> {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
-                
-                # Guardar configuración del cliente
+
                 clients_config[client_id] = {
                     'connection_name': connection_info.get('name', ''),
                     'connection_ip': connection_info.get('ip', ''),
                     'connection_port': connection_info.get('port', 0),
                     'dataset_name': dataset.get('dataset_name', '')
                 }
-                
-                # Inicializar estado del cliente
+
                 clients_status[client_id] = {
                     'client_id': client_id,
                     'connection_name': connection_info.get('name', ''),
@@ -666,20 +671,30 @@ def start_training(request):
             print(f"CLIENTS_STATUS initialized with {len(clients_status)} clients")
             
             model_config = clean_model_json_for_ml(model_config)
-            
+
+            # Dedicated port per job so concurrent trainings don't collide on 8080.
+            # The client reads this same field to know where to connect.
+            server_cfg = config.setdefault('server', {})
+            server_cfg.setdefault('host', '0.0.0.0')
+            if not server_cfg.get('port'):
+                free_port = find_free_flower_port()
+                if free_port is None:
+                    return JsonResponse({'success': False, 'error': 'No hay puertos libres (8080-8099) para el servidor de entrenamiento. Espera a que termine algún entrenamiento en curso.'})
+                server_cfg['port'] = free_port
+
             training_job = TrainingJob.objects.create(
                 user=request.user,
                 model_config=model_config,
                 name=name,
                 description=description,
                 dataset_id=dataset_id,
-                dataset_ids=selected_datasets,  # Store selected datasets
-                config_json=config,             # Store full config
-                total_rounds=total_rounds,      # Store total rounds
-                status='pending',               # Initial status
-                progress=0,                     # Initial progress
-                clients_config=clients_config,  # NUEVO: Configuración de clientes
-                clients_status=clients_status   # NUEVO: Estado inicial de clientes
+                dataset_ids=selected_datasets,
+                config_json=config,
+                total_rounds=total_rounds,
+                status='pending',
+                progress=0,
+                clients_config=clients_config,
+                clients_status=clients_status
             )
             
             # Use real Flower server in separate process
@@ -701,7 +716,7 @@ def start_training(request):
 
             def monitor_server_process():
                 try:
-                    server_process.join()  # Wait for process to finish
+                    server_process.join()
                     print("[INFO] Flower server process completed")
                 except Exception as e:
                     print(f"[ERROR] server process: {str(e)}")
@@ -980,7 +995,6 @@ def api_job_details(request, job_id):
         return JsonResponse({'error': 'Job not found'}, status=404)
 
     try:
-        # Parse metrics
         metrics = []
         if job.metrics_json:
             try:
@@ -988,7 +1002,6 @@ def api_job_details(request, job_id):
             except json.JSONDecodeError:
                 metrics = []
 
-        # Calculate training duration
         duration = None
         if job.started_at and job.completed_at:
             duration = (job.completed_at - job.started_at).total_seconds()
@@ -1026,7 +1039,6 @@ def manage_job_artifacts(request, job_id):
             # In a real implementation, this would delete actual model files
             messages.success(request, 'Job artifacts would be deleted (not implemented)')
         elif action == 'archive_job':
-            # Archive the job
             job.archived = True
             job.save()
             messages.success(request, f'Job "{job.name}" archived successfully.')
@@ -1057,7 +1069,6 @@ def client_dashboard(request, job_id):
         print(f"Processing {len(clients_status)} clients from database")
         
         for client_id, status_data in clients_status.items():
-            # Get connection info from clients_config
             config_data = clients_config.get(client_id, {})
             connection_name = config_data.get('connection_name', 'Unknown')
             connection_ip = config_data.get('connection_ip', 'unknown')
@@ -1109,7 +1120,6 @@ def client_dashboard(request, job_id):
         
         # Extract real performance data from clients' rounds_history
         if clients:
-            # Get the maximum number of rounds from any client
             max_rounds = 0
             for client in clients:
                 client_status = clients_status.get(client['id'], {})
@@ -1140,7 +1150,7 @@ def client_dashboard(request, job_id):
         context = {
             'job': job,
             'job_id': job_id,
-            'clients': clients,  # Use real clients instead of dummy
+            'clients': clients,
             'overview_stats': overview_stats,
             'performance_chart_data': performance_chart_data,
             'total_rounds': job.total_rounds or 10
@@ -1166,7 +1176,6 @@ def get_clients_data(request, job_id):
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
         
-        # Parse client data
         client_data = []
         if job.client_data:
             try:
@@ -1256,7 +1265,6 @@ def activate_clients_for_training(training_job, server_process=None):
             print("WARNING: No dataset_ids found in training job")
             return
         
-        # Parse selected datasets
         if isinstance(training_job.dataset_ids, str):
             selected_datasets = json.loads(training_job.dataset_ids)
         else:
@@ -1372,8 +1380,8 @@ def activate_clients_for_training(training_job, server_process=None):
             print(f"[SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
             print(f"[SECURE] SSL enabled: {client_config.get('ssl_enabled', False)}")
 
-            # Validate port in allowed range (8000-8099)
-            if not (8000 <= int(conn['port']) <= 8099):
+            # Validate port in allowed range (5000-5099)
+            if not (5000 <= int(conn['port']) <= 5099):
                 print(f"ERROR: Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
                 failed_clients.append(f"{conn['name']} (Invalid port)")
                 continue
@@ -1381,7 +1389,10 @@ def activate_clients_for_training(training_job, server_process=None):
             # 🚀 Use authenticated /api/v2/start-client endpoint
             client_url = f"{settings.MEDINET_NODE_SCHEME}://{conn['ip']}:{conn['port']}/api/v2/start-client"
             print(f"[API] Making authenticated request to: {client_url}")
-            print(f"[API] Headers: {auth_config.headers}")
+            # Redact credentials — API keys must never reach logs/console.
+            safe_headers = {k: ('***' if k.lower() in ('x-api-key', 'authorization') else v)
+                            for k, v in auth_config.headers.items()}
+            print(f"[API] Headers: {safe_headers}")
             
             try:
                 # Make authenticated request with center-specific credentials
@@ -1390,7 +1401,7 @@ def activate_clients_for_training(training_job, server_process=None):
                     json=client_config,
                     headers=auth_config.headers,
                     auth=auth_config.basic_auth,
-                    timeout=10
+                    timeout=30
                 )
                 
                 print(f"[API] Response status: {response.status_code}")

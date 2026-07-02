@@ -27,8 +27,7 @@ def sanitize_config_for_client(config):
     """
     import copy
     sanitized = copy.deepcopy(config)
-    
-    # Remove connection information from datasets
+
     if 'dataset' in sanitized and 'selected_datasets' in sanitized['dataset']:
         for dataset in sanitized['dataset']['selected_datasets']:
             if 'connection' in dataset:
@@ -71,10 +70,9 @@ def register(request):
             user = form.save()
             username = form.cleaned_data.get('username')
             messages.success(request, f'Account created for {username}!')
-            
-            # Create UserProfile
+
             UserProfile.objects.get_or_create(user=user)
-            
+
             # Auto-login after registration
             user = authenticate(username=user.username, password=request.POST['password1'])
             if user is not None:
@@ -83,7 +81,6 @@ def register(request):
             else:
                 return redirect('login')
         else:
-            # Add form errors to messages
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field.title()}: {error}")
@@ -95,7 +92,6 @@ def register(request):
 
 @login_required
 def profile(request):
-    # Ensure a UserProfile object exists for the user.
     user_profile, created = UserProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
@@ -145,13 +141,11 @@ def user_dashboard(request):
     """
     Main dashboard for authenticated users showing recent activity and quick stats
     """
-    # Get user's projects 
     projects = Project.objects.filter(user=request.user).order_by('name')
-    
-    # Get selected project from session
+
     selected_project_id = request.session.get('selected_project_id')
     selected_project = None
-    
+
     if selected_project_id:
         try:
             selected_project = Project.objects.get(id=selected_project_id, user=request.user)
@@ -159,38 +153,31 @@ def user_dashboard(request):
             # Clear invalid project from session
             del request.session['selected_project_id']
             selected_project_id = None
-    
-    # Get recent training jobs for the selected project or user
+
     if selected_project:
         recent_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project).order_by('-created_at')[:5]
     else:
         recent_jobs = TrainingJob.objects.filter(user=request.user).order_by('-created_at')[:5]
-    
-    # Get recent notifications
+
     recent_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]
-    
-    # Get models count for the selected project or user
+
     if selected_project:
         models_count = ModelConfig.objects.filter(user=request.user, project=selected_project).count()
     else:
         models_count = ModelConfig.objects.filter(user=request.user).count()
 
-    # Get connections count for the selected project or user
     if selected_project:
         connections_count = Connection.objects.filter(user=request.user, project=selected_project).count()
     else:
         connections_count = Connection.objects.filter(user=request.user).count()
 
-    # Get datasets count
     datasets_count = Dataset.objects.filter(connection__user=request.user).count()
 
-    # Get total jobs count
     if selected_project:
         total_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project).count()
     else:
         total_jobs = TrainingJob.objects.filter(user=request.user).count()
 
-    # Calculate success rate
     if total_jobs > 0:
         if selected_project:
             completed_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project, status='completed').count()
@@ -200,7 +187,6 @@ def user_dashboard(request):
     else:
         success_rate = 0
 
-    # Get active jobs (running or pending)
     if selected_project:
         active_jobs = TrainingJob.objects.filter(
             user=request.user,
@@ -213,7 +199,6 @@ def user_dashboard(request):
             status__in=['running', 'pending', 'server_ready']
         ).order_by('-created_at')[:3]
 
-    # Create stats dictionary
     stats = {
         'total_models': models_count,
         'total_jobs': total_jobs,
@@ -239,7 +224,6 @@ def notifications(request):
     """
     View to display all notifications for the current user
     """
-    # Mark all as read when viewing
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     
     notifications_list = Notification.objects.filter(user=request.user).order_by('-created_at')
@@ -296,7 +280,6 @@ def switch_project_api(request):
         project_id = data.get('project_id')
         
         if project_id == 'none':
-            # Clear project selection
             request.session.pop('selected_project_id', None)
             return JsonResponse({
                 'status': 'success',
