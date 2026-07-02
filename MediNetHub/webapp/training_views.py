@@ -1401,7 +1401,8 @@ def activate_clients_for_training(training_job, server_process=None):
                     json=client_config,
                     headers=auth_config.headers,
                     auth=auth_config.basic_auth,
-                    timeout=30
+                    # cold node may pay a first-time opacus/torch import
+                    timeout=75
                 )
                 
                 print(f"[API] Response status: {response.status_code}")
