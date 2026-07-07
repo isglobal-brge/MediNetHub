@@ -155,9 +155,7 @@ class TrainingJob(models.Model):
     logs = models.TextField(blank=True, null=True)
     server_pid = models.IntegerField(null=True, blank=True, help_text='PID of the Flower server process')
     training_duration = models.FloatField(null=True, blank=True, help_text='Total training duration in seconds')
-    
-    # NUEVO CAMPO: Frecuencia de guardado de checkpoints.
-    # 0 o nulo significa guardar solo el modelo final.
+
     save_frequency = models.PositiveIntegerField(default=0, null=True, blank=True, help_text="Save a checkpoint every X rounds. 0 to save only the final model.")
 
     # Differential-privacy accounting: populated when Flower reports final metrics.

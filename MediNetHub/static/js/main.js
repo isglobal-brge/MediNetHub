@@ -1,14 +1,11 @@
 // MediNet main JavaScript file
 
-// Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Initialize popovers
     var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
         return new bootstrap.Popover(popoverTriggerEl);
@@ -23,7 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 5000);
 
-    // Network visualization functions will be added here
     setupNetworkVisualization();
 });
 
@@ -56,15 +52,10 @@ function setupLayerNodeInteractions() {
     const layerNodes = document.querySelectorAll('.layer-node');
     
     layerNodes.forEach(node => {
-        // Click to select a layer
         node.addEventListener('click', function() {
-            // Remove active class from all nodes
             layerNodes.forEach(n => n.classList.remove('active'));
-            
-            // Add active class to clicked node
             this.classList.add('active');
-            
-            // Show parameters for this layer
+
             const layerId = this.dataset.layerId;
             showLayerParameters(layerId);
         });
@@ -78,12 +69,10 @@ function setupLayerNodeInteractions() {
 function showLayerParameters(layerId) {
     // This will be implemented when the layer parameters form is created
     console.log(`Showing parameters for layer ${layerId}`);
-    
-    // Hide all parameter forms
+
     const paramForms = document.querySelectorAll('.layer-parameters');
     paramForms.forEach(form => form.style.display = 'none');
-    
-    // Show the form for the selected layer
+
     const selectedForm = document.getElementById(`params-${layerId}`);
     if (selectedForm) {
         selectedForm.style.display = 'block';
@@ -170,8 +159,7 @@ function showMessage(message, type = 'info') {
     const messagesContainer = document.querySelector('.messages');
     if (messagesContainer) {
         messagesContainer.appendChild(alertContainer);
-        
-        // Auto-hide after 5 seconds
+
         setTimeout(function() {
             const bsAlert = new bootstrap.Alert(alertContainer);
             bsAlert.close();

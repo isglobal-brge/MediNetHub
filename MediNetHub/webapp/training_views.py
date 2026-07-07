@@ -107,24 +107,34 @@ def create_center_specific_config(center_datasets, base_config):
     print(f"Creating center-specific config for {len(center_datasets)} datasets")
     
     center_config = copy.deepcopy(base_config)
-    
-    # Include only datasets from this specific center (NO other center data)
-    center_config['dataset'] = {
-        'selected_datasets': [{
-            'dataset_name': ds['dataset_name'],
-            'features_info': ds['features_info'],
-            'target_info': ds['target_info'],
-            'num_columns': ds.get('num_columns', 0),
-            'num_rows': ds.get('num_rows', 0),
-            'size': ds.get('size', 0),
-            # SECURITY: NO connection info included to prevent credential leakage
-        } for ds in center_datasets]
-    }
-    
+
+    # Include only datasets from this specific center (NO other center data).
+    # dataset_id IS included: it is the center's own LOCAL id (not a credential —
+    # the connection info below is what stays stripped) and the Node needs it to
+    # resolve which local dataset to train on. Omitting it makes every center fall
+    # back to the model's baked-in id (Node 1's), so other centers get
+    # "Access denied" on a dataset they don't own.
+    center_selected = [{
+        'dataset_id': ds.get('dataset_id'),
+        'dataset_name': ds['dataset_name'],
+        'features_info': ds['features_info'],
+        'target_info': ds['target_info'],
+        'num_columns': ds.get('num_columns', 0),
+        'num_rows': ds.get('num_rows', 0),
+        'size': ds.get('size', 0),
+        # SECURITY: NO connection info included to prevent credential leakage
+    } for ds in center_datasets]
+
+    center_config['dataset'] = {'selected_datasets': center_selected}
+    # The Node reads its dataset from model.dataset.selected_datasets, so scope
+    # THAT nested block to this center too (not just the top-level one).
+    if isinstance(center_config.get('model'), dict):
+        center_config['model']['dataset'] = {'selected_datasets': center_selected}
+
     # Log security compliance
     for ds in center_datasets:
         print(f"[FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
-    
+
     return center_config
 
 
@@ -1240,9 +1250,8 @@ def activate_clients_for_training(training_job, server_process=None):
         while training_job.status not in ['server_ready', 'failed', 'cancelled']:
             if time.time() - start_time > timeout:
                 print(f"Timeout waiting for server to be ready")
-                training_job.status = 'failed'
-                training_job.logs = "Timeout waiting for server to start"
-                training_job.save()
+                TrainingJob.objects.filter(id=training_job.id).update(
+                    status='failed', logs="Timeout waiting for server to start")
                 return
                 
             time.sleep(5)
@@ -1348,7 +1357,7 @@ def activate_clients_for_training(training_job, server_process=None):
                 continue
             
             print(f"[FEDERATED] Center {conn['name']} will receive {len(center_datasets)} datasets (isolated)")
-            
+
             # SECURITY: Create center-specific config (NO cross-center data)
             center_specific_config = create_center_specific_config(center_datasets, training_job.config_json)
             
@@ -1468,11 +1477,15 @@ def activate_clients_for_training(training_job, server_process=None):
             training_job.budget_exhausted_nodes = budget_exhausted_nodes
             training_job.save(update_fields=['budget_exhausted_nodes'])
 
+        # Targeted updates only: this thread's instance is stale by now (the
+        # Flower process may already have advanced status to running/completed),
+        # so a full save() would silently resurrect an old status.
         if activated_count == 0:
             # No clients activated - mark as failed and kill server
-            training_job.status = 'failed'
-            training_job.logs = f"Failed to activate any federated learning centers. Errors: {'; '.join(failed_clients)}"
-            training_job.save()
+            TrainingJob.objects.filter(id=training_job.id).update(
+                status='failed',
+                logs=f"Failed to activate any federated learning centers. Errors: {'; '.join(failed_clients)}",
+            )
             print("ERROR: Training job marked as FAILED - no centers activated")
 
             # Kill the server process since no clients can connect
@@ -1485,17 +1498,34 @@ def activate_clients_for_training(training_job, server_process=None):
                     server_process.kill()
             
         elif failed_count > 0:
-            # Some clients failed - add warning to logs but continue
-            warning_msg = f"Warning: {failed_count}/{total_clients} centers failed to activate: {'; '.join(failed_clients)}"
-            training_job.logs = warning_msg
-            training_job.save()
-            print(f"WARNING: Federated training continuing with {activated_count} centers. {warning_msg}")
-            
+            # Partial activation. If fewer centers came up than the strategy needs
+            # (min_available_clients), the Flower server would wait forever and then
+            # leak its process/port — so fail the job and kill the server, same as
+            # the 0-clients case. Only continue when enough centers are up.
+            min_needed = (training_job.config_json.get('federated', {})
+                          .get('parameters', {}).get('min_available_clients', 1))
+            if activated_count < min_needed:
+                TrainingJob.objects.filter(id=training_job.id).update(
+                    status='failed',
+                    logs=(f"Only {activated_count}/{total_clients} centers activated, "
+                          f"below required {min_needed}. Errors: {'; '.join(failed_clients)}"),
+                )
+                print(f"ERROR: Insufficient centers ({activated_count}<{min_needed}) - marking FAILED")
+                if server_process and server_process.is_alive():
+                    print("Terminating server process due to insufficient centers")
+                    server_process.terminate()
+                    server_process.join(timeout=5)
+                    if server_process.is_alive():
+                        server_process.kill()
+            else:
+                warning_msg = f"Warning: {failed_count}/{total_clients} centers failed to activate: {'; '.join(failed_clients)}"
+                TrainingJob.objects.filter(id=training_job.id).update(logs=warning_msg)
+                print(f"WARNING: Federated training continuing with {activated_count} centers. {warning_msg}")
+
         else:
             # All clients activated successfully
             success_msg = f"All {activated_count} federated learning centers activated successfully: {', '.join(activated_clients)}"
-            training_job.logs = success_msg
-            training_job.save()
+            TrainingJob.objects.filter(id=training_job.id).update(logs=success_msg)
             print("All federated learning centers activated with secure authentication")
                 
     except Exception as e:
@@ -1503,9 +1533,10 @@ def activate_clients_for_training(training_job, server_process=None):
         import traceback
         print(f"ERROR: Full traceback: {traceback.format_exc()}")
         # Mark training job as failed due to client activation error
-        training_job.status = 'failed'
-        training_job.logs = f"Federated client activation failed: {str(e)}"
-        training_job.save()
+        TrainingJob.objects.filter(id=training_job.id).update(
+            status='failed',
+            logs=f"Federated client activation failed: {str(e)}",
+        )
         print("ERROR: Training job marked as FAILED due to client activation error")
         
         

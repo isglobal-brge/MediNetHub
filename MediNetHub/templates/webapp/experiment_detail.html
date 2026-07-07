@@ -268,16 +268,13 @@
                 return;
             }
 
-            // Show chart section and create comparison chart
             chartSection.style.display = 'block';
             createComparisonChart(selectedJobs);
 
-            // Scroll to chart
             chartSection.scrollIntoView({ behavior: 'smooth' });
         });
 
         function createComparisonChart(jobIds) {
-            // Destroy existing chart
             if (comparisonChart) {
                 comparisonChart.destroy();
             }

@@ -125,16 +125,14 @@ def load_data(partition_id: int, num_partitions: int, transforms=None):
 def train(net, trainloader, epochs, device, config=None):
     """Train the model on the training set."""
     net.to(device)  # move model to GPU if available
-    
-    # Get parameters from config or use defaults
+
     if config is None:
         config = {}
-    
+
     learning_rate = float(config.get("learning_rate", 0.01))
     optimizer_name = config.get("optimizer", "adam").lower()
     batch_size = int(config.get("batch_size", 32))
-    
-    # Select optimizer based on config
+
     if optimizer_name == "adam":
         optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate)
     elif optimizer_name == "sgd":

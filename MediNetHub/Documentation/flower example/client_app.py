@@ -53,8 +53,7 @@ class FlowerClient(NumPyClient):
         self.config = config
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.net.to(self.device)
-        
-        # Setup optimizer
+
         if config["training_config"]["optimizer"]["type"].lower() == "adam":
             self.optimizer = torch.optim.Adam(
                 self.net.parameters(),
@@ -87,13 +86,10 @@ async def start_client(config: Dict):
             with open("config.json", "r") as f:
                 config = json.load(f)
         
-        # Create model instance
         net = CNN(config["model_config"])
-        
-        # Initialize client
+
         client = FlowerClient(net=net, config=config)
-        
-        # Start Flower client
+
         fl.client.start_numpy_client(
             server_address=config.get("server_address", "127.0.0.1:8080"),
             client=client,

@@ -18,6 +18,16 @@ services:
       # IMPORTANT: Set your host machine IP here so clients can connect to Flower server
       # Find your IP: Linux/Mac: hostname -I | Windows: ipconfig
       - FLOWER_SERVER_IP=172.25.0.2
+      # ---- DEVELOPMENT MODE (default) --------------------------------------
+      # DEBUG=True relaxes the fail-closed guards (SECRET_KEY dev fallback,
+      # ALLOWED_HOSTS wildcard, plaintext Flower allowed). The entrypoint still
+      # auto-generates TLS certs for the Flower server, so the channel uses TLS.
+      # For a DEPLOY run, flip to:
+      #   - DJANGO_DEBUG=False
+      #   - DJANGO_ALLOWED_HOSTS=your.domain,1.2.3.4   (required when DEBUG=False)
+      # SECRET_KEY is auto-generated & persisted by entrypoint.sh in either mode.
+      - DJANGO_DEBUG=True
+      # - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000').read()"]

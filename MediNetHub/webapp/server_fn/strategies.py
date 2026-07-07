@@ -133,6 +133,14 @@ class ServerManager:
         """Initialize the model based on configuration"""
         print(f"initialize_model called with framework: '{self.framework}'")
 
+        # ML models (sklearn) have no torch architecture; their state lives in
+        # the ML strategies (FedSVM / FedDPRF), which never touch self.net.
+        ml_check = (self.model_config.get('metadata', {}).get('model_type', '')
+                    or self.model_config.get('model', {}).get('metadata', {}).get('model_type', ''))
+        if ml_check == 'ml':
+            print("ML model config detected - skipping torch model build")
+            return
+
         if self.framework in ['pt', 'pytorch']:
             # Legacy structure: model_config.model.architecture.layers
             layers_config = self.model_config.get('architecture', {}).get('layers', [])
@@ -326,14 +334,10 @@ class ServerManager:
                 
                 # Save model to file and update path in database
                 model_path = f"models/model_round_{round_number}_job_{self.job.id}.pth"
-                
-                # Create models directory if it doesn't exist
+
                 os.makedirs(os.path.dirname(model_path), exist_ok=True)
-                
-                # Save the model
                 save(self.net.state_dict(), model_path)
-                
-                # Update the model file path in the database
+
                 self.job.model_file_path = model_path
                 self.job.save()
                 
@@ -351,9 +355,90 @@ class ServerManager:
             self.job.save()
 
             print(f"Training job marked as FAILED due to model save error")
-            
+
             # Re-raise the exception to stop training
             raise e
+
+
+# No hospital node holds more than this many patients; any larger num_examples is
+# a model-replacement attack (a client inflates its weight to dominate FedAvg).
+_MAX_CLIENT_NUM_EXAMPLES = 10_000_000
+
+
+def get_expected_client_ids(job):
+    """Return the set of client_ids the Hub invited for this job (C3), or an
+    empty set if none are configured. The Hub orchestrates the round — it knows
+    exactly which hospitals it invited — so their assigned ids form an allowlist.
+    Sources, in order: explicit config_json['expected_client_ids'], else the keys
+    of the job's clients_config mapping.
+    """
+    try:
+        cfg = getattr(job, 'config_json', None) or {}
+        explicit = cfg.get('expected_client_ids')
+        if explicit:
+            return {str(c) for c in explicit}
+        clients_config = getattr(job, 'clients_config', None) or {}
+        if isinstance(clients_config, dict):
+            return {str(k) for k in clients_config.keys()}
+    except Exception:
+        pass
+    return set()
+
+
+def filter_authorized_clients(results, expected_client_ids, server_round):
+    """C3: drop fit results from clients whose reported client_id is not in the
+    job's invited allowlist. A rogue Flower client that merely reaches the server
+    port cannot inject updates into aggregation (poisoning) or be counted as a
+    participant. Enforced only when an allowlist is configured; with none set this
+    is a no-op (backward compatible). Returns (kept, dropped).
+
+    NOTE: this is the aggregation-side control. Full protection against a rogue
+    client *receiving* the global model (exfiltration) additionally requires
+    connection-time authentication (mTLS) on the Flower channel — see audit C3.
+    """
+    if not expected_client_ids:
+        return list(results), 0
+    expected = {str(c) for c in expected_client_ids}
+    kept, dropped = [], 0
+    for cp, fr in results:
+        reported = str((getattr(fr, 'metrics', {}) or {}).get('client_id', getattr(cp, 'cid', '')))
+        if reported in expected:
+            kept.append((cp, fr))
+        else:
+            print(f"WARNING: round {server_round}: unauthorized client_id={reported!r} "
+                  f"not in invited allowlist {sorted(expected)}; dropped (C3 client-auth guard)")
+            dropped += 1
+    return kept, dropped
+
+
+def sanitize_fit_results(results, server_round):
+    """Defend FedAvg against poisoned client updates before averaging:
+      * drop clients whose weights contain NaN/Inf (would poison the global model),
+      * drop clients reporting num_examples <= 0 (divide-by-zero / no contribution),
+      * clamp inflated num_examples so a client can't dominate the weighted average.
+    Returns (sanitized_results, dropped_count). Never raises."""
+    clean, dropped = [], 0
+    for cp, fr in results:
+        cid = getattr(cp, 'cid', '?')
+        try:
+            arrays = parameters_to_ndarrays(fr.parameters)
+        except Exception as exc:
+            print(f"WARNING: round {server_round}: unreadable params from {cid} ({exc}); dropped")
+            dropped += 1
+            continue
+        if not arrays or any(not np.all(np.isfinite(a)) for a in arrays):
+            print(f"WARNING: round {server_round}: non-finite (NaN/Inf) weights from {cid}; dropped (poisoning guard)")
+            dropped += 1
+            continue
+        if fr.num_examples <= 0:
+            dropped += 1
+            continue
+        if fr.num_examples > _MAX_CLIENT_NUM_EXAMPLES:
+            print(f"WARNING: round {server_round}: {cid} reported num_examples={fr.num_examples} "
+                  f"> {_MAX_CLIENT_NUM_EXAMPLES}; clamping (model-replacement guard)")
+            fr.num_examples = _MAX_CLIENT_NUM_EXAMPLES
+        clean.append((cp, fr))
+    return clean, dropped
 
 
 class FedAvgModelStrategy(FedAvg):
@@ -393,18 +478,23 @@ class FedAvgModelStrategy(FedAvg):
         if self.round_start_time is None:
             self.round_start_time = self.server_manager.job.started_at or timezone.now()
         
-        # Filter out any results with num_examples=0 before calling FedAvg.
-        # A client returning 0 examples (e.g. due to an exception in fit()) causes
-        # FedAvg's weighted average to divide by zero and crash the whole server.
-        # Filtering here means: bad clients are simply excluded from aggregation for
-        # this round while the server stays alive for remaining clients.
-        valid_results = [(cp, fr) for cp, fr in results if fr.num_examples > 0]
+        # C3: drop updates from clients not in the invited allowlist before any
+        # aggregation, so a rogue client that reached the port can't poison FedAvg.
+        results, unauthorized = filter_authorized_clients(
+            results, get_expected_client_ids(self.server_manager.job), server_round
+        )
+        if unauthorized:
+            print(f"WARNING: Round {server_round}: dropped {unauthorized} unauthorized client result(s) (C3)")
+
+        # Reject poisoned/malformed updates (NaN/Inf weights, num_examples<=0, and
+        # inflated num_examples) before FedAvg's weighted average. Keeps the server
+        # alive and the global model un-poisoned when a client misbehaves.
+        valid_results, dropped = sanitize_fit_results(results, server_round)
         if not valid_results:
-            print(f"WARNING: Round {server_round}: all {len(results)} client(s) returned 0 examples — skipping aggregation, retaining current parameters")
+            print(f"WARNING: Round {server_round}: all {len(results)} client result(s) rejected — skipping aggregation, retaining current parameters")
             return None, {}
-        if len(valid_results) < len(results):
-            dropped = len(results) - len(valid_results)
-            print(f"WARNING: Round {server_round}: dropped {dropped} client result(s) with num_examples=0")
+        if dropped:
+            print(f"WARNING: Round {server_round}: dropped {dropped} invalid client result(s)")
 
         try:
             aggregated_parameters, aggregated_metrics = super().aggregate_fit(server_round, valid_results, failures)
@@ -535,74 +625,17 @@ class FedSVMStrategy(Strategy):
         return None
 
     def configure_fit(self, server_round: int, parameters, client_manager):
-        """Configure the next round of federated training"""
-        
+        """Send the current GLOBAL model weights to every sampled client.
 
-        print(f"FedSVM configure_fit - Round {server_round}")
-
-        # Sample clients for this round
-        sample_size, min_num_clients = self.num_fit_clients(
-            client_manager.num_available()
-        )
-        clients = client_manager.sample(
-            num_clients=sample_size, min_num_clients=min_num_clients
-        )
-
-        # Create fit configuration for each client
-        fit_configurations = []
-        for client in clients:
-            # Get support vectors from other clients (excluding current client)
-            other_svs_dict = self._get_support_vectors_for_client(client.cid)
-
-            # Convert support vectors to ndarrays for Flower serialization
-            if other_svs_dict:
-                # Aggregate all SVs from different clients into single arrays
-                all_svs = []
-                all_labels = []
-
-                # other_svs_dict format: {client_id: {'support_vectors': [...], 'labels': [...], 'shas': [...]}}
-                for other_client_id, sv_data in other_svs_dict.items():
-                    support_vectors = sv_data['support_vectors']
-                    labels = sv_data['labels']
-
-                    # Add all SVs from this client
-                    all_svs.extend(support_vectors)
-                    all_labels.extend(labels)
-
-                if all_svs:
-                    # Convert to numpy arrays
-                    svs_array = np.array(all_svs, dtype=np.float32)
-                    labels_array = np.array(all_labels, dtype=np.float32)
-
-                    # Pack into Parameters
-                    params = ndarrays_to_parameters([svs_array, labels_array])
-                    print(f"Sending {len(all_svs)} SVs to client {client.cid}")
-                else:
-                    params = Parameters(tensors=[], tensor_type="")
-            else:
-                # No support vectors to send (first round)
-                params = Parameters(tensors=[], tensor_type="")
-                print(f"No SVs to send to client {client.cid} (first round or no other clients)")
-
-            # Config only contains scalar metadata
-            config = {
-                "server_round": server_round,
-                "converged": int(self.converged),  # 1 if converged, 0 otherwise
-            }
-
-            # Create FitIns object
-            fit_ins = FitIns(
-                parameters=params,
-                config=config
-            )
-
-            fit_configurations.append((client, fit_ins))
-
-        if self.converged:
-            print(f"Configured {len(fit_configurations)} clients for round {server_round} (CONVERGED - no-op mode)")
-        else:
-            print(f"Configured {len(fit_configurations)} clients for round {server_round}")
-        return fit_configurations
+        DP-SGD FedSVM shares model weights (never data), so this is plain FedAvg:
+        each client trains locally on the received weights and returns updated
+        weights. On round 1, `parameters` are the initial weights Flower obtained
+        from a client (initialize_parameters returns None)."""
+        print(f"FedSVM(DP) configure_fit - Round {server_round}")
+        sample_size, min_num_clients = self.num_fit_clients(client_manager.num_available())
+        clients = client_manager.sample(num_clients=sample_size, min_num_clients=min_num_clients)
+        fit_ins = FitIns(parameters=parameters, config={"server_round": server_round})
+        return [(client, fit_ins) for client in clients]
 
     def aggregate_fit(
         self,
@@ -660,99 +693,60 @@ class FedSVMStrategy(Strategy):
             print("ERROR: No results to aggregate")
             return None, {}
 
-        # Collect support vectors from all clients
-        new_svs_count = 0
-        total_svs_exchanged = 0
+        # C3: drop updates from clients not in the invited allowlist first.
+        results, unauthorized = filter_authorized_clients(
+            results, get_expected_client_ids(self.server_manager.job), server_round
+        )
+        if unauthorized:
+            print(f"WARNING: FedSVM round {server_round}: dropped {unauthorized} unauthorized client result(s) (C3)")
 
-        for client_proxy, fit_res in results:
-            client_id = fit_res.metrics.get('client_id', client_proxy.cid)
+        # Reject poisoned/malformed updates (NaN/Inf weights, inflated num_examples)
+        # before averaging — same defense as the DL path.
+        results, dropped = sanitize_fit_results(results, server_round)
+        if dropped:
+            print(f"WARNING: FedSVM round {server_round}: dropped {dropped} invalid client result(s)")
 
-            # Extract support vectors from parameters
-            # Format: [svs_array, labels_array, shas_array]
-            if fit_res.parameters:
-                svs_data = parameters_to_ndarrays(fit_res.parameters)
+        # FedAvg: weighted average of the DP-trained model weights [W, b] by the
+        # client-reported num_examples. No patient data crosses the network.
+        weighted = [(parameters_to_ndarrays(fr.parameters), fr.num_examples)
+                    for _, fr in results if fr.parameters]
+        weighted = [(nds, n) for nds, n in weighted if nds]
+        if not weighted:
+            print("ERROR: no valid weight arrays in results")
+            return None, {}
+        total_examples = sum(n for _, n in weighted) or 1
+        n_arrays = len(weighted[0][0])
+        aggregated_ndarrays = [
+            (sum(nds[i].astype(np.float64) * n for nds, n in weighted) / total_examples).astype(np.float32)
+            for i in range(n_arrays)
+        ]
+        aggregated_parameters = ndarrays_to_parameters(aggregated_ndarrays)
+        print(f"FedSVM(DP) aggregated {len(weighted)} client weight-sets "
+              f"(total_examples={total_examples})")
 
-                if len(svs_data) >= 3:
-                    svs = svs_data[0]  # Support vectors
-                    labels = svs_data[1]  # Labels
-                    shas = svs_data[2]  # SHA hashes
-
-                    # Initialize client pool if needed
-                    if client_id not in self.support_vectors_pool:
-                        self.support_vectors_pool[client_id] = []
-
-                    # Add new support vectors to pool
-                    existing_shas = set([sha for sha, _, _ in self.support_vectors_pool[client_id]])
-
-                    for i in range(len(svs)):
-                        sha = shas[i] if i < len(shas) else f"sha_{i}"
-                        if sha not in existing_shas:
-                            self.support_vectors_pool[client_id].append((sha, svs[i], labels[i]))
-                            new_svs_count += 1
-
-                    total_svs_exchanged += len(svs)
-
-                    print(f"Client {client_id}: received {len(svs)} SVs ({new_svs_count} new)")
-
-        print(f"Total SVs in pool: {sum(len(svs) for svs in self.support_vectors_pool.values())}")
-
-        # Update client tracking
         update_client_tracking(self.server_manager, server_round, results)
 
-        # Aggregate metrics
         aggregated_metrics = self._aggregate_metrics(results)
-
-        # Save metrics
-        clients_info = {'active_clients': len(results)}
         self.server_manager.save_metrics(
-            aggregated_metrics,
-            server_round,
-            round_start_time=self.round_start_time,
-            round_end_time=round_end_time,
-            clients_info=clients_info
+            aggregated_metrics, server_round,
+            round_start_time=self.round_start_time, round_end_time=round_end_time,
+            clients_info={'active_clients': len(results)},
         )
 
-        # Check convergence
-        if new_svs_count == 0 and not self.converged:
-            print(f"Convergence achieved - no new support vectors")
-            print(f" Setting converged flag - remaining rounds will be no-ops")
-
-            # Set convergence flag (clients will skip training in next rounds)
-            self.converged = True
-
-            # Mark job as completed
-            self.server_manager.job.status = 'completed'
-            self.server_manager.job.completed_at = round_end_time
-            self.server_manager.job.progress = 100
-
-            if self.training_start_time:
-                total_duration = (round_end_time - self.training_start_time).total_seconds()
-                self.server_manager.job.training_duration = total_duration
-
-            self.server_manager.job.save()
-
-            # Note: Don't return None here - let Flower continue to complete remaining rounds
-            # Clients will receive converged=1 flag and skip training
-
-        # Check if final round
         if server_round >= self.server_manager.job.total_rounds:
             print(f"Final round {server_round} completed")
-
             if self.training_start_time:
-                total_duration = (round_end_time - self.training_start_time).total_seconds()
-                self.server_manager.job.training_duration = total_duration
-
+                self.server_manager.job.training_duration = (
+                    round_end_time - self.training_start_time).total_seconds()
             self.server_manager.job.status = 'completed'
             self.server_manager.job.completed_at = round_end_time
             self.server_manager.job.progress = 100
             self.server_manager.job.save()
-
             self.server_manager.should_stop = True
         else:
             self.round_start_time = round_end_time
 
-        # Return empty parameters (FedSVM doesn't aggregate model weights)
-        return None, aggregated_metrics
+        return aggregated_parameters, aggregated_metrics
 
     def configure_evaluate(self, server_round: int, parameters, client_manager):
         """Configure evaluation (optional for FedSVM)"""
@@ -1206,7 +1200,6 @@ class FedDPRandomForestStrategy(Strategy):
                 "global_feature_bounds_json": json.dumps(self.global_feature_bounds),
             }
 
-            # Create FitIns object
             fit_ins = FitIns(
                 parameters=params,
                 config=config
@@ -1255,6 +1248,14 @@ class FedDPRandomForestStrategy(Strategy):
 
         print(f"FedDPRF aggregate_fit - Round {server_round}")
         print(f"Received {len(results)} results, {len(failures)} failures")
+
+        # C3: drop updates from clients not in the invited allowlist first, so a
+        # rogue client that reached the port can't inject DP trees into the forest.
+        results, unauthorized = filter_authorized_clients(
+            results, get_expected_client_ids(self.server_manager.job), server_round
+        )
+        if unauthorized:
+            print(f"WARNING: FedDPRF round {server_round}: dropped {unauthorized} unauthorized client result(s) (C3)")
 
         if failures:
             print(f"FAILURE DETAILS FOR ROUND {server_round}")
