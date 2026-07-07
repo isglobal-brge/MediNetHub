@@ -2,70 +2,10 @@
 {% load crispy_forms_tags %}
 
 {% block title %}User Profile - MediNet{% endblock %}
+{% block page_title %}Profile{% endblock %}
 
 {% block extra_css %}
-<style>
-:root {
-    --primary-color: #1976d2;
-    --danger-color: #d32f2f;
-    --danger-light: #ffebee;
-    --gray-100: #f5f5f5;
-    --gray-200: #eeeeee;
-    --gray-600: #757575;
-    --gray-800: #424242;
-    --body-bg: #f7f9fc;
-}
-
-body {
-    background-color: var(--body-bg);
-}
-
-.profile-card, .management-card {
-    background-color: #ffffff;
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-
-.profile-avatar {
-    width: 120px;
-    height: 120px;
-    font-size: 3rem;
-    background-color: var(--primary-color);
-}
-
-.nav-pills .nav-link {
-    border-radius: 8px;
-    font-weight: 500;
-    color: var(--gray-800);
-    padding: 10px 15px;
-    transition: all 0.2s ease-in-out;
-}
-
-.nav-pills .nav-link.active, .nav-pills .show>.nav-link {
-    color: #fff;
-    background-color: var(--primary-color);
-}
-
-.nav-pills .nav-link:hover:not(.active) {
-    background-color: var(--gray-100);
-}
-
-.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(25, 118, 210, 0.25);
-}
-
-.danger-zone {
-    border: 2px solid var(--danger-light);
-    background-color: var(--danger-light);
-    border-radius: 12px;
-}
-
-.danger-zone h5 {
-    color: var(--danger-color);
-}
-</style>
+<link rel="stylesheet" href="/static/css/pages/profile.css">
 {% endblock %}
 
 {% block content %}
@@ -91,17 +31,17 @@ body {
                     <ul class="nav nav-pills" id="pills-tab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="pills-account-tab" data-bs-toggle="pill" data-bs-target="#pills-account" type="button" role="tab" aria-controls="pills-account" aria-selected="true">
-                                <i class="fas fa-user-cog me-2"></i>Account
+                                <i data-lucide="user-cog" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Account
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="pills-security-tab" data-bs-toggle="pill" data-bs-target="#pills-security" type="button" role="tab" aria-controls="pills-security" aria-selected="false">
-                                <i class="fas fa-shield-alt me-2"></i>Security
+                                <i data-lucide="shield" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Security
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="pills-danger-tab" data-bs-toggle="pill" data-bs-target="#pills-danger" type="button" role="tab" aria-controls="pills-danger" aria-selected="false">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+                                <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Danger Zone
                             </button>
                         </li>
                     </ul>

@@ -20,11 +20,9 @@ def simple_rate_limit(key_func=None, rate='5/m', method='POST', block=True):
     def decorator(func):
         @wraps(func)
         def wrapper(request, *args, **kwargs):
-            # Skip rate limiting if not the specified method
             if request.method != method:
                 return func(request, *args, **kwargs)
-            
-            # Parse rate limit
+
             try:
                 requests, period = rate.split('/')
                 requests = int(requests)
@@ -37,29 +35,23 @@ def simple_rate_limit(key_func=None, rate='5/m', method='POST', block=True):
                     period_seconds = 86400
                 else:
                     period_seconds = 60  # Default to minute
-                    
+
             except ValueError:
                 # Invalid rate format, skip rate limiting
                 return func(request, *args, **kwargs)
-            
-            # Generate cache key
+
             if key_func:
                 cache_key = key_func(request)
             else:
-                # Default: use IP address
                 ip = request.META.get('REMOTE_ADDR', 'unknown')
                 cache_key = f"rate_limit_{func.__name__}_{ip}"
-            
-            # Hash the key to ensure it's a valid cache key
+
             cache_key = hashlib.md5(cache_key.encode()).hexdigest()
-            
-            # Get current count
+
             current_count = cache.get(cache_key, 0)
-            
-            # Check if rate limit exceeded
+
             if current_count >= requests:
                 if block:
-                    # Check if it's an AJAX request
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                         return JsonResponse({
                             'error': 'Rate limit exceeded. Please try again later.',
@@ -70,12 +62,10 @@ def simple_rate_limit(key_func=None, rate='5/m', method='POST', block=True):
                             'message': f'Too many requests. Maximum {requests} requests per {period_seconds//60} minutes allowed.'
                         }, status=429)
                 else:
-                    # Just log the rate limit violation
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f'Rate limit exceeded for {cache_key}')
-            
-            # Increment counter
+
             cache.set(cache_key, current_count + 1, period_seconds)
             
             return func(request, *args, **kwargs)

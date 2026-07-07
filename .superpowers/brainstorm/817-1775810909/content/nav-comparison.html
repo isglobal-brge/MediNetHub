@@ -1,0 +1,188 @@
+<h2>Navegacion: Sidebar Colapsable vs Top Bar</h2>
+<p class="subtitle">Mismo dashboard, diferente estructura. Paleta Navy + Teal aplicada.</p>
+
+<div style="display:flex;flex-direction:column;gap:32px;">
+
+  <!-- OPTION B: Collapsible Sidebar -->
+  <div class="mockup" data-choice="b" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="mockup-header" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;font-weight:600;">
+      B) Sidebar Colapsable — iconos por defecto, expande al hover
+    </div>
+    <div class="mockup-body" style="padding:0;background:#f8fafc;display:flex;min-height:340px;">
+
+      <!-- Sidebar collapsed -->
+      <div style="width:60px;background:#0f172a;display:flex;flex-direction:column;align-items:center;padding-top:16px;gap:4px;flex-shrink:0;transition:width 0.2s;">
+        <!-- Logo -->
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#1e40af,#0891b2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;font-weight:800;margin-bottom:16px;">M</div>
+
+        <!-- Nav items -->
+        <div style="width:40px;height:40px;background:rgba(8,145,178,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#0891b2;font-size:16px;" title="Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <div style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:16px;" title="Datasets">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <div style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:16px;" title="Models">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <div style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:16px;" title="Training">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+
+        <div style="flex:1;"></div>
+
+        <!-- Bottom: expand arrow -->
+        <div style="width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#475569;font-size:14px;margin-bottom:12px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div style="flex:1;padding:20px;">
+        <!-- Top bar minimal -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <div style="font-family:Inter,system-ui;font-size:18px;font-weight:700;color:#0f172a;">Dashboard</div>
+            <div style="font-size:12px;color:#64748b;">Welcome back, Dr. Garcia</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:32px;height:32px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748b;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+            </div>
+            <div style="width:32px;height:32px;background:linear-gradient(135deg,#1e40af,#0891b2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;">RG</div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Active Jobs</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">12</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:65%;background:linear-gradient(90deg,#1e40af,#0891b2);border-radius:2px;"></div></div>
+          </div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Models</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">8</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:40%;background:linear-gradient(90deg,#059669,#34d399);border-radius:2px;"></div></div>
+          </div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Datasets</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">23</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:55%;background:linear-gradient(90deg,#d97706,#fbbf24);border-radius:2px;"></div></div>
+          </div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Clients</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">5</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:80%;background:linear-gradient(90deg,#0891b2,#22d3ee);border-radius:2px;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION C: Top Bar Redesigned -->
+  <div class="mockup" data-choice="c" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="mockup-header" style="background:linear-gradient(135deg,#1e40af,#0891b2);color:white;font-weight:600;">
+      C) Top Bar Rediseñada — branding fuerte, nav agrupada
+    </div>
+    <div class="mockup-body" style="padding:0;background:#f8fafc;min-height:340px;">
+
+      <!-- Top bar -->
+      <div style="background:#0f172a;padding:0 24px;display:flex;align-items:center;height:56px;gap:32px;">
+        <!-- Logo -->
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#1e40af,#0891b2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;font-weight:800;">M</div>
+          <span style="font-family:Inter,system-ui;font-size:15px;font-weight:700;color:#f1f5f9;">MediNet</span>
+        </div>
+
+        <!-- Nav items -->
+        <div style="display:flex;gap:2px;flex:1;">
+          <div style="padding:8px 14px;background:rgba(8,145,178,0.15);border-radius:8px;color:#0891b2;font-size:12px;font-weight:600;font-family:Inter,system-ui;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+          </div>
+          <div style="padding:8px 14px;border-radius:8px;color:#94a3b8;font-size:12px;font-family:Inter,system-ui;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Datasets
+          </div>
+          <div style="padding:8px 14px;border-radius:8px;color:#94a3b8;font-size:12px;font-family:Inter,system-ui;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            Model Studio
+          </div>
+          <div style="padding:8px 14px;border-radius:8px;color:#94a3b8;font-size:12px;font-family:Inter,system-ui;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>
+            Training
+          </div>
+        </div>
+
+        <!-- Right side -->
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;background:#1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#64748b;position:relative;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+            <div style="position:absolute;top:4px;right:4px;width:7px;height:7px;background:#0891b2;border-radius:50%;border:2px solid #0f172a;"></div>
+          </div>
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#1e40af,#0891b2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;">RG</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div style="padding:24px;">
+        <!-- Page header -->
+        <div style="margin-bottom:20px;">
+          <div style="font-family:Inter,system-ui;font-size:18px;font-weight:700;color:#0f172a;">Dashboard</div>
+          <div style="font-size:12px;color:#64748b;">Welcome back, Dr. Garcia</div>
+        </div>
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Active Jobs</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">12</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:65%;background:linear-gradient(90deg,#1e40af,#0891b2);border-radius:2px;"></div></div>
+          </div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Models</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">8</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:40%;background:linear-gradient(90deg,#059669,#34d399);border-radius:2px;"></div></div>
+          </div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Datasets</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">23</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:55%;background:linear-gradient(90deg,#d97706,#fbbf24);border-radius:2px;"></div></div>
+          </div>
+          <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Clients</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;">5</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:6px;"><div style="height:100%;width:80%;background:linear-gradient(90deg,#0891b2,#22d3ee);border-radius:2px;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <div>
+      <h3 style="font-size:14px;">B) Sidebar Colapsable</h3>
+      <ul style="font-size:12px;color:#666;line-height:1.9;padding-left:16px;">
+        <li>60px colapsada → 220px expandida</li>
+        <li>Mas area para Model Designer (canvas grande)</li>
+        <li>Escala bien si anadis mas secciones</li>
+        <li>Patron familiar para devs (VS Code, GitHub)</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:14px;">C) Top Bar Rediseñada</h3>
+      <ul style="font-size:12px;color:#666;line-height:1.9;padding-left:16px;">
+        <li>100% del ancho para contenido siempre</li>
+        <li>Cambio menos drastico vs la UI actual</li>
+        <li>Limitada a ~6 items antes de saturar</li>
+        <li>La navbar dark con logo da identidad fuerte</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px;text-align:center;">Click en la que prefieras</p>

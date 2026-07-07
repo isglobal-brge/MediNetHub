@@ -4,421 +4,446 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MediNet - Federated Learning Platform{% endblock %}</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
-    
+
+    <!-- Google Fonts: Inter + JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Design System CSS -->
+    <link rel="stylesheet" href="/static/css/design-system.css?v=2">
+    <link rel="stylesheet" href="/static/css/components.css?v=2">
+    <link rel="stylesheet" href="/static/css/layout.css?v=2">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'home' %}">
-                <i class="fas fa-network-wired me-2"></i>MediNet
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    {% if not user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}">Home</a>
-                    </li>
-                    {% endif %}
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}" href="{% url 'user_dashboard' %}">
-                            <i class="fas fa-tachometer-alt me-1"></i> Panel
-                        </a>
-                    </li>
-                    {% endif %}
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'datasets' %}">
-                            <i class="fas fa-database me-1"></i> Datasets
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'model_studio' %}active{% endif %}" href="{% url 'model_studio' %}">
-                            <i class="fas fa-cube me-1"></i> Model Studio
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'training' %}">
-                            <i class="fas fa-cogs me-1"></i> Training
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-                <ul class="navbar-nav">
-                    {% if user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-bell"></i>
-                            {% if unread_notifications_count > 0 %}
-                                <span class="notification-indicator" id="notifications-badge"></span>
-                            {% endif %}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" id="notifications-list">
-                            <li>
-                                <h6 class="dropdown-header">Notificacions</h6>
-                            </li>
-                            {% with recent_notifications=user.notifications.all|slice:":5" %}
-                                {% if recent_notifications %}
-                                    {% for notification in recent_notifications %}
-                                        <li>
-                                            <a class="dropdown-item {% if not notification.is_read %}fw-bold{% endif %}" href="{{ notification.link|default:'#' }}">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span>{{ notification.title }}</span>
-                                                    {% if not notification.is_read %}
-                                                        <span class="badge bg-primary">Nova</span>
-                                                    {% endif %}
-                                                </div>
-                                                <small class="text-muted">{{ notification.created_at|date:"j M, H:i" }}</small>
-                                            </a>
-                                        </li>
-                                    {% endfor %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item text-center" href="{% url 'notifications' %}">
-                                           View all notifications
-                                        </a>
-                                    </li>
-                                {% else %}
-                                    <li>
-                                        <span class="dropdown-item text-center text-muted">
-                                            No notifications
-                                        </span>
-                                    </li>
-                                {% endif %}
-                            {% endwith %}
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i> {{ user.username }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="post" action="{% url 'logout' %}" class="m-0 p-0">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item">Log Out</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">
-                            <i class="fas fa-sign-in-alt me-1"></i> Log In
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'register' %}">
-                            <i class="fas fa-user-plus me-1"></i> Register
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="container mt-4">
-        {% if messages %}
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                {% for message in messages %}
-                showToast('{{ message|escapejs }}', '{{ message.tags }}');
-                {% endfor %}
-            });
-        </script>
-        {% endif %}
+{% if user.is_authenticated %}
 
-        {% block content %}{% endblock %}
+<div class="app-shell">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">M</div>
+      <span class="sidebar-logo-text">MediNet</span>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-light text-center text-lg-start mt-5">
-        <div class="container p-4">
-            <div class="row">
-                <div class="col-lg-6 col-md-12 mb-4 mb-md-0">
-                    <h5>MediNet</h5>
-                    <p>
-                        A advanced platform for federated training in medical sciences.
-                    </p>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-                    <h5>Links</h5>
-                    <ul class="list-unstyled mb-0">
-                        <li><a href="{% url 'home' %}" class="text-dark">Home</a></li>
-                        <li><a href="{% url 'datasets' %}" class="text-dark">Datasets</a></li>
-                        <li><a href="{% url 'model_studio' %}" class="text-dark">Model Studio</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
-                    <h5>Resources</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-dark">Documentation</a></li>
-                        <li><a href="#" class="text-dark">API</a></li>
-                        <li><a href="#" class="text-dark">Support</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
-            © 2025 MediNet - All rights reserved
-        </div>
-    </footer>
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JS -->
-    <script src="/static/js/main.js"></script>
-    
-    <!-- Global Toast Notification System -->
-    <script>
-        // Global function for centered floating notifications
-        window.showToast = function(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `toast-notification toast-${type}`;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                left: 50%;
-                transform: translateX(-50%) translateY(-100%);
-                z-index: 9999;
-                min-width: 300px;
-                max-width: 500px;
-                padding: 16px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                display: flex;
-                align-items: center;
-                font-weight: 500;
-                transition: transform 0.3s ease-out;
-                cursor: pointer;
-                margin-bottom: 10px;
-            `;
-            
-            // Colors and icons based on type - Map error to danger
-            const styles = {
-                'success': { bg: '#28a745', color: 'white', icon: 'fas fa-check-circle' },
-                'error': { bg: '#dc3545', color: 'white', icon: 'fas fa-exclamation-circle' },
-                'danger': { bg: '#dc3545', color: 'white', icon: 'fas fa-exclamation-circle' },
-                'warning': { bg: '#ffc107', color: '#000', icon: 'fas fa-exclamation-triangle' },
-                'info': { bg: '#17a2b8', color: 'white', icon: 'fas fa-info-circle' }
-            };
-            
-            const style = styles[type] || styles['info'];
-            notification.style.backgroundColor = style.bg;
-            notification.style.color = style.color;
-            
-            notification.innerHTML = `
-                <i class="${style.icon} me-2"></i>
-                <span>${message}</span>
-                <i class="fas fa-times ms-auto" style="cursor: pointer; opacity: 0.7; margin-left: 12px;"></i>
-            `;
-            
-            // Stack notifications vertically
-            const existingNotifications = document.querySelectorAll('.toast-notification');
-            let topOffset = 20;
-            existingNotifications.forEach(notif => {
-                topOffset += notif.offsetHeight + 10;
-            });
-            notification.style.top = topOffset + 'px';
-            
-            document.body.appendChild(notification);
-            
-            // Animate in (slide down from top)
-            setTimeout(() => {
-                notification.style.transform = 'translateX(-50%) translateY(0)';
-            }, 10);
-            
-            // Auto hide after 4 seconds
-            const autoHide = setTimeout(() => {
-                hideNotification(notification);
-            }, 4000);
-            
-            // Click to dismiss
-            notification.addEventListener('click', () => {
-                clearTimeout(autoHide);
-                hideNotification(notification);
-            });
-            
-            function hideNotification(element) {
-                element.style.transform = 'translateX(-50%) translateY(-100%)';
-                setTimeout(() => {
-                    if (element.parentNode) {
-                        element.parentNode.removeChild(element);
-                        // Reposition remaining notifications
-                        repositionNotifications();
-                    }
-                }, 300);
-            }
-            
-            function repositionNotifications() {
-                const notifications = document.querySelectorAll('.toast-notification');
-                let topOffset = 20;
-                notifications.forEach(notif => {
-                    notif.style.top = topOffset + 'px';
-                    topOffset += notif.offsetHeight + 10;
-                });
-            }
-        };
-    </script>
-    
-    {% block extra_js %}
-    {% if user.is_authenticated %}
-    <script>
+      <a href="{% url 'user_dashboard' %}"
+         class="sidebar-item {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+        <i data-lucide="layout-dashboard"></i>
+        <span class="sidebar-item-label">Dashboard</span>
+      </a>
+
+      <a href="{% url 'datasets' %}"
+         class="sidebar-item {% if request.resolver_match.url_name == 'datasets' or request.resolver_match.url_name == 'dataset_details' %}active{% endif %}{% if global_connections_count == 0 %} sidebar-item--locked{% endif %}">
+        <i data-lucide="database"></i>
+        <span class="sidebar-item-label">Datasets</span>
+        {% if global_connections_count == 0 %}<i data-lucide="lock" class="sidebar-lock-icon"></i>{% endif %}
+      </a>
+
+      <a href="{% url 'model_studio' %}"
+         class="sidebar-item {% if request.resolver_match.url_name == 'model_studio' or request.resolver_match.url_name == 'model_designer' or request.resolver_match.url_name == 'edit_model' or request.resolver_match.url_name == 'model_designer_advanced' or request.resolver_match.url_name == 'edit_model_advanced' or request.resolver_match.url_name == 'ml_model_designer' or request.resolver_match.url_name == 'edit_ml_model' or request.resolver_match.url_name == 'models_list' %}active{% endif %}{% if global_connections_count == 0 %} sidebar-item--locked{% endif %}">
+        <i data-lucide="box"></i>
+        <span class="sidebar-item-label">Model Studio</span>
+        {% if global_connections_count == 0 %}<i data-lucide="lock" class="sidebar-lock-icon"></i>{% endif %}
+      </a>
+
+      <a href="{% url 'training' %}"
+         class="sidebar-item {% if request.resolver_match.url_name == 'training' or request.resolver_match.url_name == 'experiment_detail' or request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'client_dashboard' or request.resolver_match.url_name == 'job_detail' or request.resolver_match.url_name == 'manage_job_artifacts' %}active{% endif %}{% if global_connections_count == 0 %} sidebar-item--locked{% endif %}">
+        <i data-lucide="settings"></i>
+        <span class="sidebar-item-label">Training</span>
+        {% if global_connections_count == 0 %}<i data-lucide="lock" class="sidebar-lock-icon"></i>{% endif %}
+      </a>
+
+      <div class="sidebar-separator"></div>
+
+      <a href="{% url 'notifications' %}"
+         class="sidebar-item {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+        <i data-lucide="bell"></i>
+        <span class="sidebar-item-label">Notifications</span>
+        {% if unread_notifications_count > 0 %}
+          <span class="sidebar-badge" id="notifications-badge">{{ unread_notifications_count }}</span>
+        {% endif %}
+      </a>
+
+      <div class="sidebar-spacer"></div>
+
+      <!-- Profile at bottom -->
+      <a href="{% url 'profile' %}"
+         class="sidebar-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+        <i data-lucide="user"></i>
+        <span class="sidebar-item-label">{{ user.username }}</span>
+      </a>
+
+    </nav>
+
+    <!-- Footer with toggle -->
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
+        <i data-lucide="chevrons-right"></i>
+      </button>
+    </div>
+
+  </aside>
+  <!-- /Sidebar -->
+
+  <!-- ===== Content Area ===== -->
+  <div class="content-area">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="topbar-breadcrumb">{% block breadcrumb %}{% endblock %}</div>
+      </div>
+      <div class="topbar-right">
+
+        <!-- Notification bell -->
+        <div class="topbar-icon-btn dropdown" id="notificationsDropdown" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">
+          <i data-lucide="bell" style="width:18px;height:18px;"></i>
+          {% if unread_notifications_count > 0 %}
+            <span class="notification-dot"></span>
+          {% endif %}
+        </div>
+
+        <!-- Notifications dropdown -->
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown"
+            id="notifications-list" style="width:320px;max-height:400px;overflow-y:auto;">
+          <li><h6 class="dropdown-header">Notifications</h6></li>
+          {% with recent_notifications=user.notifications.all|slice:":5" %}
+            {% if recent_notifications %}
+              {% for notification in recent_notifications %}
+                <li>
+                  <a class="dropdown-item {% if not notification.is_read %}fw-bold{% endif %}"
+                     href="{{ notification.link|default:'#' }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span>{{ notification.title }}</span>
+                      {% if not notification.is_read %}
+                        <span class="badge"
+                              style="background:rgba(8,145,178,0.12);color:var(--color-accent);font-size:10px;">New</span>
+                      {% endif %}
+                    </div>
+                    <small class="text-muted">{{ notification.created_at|date:"j M, H:i" }}</small>
+                  </a>
+                </li>
+              {% endfor %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-center" href="{% url 'notifications' %}">
+                  View all notifications
+                </a>
+              </li>
+            {% else %}
+              <li>
+                <span class="dropdown-item text-center text-muted">No notifications</span>
+              </li>
+            {% endif %}
+          {% endwith %}
+        </ul>
+
+        <!-- User avatar / dropdown -->
+        <div class="dropdown">
+          <div class="topbar-avatar" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+               title="{{ user.username }}">
+            {{ user.username.0|upper }}
+          </div>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{% url 'logout' %}" class="m-0 p-0">
+                {% csrf_token %}
+                <button type="submit" class="dropdown-item">Log Out</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </header>
+    <!-- /Top Bar -->
+
+    <!-- Page Content -->
+    <main class="page-content">
+
+      {% if messages %}
+      <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Funció per actualitzar el comptador i les notificacions
-            function updateNotifications() {
-                fetch('/api/get-notifications-count/')
-                    .then(response => response.json())
-                    .then(data => {
-                        // Actualitzar el badge amb el compte
-                        const badge = document.getElementById('notifications-badge');
-                        if (badge) {
-                            if (data.count > 0) {
-                                badge.textContent = data.count;
-                                badge.classList.remove('d-none');
-                            } else {
-                                badge.classList.add('d-none');
-                            }
-                        }
-                        
-                        const dropdown = document.getElementById('notificationsDropdown');
-                        if (dropdown && dropdown.classList.contains('show')) {
-                            updateNotificationsList();
-                        }
-                    })
-                    .catch(error => console.error('Error updating notifications:', error));
-            }
-            
-            function updateNotificationsList() {
-                fetch('/api/get-recent-notifications/')
-                    .then(response => response.json())
-                    .then(data => {
-                        const container = document.querySelector('#notificationsDropdown + .dropdown-menu');
-                        if (container) {
-                            // Netejar contingut actual (excepte l'header)
-                            container.innerHTML = '<li><h6 class="dropdown-header">Notificacions</h6></li>';
-                            
-                            // Afegir les noves notificacions
-                            if (data.notifications && data.notifications.length > 0) {
-                                data.notifications.forEach(notification => {
-                                    const item = document.createElement('li');
-                                    item.innerHTML = `
-                                        <a class="dropdown-item ${!notification.is_read ? 'fw-bold' : ''}" href="${notification.link || '#'}">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span>${notification.title}</span>
-                                                ${!notification.is_read ? '<span class="badge bg-primary">Nova</span>' : ''}
-                                            </div>
-                                            <small class="text-muted">${notification.created_at}</small>
-                                        </a>
-                                    `;
-                                    container.appendChild(item);
-                                });
-                                
-                                // Afegir separator i enllaç "Veure tots"
-                                const separator = document.createElement('li');
-                                separator.innerHTML = '<hr class="dropdown-divider">';
-                                container.appendChild(separator);
-                                
-                                const viewAll = document.createElement('li');
-                                viewAll.innerHTML = `
-                                    <a class="dropdown-item text-center" href="/notifications/">
-                                        Veure totes les notificacions
-                                    </a>
-                                `;
-                                container.appendChild(viewAll);
-                            } else {
-                                const emptyItem = document.createElement('li');
-                                emptyItem.innerHTML = `
-                                    <span class="dropdown-item text-center text-muted">
-                                        You have no notifications
-                                    </span>
-                                `;
-                                container.appendChild(emptyItem);
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error updating notifications list:', error));
-            }
-            
-            // Actualitzar cada 10 segons
-            setInterval(updateNotifications, 10000);
-            
-            // Actualitzar immediatament
-            updateNotifications();
-            
-            // Actualitzar el desplegable quan s'obre
-            const notificationsDropdown = document.getElementById('notificationsDropdown');
-            if (notificationsDropdown) {
-                notificationsDropdown.addEventListener('show.bs.dropdown', function() {
-                    updateNotificationsList();
-                });
-            }
+          {% for message in messages %}
+          showToast('{{ message|escapejs }}', '{{ message.tags }}');
+          {% endfor %}
         });
-    </script>
-    {% endif %}
-    {% endblock %}
-<style>
-    /* Estil específic per al desplegable de notificacions */
-    .navbar .dropdown {
-        position: relative !important;
+      </script>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+
+    </main>
+
+  </div>
+  <!-- /Content Area -->
+
+</div>
+<!-- /App Shell -->
+
+{% else %}
+
+<!-- Unauthenticated users: minimal full-width layout -->
+<div class="container mt-4">
+</div>
+
+{% endif %}
+
+<!-- ===== Scripts ===== -->
+
+<!-- Bootstrap JS Bundle (includes Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Toast notification system — defined before main.js so showToast() is always available -->
+<script>
+  window.showToast = function(message, type) {
+    type = type || 'info';
+
+    var notification = document.createElement('div');
+    notification.className = 'toast-notification toast-' + type;
+    notification.style.cssText = [
+      'position:fixed',
+      'top:20px',
+      'left:50%',
+      'transform:translateX(-50%) translateY(-100%)',
+      'z-index:9999',
+      'min-width:300px',
+      'max-width:500px',
+      'padding:16px 20px',
+      'border-radius:8px',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.15)',
+      'display:flex',
+      'align-items:center',
+      'font-weight:500',
+      'transition:transform 0.3s ease-out',
+      'cursor:pointer',
+      'margin-bottom:10px'
+    ].join(';');
+
+    var styles = {
+      success: { bg: '#059669', color: '#fff', symbol: '\u2713' },
+      error:   { bg: '#DC2626', color: '#fff', symbol: '\u2715' },
+      danger:  { bg: '#DC2626', color: '#fff', symbol: '\u2715' },
+      warning: { bg: '#D97706', color: '#fff', symbol: '\u26a0' },
+      info:    { bg: '#0891B2', color: '#fff', symbol: '\u2139' }
+    };
+
+    var s = styles[type] || styles.info;
+    notification.style.backgroundColor = s.bg;
+    notification.style.color = s.color;
+
+    var iconSpan = document.createElement('span');
+    iconSpan.style.cssText = 'margin-right:10px;font-size:16px;';
+    iconSpan.textContent = s.symbol;
+    notification.appendChild(iconSpan);
+
+    var msgSpan = document.createElement('span');
+    msgSpan.textContent = message;
+    notification.appendChild(msgSpan);
+
+    var closeSpan = document.createElement('span');
+    closeSpan.style.cssText = 'margin-left:auto;padding-left:12px;opacity:0.7;font-size:14px;cursor:pointer;';
+    closeSpan.textContent = '\u00d7';
+    notification.appendChild(closeSpan);
+
+    var existing = document.querySelectorAll('.toast-notification');
+    var topOffset = 20;
+    existing.forEach(function(n) { topOffset += n.offsetHeight + 10; });
+    notification.style.top = topOffset + 'px';
+
+    document.body.appendChild(notification);
+
+    setTimeout(function() {
+      notification.style.transform = 'translateX(-50%) translateY(0)';
+    }, 10);
+
+    var autoHide = setTimeout(function() { hideToast(notification); }, 4000);
+
+    notification.addEventListener('click', function() {
+      clearTimeout(autoHide);
+      hideToast(notification);
+    });
+
+    function hideToast(el) {
+      el.style.transform = 'translateX(-50%) translateY(-100%)';
+      setTimeout(function() {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el);
+          repositionToasts();
+        }
+      }, 300);
     }
-    
-    .navbar .dropdown-menu {
-        position: absolute !important;
-        right: 0;
-        left: auto;
-        width: 300px;
-        max-height: 400px;
-        overflow-y: auto;
+
+    function repositionToasts() {
+      var toasts = document.querySelectorAll('.toast-notification');
+      var top = 20;
+      toasts.forEach(function(t) {
+        t.style.top = top + 'px';
+        top += t.offsetHeight + 10;
+      });
     }
-    
-    /* Només aplica els estils globals de dropdown a les taules, no a la navegació */
-    .table .dropdown {
-        position: static;
+  };
+</script>
+
+<!-- Sidebar toggle JS -->
+<script src="/static/js/sidebar.js"></script>
+
+<!-- Custom application JS -->
+<script src="/static/js/main.js"></script>
+
+<!-- Lucide icon rendering — must come after all HTML elements are in the DOM -->
+<script>lucide.createIcons();</script>
+
+{% if user.is_authenticated %}
+<!-- Notification polling — updates count and list every 10 seconds -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+
+    function updateNotificationCount() {
+      fetch('/api/get-notifications-count/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var badge = document.getElementById('notifications-badge');
+          var bellBtn = document.getElementById('notificationsDropdown');
+
+          if (data.count > 0) {
+            if (!badge) {
+              var notifLink = document.querySelector('a.sidebar-item[href*="notifications"]');
+              if (notifLink) {
+                badge = document.createElement('span');
+                badge.id = 'notifications-badge';
+                badge.className = 'sidebar-badge';
+                notifLink.appendChild(badge);
+              }
+            }
+            if (badge) {
+              badge.textContent = data.count;
+              badge.style.display = '';
+            }
+            if (bellBtn && !bellBtn.querySelector('.notification-dot')) {
+              var dot = document.createElement('span');
+              dot.className = 'notification-dot';
+              bellBtn.appendChild(dot);
+            }
+          } else {
+            if (badge) { badge.style.display = 'none'; }
+            if (bellBtn) {
+              var existingDot = bellBtn.querySelector('.notification-dot');
+              if (existingDot) { existingDot.parentNode.removeChild(existingDot); }
+            }
+          }
+
+          if (bellBtn && bellBtn.classList.contains('show')) {
+            updateNotificationsList();
+          }
+        })
+        .catch(function(err) { console.error('Error updating notifications:', err); });
     }
-    
-    .table .dropdown-menu {
-        z-index: 1030;
+
+    function updateNotificationsList() {
+      fetch('/api/get-recent-notifications/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var container = document.getElementById('notifications-list');
+          if (!container) { return; }
+
+          while (container.firstChild) { container.removeChild(container.firstChild); }
+
+          var header = document.createElement('li');
+          var h6 = document.createElement('h6');
+          h6.className = 'dropdown-header';
+          h6.textContent = 'Notifications';
+          header.appendChild(h6);
+          container.appendChild(header);
+
+          if (data.notifications && data.notifications.length > 0) {
+            data.notifications.forEach(function(n) {
+              var li = document.createElement('li');
+              var a = document.createElement('a');
+              a.className = 'dropdown-item' + (n.is_read ? '' : ' fw-bold');
+              a.href = n.link || '#';
+
+              var row = document.createElement('div');
+              row.className = 'd-flex justify-content-between align-items-center';
+
+              var titleSpan = document.createElement('span');
+              titleSpan.textContent = n.title;
+              row.appendChild(titleSpan);
+
+              if (!n.is_read) {
+                var bdg = document.createElement('span');
+                bdg.className = 'badge';
+                bdg.style.cssText = 'background:rgba(8,145,178,0.12);color:var(--color-accent);font-size:10px;';
+                bdg.textContent = 'New';
+                row.appendChild(bdg);
+              }
+
+              var timeSmall = document.createElement('small');
+              timeSmall.className = 'text-muted';
+              timeSmall.textContent = n.created_at;
+
+              a.appendChild(row);
+              a.appendChild(timeSmall);
+              li.appendChild(a);
+              container.appendChild(li);
+            });
+
+            var sep = document.createElement('li');
+            var hr = document.createElement('hr');
+            hr.className = 'dropdown-divider';
+            sep.appendChild(hr);
+            container.appendChild(sep);
+
+            var viewAllLi = document.createElement('li');
+            var viewAllA = document.createElement('a');
+            viewAllA.className = 'dropdown-item text-center';
+            viewAllA.href = '/notifications/';
+            viewAllA.textContent = 'View all notifications';
+            viewAllLi.appendChild(viewAllA);
+            container.appendChild(viewAllLi);
+          } else {
+            var emptyLi = document.createElement('li');
+            var emptySpan = document.createElement('span');
+            emptySpan.className = 'dropdown-item text-center text-muted';
+            emptySpan.textContent = 'No notifications';
+            emptyLi.appendChild(emptySpan);
+            container.appendChild(emptyLi);
+          }
+        })
+        .catch(function(err) { console.error('Error updating notifications list:', err); });
     }
-    
-    /* Indicador de notificacions (punt vermell) */
-    .notification-dot {
-        display: block;
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background-color: #ff3e3e;
-        border-radius: 50%;
-        top: 6px;
-        right: 6px;
-        border: 1px solid #ffffff;
-        box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+
+    updateNotificationCount();
+    setInterval(updateNotificationCount, 10000);
+
+    var bellBtn = document.getElementById('notificationsDropdown');
+    if (bellBtn) {
+      bellBtn.addEventListener('show.bs.dropdown', function() {
+        updateNotificationsList();
+      });
     }
-    
-    /* Fer que la icona de la campana tingui posició relativa */
-    #notificationsDropdown {
-        position: relative;
-        padding-right: 15px;
-    }
-</style>
+  });
+</script>
+{% endif %}
+
+{% block extra_js %}{% endblock %}
+
 </body>
 </html>

@@ -2,314 +2,80 @@
 
 {% block title %}MediNet - Training Dashboard{% endblock %}
 
+{% block page_title %}Training Dashboard{% endblock %}
+
+{% block breadcrumb %}Real-time monitoring of federated training job{% endblock %}
+
 {% block extra_css %}
-<style>
-    .dashboard-card {
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-        height: 100%;
-    }
-    
-    .dashboard-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    }
-    
-    .dashboard-card .card-header {
-        border-radius: 10px 10px 0 0;
-    }
-    
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: 700;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-    
-    .progress {
-        height: 8px;
-        border-radius: 4px;
-        margin-top: 8px;
-    }
-    
-    .client-card {
-        border-radius: 10px;
-        transition: all 0.2s ease;
-        margin-bottom: 15px;
-    }
-    
-    .client-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    
-    .client-status {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 6px;
-    }
-    
-    .status-waiting {
-        background-color: #ffc107;
-    }
-    
-    .status-selected {
-        background-color: #17a2b8;
-    }
-    
-    .status-training {
-        background-color: #007bff;
-    }
-    
-    .status-aggregating {
-        background-color: #6610f2;
-    }
-    
-    .status-completed {
-        background-color: #28a745;
-    }
-    
-    .status-unavailable {
-        background-color: #dc3545;
-    }
-    
-    .log-container {
-        background-color: #272822;
-        color: #f8f8f2;
-        font-family: 'Courier New', monospace;
-        padding: 15px;
-        border-radius: 8px;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-    
-    .log-entry {
-        margin-bottom: 5px;
-        line-height: 1.4;
-    }
-    
-    .log-timestamp {
-        color: #a6e22e;
-    }
-    
-    .log-info {
-        color: #66d9ef;
-    }
-    
-    .log-warning {
-        color: #f92672;
-    }
-    
-    /* Chart legend styling - target Chart.js generated elements */
-    .chart-legend-custom {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        margin: 10px 0;
-        flex-wrap: wrap;
-    }
-    
-    .legend-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border: 1px solid transparent;
-        background: rgba(255,255,255,0.9);
-        backdrop-filter: blur(10px);
-        font-weight: 600;
-        font-size: 0.9rem;
-        letter-spacing: 0.025em;
-    }
-    
-    .legend-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        background: rgba(255,255,255,1);
-    }
-    
-    .legend-item:active {
-        transform: translateY(0px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    
-    .legend-color {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-    
-    .card-header.unified {
-        background-color: white;
-        color: var(--dark-color);
-        border-bottom: 1px solid #e9ecef;
-        font-weight: 600;
-    }
-    
-    .client-status-card .card-body {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        height: 100%;
-    }
-    
-    .client-status-footer {
-        text-align: right;
-        margin-top: 1rem;
-        border-top: 1px solid #f0f0f0;
-        padding-top: 0.75rem;
-    }
-    
-    /* Enhanced Button Styles */
-    .btn-outline-primary, .btn-outline-secondary {
-        border-radius: 8px;
-        font-weight: 600;
-        border-width: 1px;
-        transition: all 0.2s ease-in-out;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .btn-outline-primary:hover, .btn-outline-secondary:hover {
-        color: #fff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .btn-outline-secondary {
-        color: #64748B !important; /* Slate Blue */
-        border-color: #64748B !important;
-    }
-
-    .btn-outline-secondary:hover {
-        background-color: #64748B !important;
-        border-color: #64748B !important;
-        color: #fff !important;
-    }
-    
-    .metric-value.text-slate {
-        color: #0d6efd !important;
-    }
-    
-    /* Debug Mode Styles - Will be added/removed dynamically */
-    .debug-tab-hidden {
-        display: none;
-    }
-    
-    .debug-content-hidden {
-        display: none;
-    }
-    
-    /* Legend styling for debug charts */
-    .chart-legend-custom .legend-item {
-        cursor: pointer;
-        transition: opacity 0.2s ease;
-    }
-    
-    .chart-legend-custom .legend-item:hover {
-        opacity: 0.8;
-    }
-    
-    .metric-value.text-slate {
-        color: #64748B;
-    }
-    
-    .metric-value.text-brand-blue {
-        color: #0d6efd;
-    }
-    
-    .btn-primary,
-    .btn-primary:hover,
-    .btn-primary:focus {
-        background-color: var(--primary-color) !important;
-        border-color: var(--primary-color) !important;
-        color: #fff !important;
-    }
-</style>
-
-<!-- Chart.js para los gráficos -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+<link rel="stylesheet" href="/static/css/pages/dashboard.css?v=2">
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-chart-line me-2"></i>Training Dashboard</h2>
-            <p class="text-muted">Real-time monitoring of federated training job</p>
-        </div>
-        <div>
-            <button type="button" class="btn btn-outline-primary me-2" id="refresh-btn">
-                <i class="fas fa-sync-alt me-1"></i>Refresh
+        <div></div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary-custom btn-sm" id="refresh-btn">
+                <i data-lucide="refresh-cw" style="width:14px;height:14px;" class="me-1"></i>Refresh
             </button>
-            <a href="{% url 'training' %}" class="btn btn-primary" style="border-radius: 8px;">
-                <i class="fas fa-arrow-left me-2"></i>Back to Training
+            <a href="{% url 'training' %}" class="btn btn-primary btn-sm">
+                <i data-lucide="arrow-left" style="width:14px;height:14px;" class="me-1"></i>Back to Training
             </a>
         </div>
     </div>
     
-    <!-- Status de entrenamiento -->
+    <!-- Training Status -->
     <div class="row mb-4" id="training-status-row">
         <div class="col">
-            <div class="card dashboard-card">
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-md-3 text-center">
-                            <div class="d-flex flex-column justify-content-center h-100">
-                                <h5 class="mb-1">Job Status</h5>
-                                <div class="d-inline-block mt-2">
-                                    <span class="badge bg-primary p-2" id="status-badge">Pending</span>
-                                </div>
+            <div class="card-raised p-4">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="d-flex flex-column justify-content-center h-100">
+                            <h6 class="mb-1 text-muted text-uppercase" style="font-size:var(--text-xs);letter-spacing:.5px;">Job Status</h6>
+                            <div class="d-inline-block mt-2">
+                                <span class="status-badge status-pending" id="status-badge">Pending</span>
                             </div>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <h5 class="mb-1">Progress</h5>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>Round <span id="current-round">0</span>/<span id="total-rounds">10</span></span>
-                                <span><span id="progress-percentage">0</span>% Complete</span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" id="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            
-                            <div class="mt-3 text-center">
-                                <button type="button" class="btn btn-sm btn-success me-2" id="start-training-btn">
-                                    <i class="fas fa-play me-1"></i>Start
-                                </button>
-                                <button type="button" class="btn btn-sm btn-warning me-2" id="pause-training-btn" disabled>
-                                    <i class="fas fa-pause me-1"></i>Pause
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" id="stop-training-btn" disabled>
-                                    <i class="fas fa-stop me-1"></i>Stop
-                                </button>
-                            </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="mb-2 text-muted text-uppercase" style="font-size:var(--text-xs);letter-spacing:.5px;">Progress</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small">Round <span id="current-round">0</span>/<span id="total-rounds">10</span></span>
+                            <span class="small"><span id="progress-percentage">0</span>% Complete</span>
                         </div>
-                        
-                        <div class="col-md-3 text-center">
-                            <div class="d-flex flex-column justify-content-center h-100">
-                                <h5 class="mb-1">Time Info</h5>
-                                <div class="small text-muted" id="time-info">
-                                    <div>Started: 
-                                        {% if job.started_at %}
-                                            <span id="start-time">{{ job.started_at|date:"j F, H:i" }}</span>
-                                        {% else %}
-                                            <span id="start-time">Pendent</span>
-                                        {% endif %}
-                                    </div>
-                                    <div>Elapsed: <span id="elapsed-time">--</span></div>
-                                    <div>Est. Completion: <span id="completion-time">--</span></div>
+                        <div class="progress-custom">
+                            <div class="progress-bar progress-bar--primary progress-bar-striped progress-bar-animated"
+                                 id="progress-bar" role="progressbar" style="width: 0%"
+                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+
+                        <div class="mt-3 text-center d-flex justify-content-center gap-2">
+                            <button type="button" class="btn btn-sm btn-success" id="start-training-btn">
+                                <i data-lucide="play" style="width:13px;height:13px;" class="me-1"></i>Start
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning" id="pause-training-btn" disabled>
+                                <i data-lucide="pause" style="width:13px;height:13px;" class="me-1"></i>Pause
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" id="stop-training-btn" disabled>
+                                <i data-lucide="square" style="width:13px;height:13px;" class="me-1"></i>Stop
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 text-center">
+                        <div class="d-flex flex-column justify-content-center h-100">
+                            <h6 class="mb-1 text-muted text-uppercase" style="font-size:var(--text-xs);letter-spacing:.5px;">Time Info</h6>
+                            <div class="small text-muted" id="time-info">
+                                <div>Started:
+                                    {% if job.started_at %}
+                                        <span id="start-time">{{ job.started_at|date:"j F, H:i" }}</span>
+                                    {% else %}
+                                        <span id="start-time">Pending</span>
+                                    {% endif %}
                                 </div>
+                                <div>Elapsed: <span id="elapsed-time">--</span></div>
+                                <div>Est. Completion: <span id="completion-time">--</span></div>
                             </div>
                         </div>
                     </div>
@@ -317,101 +83,93 @@
             </div>
         </div>
     </div>
-    
-    <!-- Métricas principales -->
+
+    <!-- Main Metrics -->
     <div class="row mb-4" id="main-metrics-row">
         <div class="col-md-3">
-            <div class="card dashboard-card">
-                <div class="card-body text-center py-4">
-                    <div class="metric-label">Accuracy</div>
-                    <div class="metric-value text-primary" id="accuracy-value">--</div>
-                    <div class="small text-muted">Last round</div>
-                </div>
+            <div class="stat-card stat-card--primary">
+                <div class="metric-label">Accuracy</div>
+                <div class="metric-value text-primary" id="accuracy-value">--</div>
+                <div class="small text-muted">Last round</div>
             </div>
         </div>
-        
+
         <div class="col-md-3">
-            <div class="card dashboard-card">
-                <div class="card-body text-center py-4">
-                    <div class="metric-label">Loss</div>
-                    <div class="metric-value text-danger" id="loss-value">--</div>
-                    <div class="small text-muted">Last round</div>
-                </div>
+            <div class="stat-card">
+                <div class="metric-label">Loss</div>
+                <div class="metric-value text-danger" id="loss-value">--</div>
+                <div class="small text-muted">Last round</div>
             </div>
         </div>
-        
+
         <div class="col-md-3">
-            <div class="card dashboard-card">
-                <div class="card-body text-center py-4">
-                    <div class="metric-label">F1 Score</div>
-                    <div class="metric-value text-success" id="f1-value">--</div>
-                    <div class="small text-muted">Last round</div>
-                </div>
+            <div class="stat-card stat-card--success">
+                <div class="metric-label">F1 Score</div>
+                <div class="metric-value text-success" id="f1-value">--</div>
+                <div class="small text-muted">Last round</div>
             </div>
         </div>
-        
+
         <div class="col-md-3">
-            <div class="card dashboard-card">
-                <div class="card-body text-center py-4">
-                    <div class="metric-label">Active Clients</div>
-                    <div class="metric-value text-brand-blue" id="clients-value">--</div>
-                    <div class="small text-muted">Connected nodes</div>
-                </div>
+            <div class="stat-card stat-card--accent">
+                <div class="metric-label">Active Clients</div>
+                <div class="metric-value text-brand-blue" id="clients-value">--</div>
+                <div class="small text-muted">Connected nodes</div>
             </div>
         </div>
     </div>
     
-    <!-- Gráficos y estado de clientes -->
+    <!-- Charts and Client Status -->
     <div class="row">
-        <!-- Gráficos -->
+        <!-- Charts -->
         <div class="col-md-8">
-            <div class="card dashboard-card">
-                <div class="card-header unified d-flex justify-content-between align-items-center">
+            <div class="card-raised">
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
                     <div>
-                        <i class="fas fa-chart-area me-2"></i>Training Metrics
+                        <i data-lucide="bar-chart-2" style="width:15px;height:15px;" class="me-2"></i>Training Metrics
                     </div>
                     <div>
                         <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-outline-secondary" id="debug-mode-toggle" onclick="toggleDebugMode()">
-                                <i class="fas fa-bug me-1"></i>Debug Mode: <span id="debug-status">OFF</span>
+                            <button class="btn btn-sm btn-outline-secondary-custom" id="debug-mode-toggle" onclick="toggleDebugMode()">
+                                <i data-lucide="bug" style="width:13px;height:13px;" class="me-1"></i>Debug Mode: <span id="debug-status">OFF</span>
                             </button>
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split d-none" data-bs-toggle="dropdown" aria-expanded="false" id="debug-dropdown-toggle">
+                            <button class="btn btn-sm btn-outline-secondary-custom dropdown-toggle dropdown-toggle-split d-none" data-bs-toggle="dropdown" aria-expanded="false" id="debug-dropdown-toggle">
                                 <span class="visually-hidden">Toggle Dropdown</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" id="debug-metrics-dropdown">
                                 <li><h6 class="dropdown-header">Specialized Metrics</h6></li>
                                 <li>
                                     <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('segmentation'); closeDropdown();">
-                                        <i class="fas fa-puzzle-piece me-2"></i>
+                                        <i data-lucide="scan" style="width:13px;height:13px;" class="me-2"></i>
                                         <span>Segmentation</span>
-                                        <i class="fas fa-check text-success ms-auto" id="segmentation-check" style="display: none;"></i>
+                                        <i data-lucide="check" style="width:13px;height:13px;" class="text-success ms-auto" id="segmentation-check" style="display: none;"></i>
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('medical'); closeDropdown();">
-                                        <i class="fas fa-stethoscope me-2"></i>
+                                        <i data-lucide="activity" style="width:13px;height:13px;" class="me-2"></i>
                                         <span>Medical</span>
-                                        <i class="fas fa-check text-success ms-auto" id="medical-check" style="display: none;"></i>
+                                        <i data-lucide="check" style="width:13px;height:13px;" class="text-success ms-auto" id="medical-check" style="display: none;"></i>
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('detection'); closeDropdown();">
-                                        <i class="fas fa-crosshairs me-2"></i>
+                                        <i data-lucide="crosshair" style="width:13px;height:13px;" class="me-2"></i>
                                         <span>Detection</span>
-                                        <i class="fas fa-check text-success ms-auto" id="detection-check" style="display: none;"></i>
+                                        <i data-lucide="check" style="width:13px;height:13px;" class="text-success ms-auto" id="detection-check" style="display: none;"></i>
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="#" onclick="toggleSpecificMetric('regression'); closeDropdown();">
-                                        <i class="fas fa-chart-line me-2"></i>
+                                        <i data-lucide="trending-up" style="width:13px;height:13px;" class="me-2"></i>
                                         <span>Regression</span>
-                                        <i class="fas fa-check text-success ms-auto" id="regression-check" style="display: none;"></i>
+                                        <i data-lucide="check" style="width:13px;height:13px;" class="text-success ms-auto" id="regression-check" style="display: none;"></i>
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-danger" href="#" onclick="disableAllMetrics(); closeDropdown();">
-                                        <i class="fas fa-times me-2"></i>Disable All
+                                        <i data-lucide="x" style="width:13px;height:13px;" class="me-2"></i>Disable All
                                     </a>
                                 </li>
                             </ul>
@@ -432,22 +190,22 @@
                         <!-- Debug Mode Tabs - Hidden by default -->
                         <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="segmentation">
                             <button class="nav-link" id="segmentation-tab" data-bs-toggle="tab" data-bs-target="#segmentation-metrics" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-puzzle-piece me-1"></i>Segmentation
+                                <i data-lucide="scan" style="width:13px;height:13px;" class="me-1"></i>Segmentation
                             </button>
                         </li>
                         <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="medical">
                             <button class="nav-link" id="medical-tab" data-bs-toggle="tab" data-bs-target="#medical-metrics" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-stethoscope me-1"></i>Medical
+                                <i data-lucide="activity" style="width:13px;height:13px;" class="me-1"></i>Medical
                             </button>
                         </li>
                         <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="detection">
                             <button class="nav-link" id="detection-tab" data-bs-toggle="tab" data-bs-target="#detection-metrics" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-crosshairs me-1"></i>Detection
+                                <i data-lucide="crosshair" style="width:13px;height:13px;" class="me-1"></i>Detection
                             </button>
                         </li>
                         <li class="nav-item debug-tab debug-tab-hidden" role="presentation" data-metric="regression">
                             <button class="nav-link" id="regression-tab" data-bs-toggle="tab" data-bs-target="#regression-metrics" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-chart-line me-1"></i>Regression
+                                <i data-lucide="trending-up" style="width:13px;height:13px;" class="me-1"></i>Regression
                             </button>
                         </li>
                     </ul>
@@ -584,19 +342,19 @@
         
         <!-- Estado de clientes -->
         <div class="col-md-4">
-            <div class="card dashboard-card client-status-card">
-                <div class="card-header unified">
-                    <i class="fas fa-satellite-dish me-2"></i>Client Status
+            <div class="card-raised client-status-card h-100">
+                <div class="card-header-custom">
+                    <i data-lucide="wifi" style="width:15px;height:15px;" class="me-2"></i>Client Status
                 </div>
-                <div class="card-body">
+                <div class="p-3" style="display:flex;flex-direction:column;height:calc(100% - 52px);">
                     <div id="clients-container" class="overflow-auto" style="flex-grow: 1;">
-                        <!-- Client cards will be dynamically inserted here -->
                         <p class="text-muted text-center mt-3" id="clients-loading">Waiting for clients...</p>
                     </div>
                     <div class="client-status-footer">
                         <div class="d-grid">
-                            <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary">
-                                View Client Details<i class="fas fa-arrow-right ms-2"></i>
+                            <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary-custom">
+                                View Client Details
+                                <i data-lucide="arrow-right" style="width:13px;height:13px;" class="ms-2"></i>
                             </a>
                         </div>
                     </div>
@@ -604,7 +362,6 @@
             </div>
         </div>
     </div>
-    
 
 </div>
 {% endblock %}
@@ -614,19 +371,19 @@
 <script>
     const INTERVALS = {
         ACTIVE: {
-            DETAILS: 5000,     // 5 segons (quan està entrenant)
-            METRICS: 10000,    // 10 segons (mètriques)
-            CLIENTS: 15000,    // 15 segons (clients)
+            DETAILS: 5000,     // 5s (while training)
+            METRICS: 10000,    // 10s (metrics)
+            CLIENTS: 15000,    // 15s (clients)
         },
         COMPLETED: {
-            DETAILS: 30000,    // 30 segons (quan ja està completat)
-            METRICS: 60000,    // 1 minut (no canvien)
-            CLIENTS: 60000,    // 1 minut
+            DETAILS: 30000,    // 30s (completed)
+            METRICS: 60000,    // 1 min (no changes)
+            CLIENTS: 60000,    // 1 min
         },
         PENDING: {
-            DETAILS: 10000,    // 10 segons (pendent)
-            METRICS: 30000,    // 30 segons
-            CLIENTS: 30000,    // 30 segons
+            DETAILS: 10000,    // 10s (pending)
+            METRICS: 30000,    // 30s
+            CLIENTS: 30000,    // 30s
         }
     };
     document.addEventListener('DOMContentLoaded', function() {
@@ -659,7 +416,7 @@
         fetchMetrics();
         fetchClients();
         
-        // Iniciar refresco automático amb intervals adaptatius
+        // Start auto-refresh with adaptive intervals
         startAutoRefresh();
         
         // Event listeners
@@ -1167,7 +924,7 @@
                     if (data.success && data.job) {
                         updateJobUI(data.job);
                         
-                        // Aturem l'interval si el job està completat
+                        // Stop interval when job completes
                         if (data.job.status === 'completed') {
                             if (clientStatusInterval) {
                                 clearInterval(clientStatusInterval);
@@ -1291,13 +1048,13 @@
                 const currentTime = new Date();
                 const elapsedMs = currentTime - startTime;
                 
-                // Convertim a minuts i segons
+                // Convert to minutes and seconds
                 const minutes = Math.floor(elapsedMs / 60000);
                 const seconds = Math.floor((elapsedMs % 60000) / 1000);
-                
+
                 elapsedElement.textContent = `${minutes}m ${seconds}s`;
             } else if (job && job.status === 'completed' && job.completed_at) {
-                // Si està completat, mostrem el temps total
+                // Show total time for completed jobs
                 const startTime = new Date(job.started_at);
                 const endTime = new Date(job.completed_at);
                 const totalMs = endTime - startTime;
@@ -1348,7 +1105,7 @@
                 updateControlButtons(data.job_status);
             }
             
-            // Afegim l'actualització del temps
+            // Update time info
             updateTimeInfo(data.job);
         }
         
@@ -1453,7 +1210,7 @@
             }
         }
         
-        // Iniciar entrenamiento
+        // Start training
         function startTraining() {
             fetch(`/api/simulate-training/${jobId}/`)
                 .then(response => response.json())
@@ -1499,7 +1256,7 @@
             fetchClients();
         }
         
-        // Iniciar refresco automático adaptatiu
+        // Start adaptive auto-refresh
         function startAutoRefresh(jobStatus = 'pending') {
             // Netejar intervals existents
             if (intervalId) clearInterval(intervalId);
@@ -1586,7 +1343,7 @@
         
 
         function calculateEstimatedTime(job, metrics) {
-            // Si no tenim mètriques o estem completats, no cal estimar
+            // No estimation needed without metrics or when completed
             if (!metrics || metrics.length < 1 || job.status === 'completed') {
                 return '--';
             }
@@ -2099,5 +1856,12 @@
     }
     
     // Initialize debug mode on page load (moved to main DOMContentLoaded)
+
+    // Initialize Lucide icons after DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
 </script>
-{% endblock %} 
+{% endblock %}

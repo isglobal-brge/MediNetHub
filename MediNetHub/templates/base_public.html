@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MediNet - Federated Learning Platform{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Google Fonts: Inter + JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Design System CSS (no layout.css — no sidebar needed) -->
+    <link rel="stylesheet" href="/static/css/design-system.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body style="background-color: var(--color-bg);">
+
+  <!-- Minimal top bar with logo -->
+  <nav style="background: var(--color-primary); padding: 12px 0;">
+    <div class="container">
+      <a href="{% url 'home' %}" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+        <div style="width:32px;height:32px;background:var(--gradient-primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;">M</div>
+        <span style="font-weight:700;font-size:16px;color:var(--color-text-inverse);">MediNet</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+
+    {% if messages %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        {% for message in messages %}
+        showToast('{{ message|escapejs }}', '{{ message.tags }}');
+        {% endfor %}
+      });
+    </script>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+  </div>
+
+  <!-- Bootstrap JS Bundle (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Lucide icon rendering — must come after all HTML elements are in the DOM -->
+  <script>lucide.createIcons();</script>
+
+  <!-- Toast notification system -->
+  <script>
+    window.showToast = function(message, type) {
+      type = type || 'info';
+
+      var notification = document.createElement('div');
+      notification.className = 'toast-notification toast-' + type;
+      notification.style.cssText = [
+        'position:fixed',
+        'top:20px',
+        'left:50%',
+        'transform:translateX(-50%) translateY(-100%)',
+        'z-index:9999',
+        'min-width:300px',
+        'max-width:500px',
+        'padding:16px 20px',
+        'border-radius:8px',
+        'box-shadow:0 4px 12px rgba(0,0,0,0.15)',
+        'display:flex',
+        'align-items:center',
+        'font-weight:500',
+        'transition:transform 0.3s ease-out',
+        'cursor:pointer',
+        'margin-bottom:10px'
+      ].join(';');
+
+      var styles = {
+        success: { bg: '#059669', color: '#fff', symbol: '\u2713' },
+        error:   { bg: '#DC2626', color: '#fff', symbol: '\u2715' },
+        danger:  { bg: '#DC2626', color: '#fff', symbol: '\u2715' },
+        warning: { bg: '#D97706', color: '#fff', symbol: '\u26a0' },
+        info:    { bg: '#0891B2', color: '#fff', symbol: '\u2139' }
+      };
+
+      var s = styles[type] || styles.info;
+      notification.style.backgroundColor = s.bg;
+      notification.style.color = s.color;
+
+      var iconSpan = document.createElement('span');
+      iconSpan.style.cssText = 'margin-right:10px;font-size:16px;';
+      iconSpan.textContent = s.symbol;
+      notification.appendChild(iconSpan);
+
+      var msgSpan = document.createElement('span');
+      msgSpan.textContent = message;
+      notification.appendChild(msgSpan);
+
+      var closeSpan = document.createElement('span');
+      closeSpan.style.cssText = 'margin-left:auto;padding-left:12px;opacity:0.7;font-size:14px;cursor:pointer;';
+      closeSpan.textContent = '\u00d7';
+      notification.appendChild(closeSpan);
+
+      var existing = document.querySelectorAll('.toast-notification');
+      var topOffset = 20;
+      existing.forEach(function(n) { topOffset += n.offsetHeight + 10; });
+      notification.style.top = topOffset + 'px';
+
+      document.body.appendChild(notification);
+
+      setTimeout(function() {
+        notification.style.transform = 'translateX(-50%) translateY(0)';
+      }, 10);
+
+      var autoHide = setTimeout(function() { hideToast(notification); }, 4000);
+
+      notification.addEventListener('click', function() {
+        clearTimeout(autoHide);
+        hideToast(notification);
+      });
+
+      function hideToast(el) {
+        el.style.transform = 'translateX(-50%) translateY(-100%)';
+        setTimeout(function() {
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+            repositionToasts();
+          }
+        }, 300);
+      }
+
+      function repositionToasts() {
+        var toasts = document.querySelectorAll('.toast-notification');
+        var top = 20;
+        toasts.forEach(function(t) {
+          t.style.top = top + 'px';
+          top += t.offsetHeight + 10;
+        });
+      }
+    };
+  </script>
+
+  {% block extra_js %}{% endblock %}
+
+</body>
+</html>

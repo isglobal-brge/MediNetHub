@@ -14,7 +14,6 @@ from django.utils import timezone
 import requests
 from django.views.decorators.http import require_http_methods
 from .decorators import user_rate_limit
-from .base_views import sanitize_config_for_client, create_center_specific_config, prepare_center_authentication
 
 
 @login_required
@@ -24,13 +23,11 @@ def datasets(request):
     Connections are now stored in the database.
     Discovered datasets are temporarily stored in session.
     """
-    # Get user's projects 
     projects = Project.objects.filter(user=request.user).order_by('name')
-    
-    # Get selected project from session
+
     selected_project_id = request.session.get('selected_project_id')
     selected_project = None
-    
+
     if selected_project_id:
         try:
             selected_project = Project.objects.get(id=selected_project_id, user=request.user)
@@ -38,17 +35,13 @@ def datasets(request):
             # Clear invalid project from session
             del request.session['selected_project_id']
             selected_project_id = None
-    
-    
-    # Fetch connections belonging to the current user and selected project
+
     if selected_project:
         connections = Connection.objects.filter(user=request.user, project=selected_project).order_by('name')
     else:
-        # Si no hay proyecto seleccionado, muestra conexiones sin proyecto
         connections = Connection.objects.filter(user=request.user, project__isnull=True).order_by('name')
     selected_datasets = request.session.get('selected_datasets', [])
-    
-    # Use forms for adding/editing connections
+
     connection_form = ConnectionForm()
     edit_connection_form = None
     connection_to_edit_id = request.GET.get('edit_id')
@@ -77,7 +70,7 @@ def datasets(request):
                 )
                 # Auto-select the new project
                 request.session['selected_project_id'] = project.id
-                
+
                 messages.success(request, f'Project "{name}" created successfully')
             else:
                 messages.error(request, 'Invalid project name or project already exists')
@@ -118,8 +111,7 @@ def datasets(request):
             if form.is_valid():
                 try:
                     connection = form.save(commit=False)
-                    
-                    # Handle password correctly for editing
+
                     raw_password = form.cleaned_data.get('password')
                     if raw_password:
                         # Direct assignment to the encrypted field - django-fernet-fields handles encryption
@@ -143,7 +135,6 @@ def datasets(request):
                 connection_ip = connection.ip
                 connection_port = connection.port
 
-                # Eliminar datasets associats de la sessió
                 selected_datasets = request.session.get('selected_datasets', [])
                 updated_datasets = [
                     ds for ds in selected_datasets
@@ -152,15 +143,12 @@ def datasets(request):
                         ds['connection']['port'] == connection_port
                     )
                 ]
-                
-                # Actualitzar la sessió amb els datasets filtrats
+
                 request.session['selected_datasets'] = updated_datasets
                 request.session.modified = True
-                
-                # Eliminar la connexió
+
                 connection.delete()
-                
-                # Eliminar datasets de la sessió de datasets disponibles
+
                 if 'datasets' in request.session:
                     request.session['datasets'].pop(str(connection_id), None)
                     request.session.modified = True
@@ -176,13 +164,12 @@ def datasets(request):
             connection_id = int(request.POST.get('connection_id'))
             try:
                 connection = get_object_or_404(Connection, pk=connection_id, user=request.user)
-                # Validar puerto en rango permitido (5000-5099)
-                if not (5000 <= connection.port <= 5099):
-                    messages.error(request, f'Port {connection.port} is not allowed. Use ports 5000-5099')
+                # Validate port is in allowed range (any valid TCP port)
+                if not (1 <= connection.port <= 65535):
+                    messages.error(request, f'Port {connection.port} is not a valid port number (1–65535).')
                     return redirect('datasets')
                 
-                url_scheme = "http" 
-                fetch_url = f"{url_scheme}://{connection.ip}:{connection.port}/api/v1/get-data-info"
+                fetch_url = f"{settings.MEDINET_NODE_SCHEME}://{connection.ip}:{connection.port}/api/v2/get-data-info"
                 
                 # Prepare authentication headers matching test_api_researcher.py format
                 headers = {
@@ -215,18 +202,15 @@ def datasets(request):
                     if missing_required:
                         raise ValueError(f"Missing required fields: {', '.join(missing_required)}")
                     
-                    # Validate that all fields are lists
                     non_list_fields = [field for field in data.keys() if not isinstance(data[field], list)]
                     if non_list_fields:
                         raise ValueError(f"Expected lists for fields: {', '.join(non_list_fields)}")
-                    
-                    # Validate list lengths are consistent
+
                     lengths = {field: len(data[field]) for field in data.keys()}
                     unique_lengths = set(lengths.values())
                     if len(unique_lengths) > 1:
                         raise ValueError(f"Inconsistent field lengths: {lengths}")
-                    
-                    # Check if we have at least one dataset
+
                     dataset_count = len(data['dataset_name'])
                     if dataset_count == 0:
                         messages.info(request, f'No datasets available from "{connection.name}".')
@@ -264,13 +248,12 @@ def datasets(request):
             return redirect('datasets')
             
         elif action == 'clear_session_data':
-            # 🧹 Clear corrupted session data
             try:
                 if 'datasets' in request.session:
                     corrupted_count = len(request.session['datasets'])
                     request.session['datasets'] = {}
                     request.session.modified = True
-                    print(f"🧹 [DEBUG] Cleared {corrupted_count} dataset entries from session")
+                    print(f"[DEBUG] Cleared {corrupted_count} dataset entries from session")
                     messages.success(request, f'Cleared session data. Re-fetch datasets from connections to reload.')
                 else:
                     messages.info(request, 'No session data to clear.')
@@ -293,8 +276,7 @@ def datasets(request):
             try:
                 # Required fields for datasets (adapted to your API structure)
                 required_fields = ['dataset_id', 'dataset_name', 'patient_count', 'file_size', 'num_columns']
-                
-                # Check if basic required fields exist and are lists
+
                 missing_fields = []
                 for field in required_fields:
                     if field not in conn_data:
@@ -308,21 +290,19 @@ def datasets(request):
                         del request.session['datasets'][conn_id_str]
                         request.session.modified = True
                     continue
-                
-                # Get lengths and validate consistency
+
                 lengths = {field: len(conn_data[field]) for field in required_fields}
-                
+
                 if len(set(lengths.values())) > 1:
                     raise ValueError(f"Inconsistent array lengths: {lengths}")
-                
+
                 num_datasets = lengths['dataset_name']
                 if num_datasets == 0:
                     continue
 
-                # Process each dataset with robust error handling
                 for i in range(num_datasets):
                     try:
-                        
+
                         # Safely get fields from your API structure
                         dataset_id = conn_data['dataset_id'][i] if i < len(conn_data['dataset_id']) else i
                         dataset_name = conn_data['dataset_name'][i] if i < len(conn_data['dataset_name']) else f"unknown_dataset_{i}"
@@ -346,7 +326,7 @@ def datasets(request):
                                 elif isinstance(conn_data['metadata'][i], dict):
                                     metadata = conn_data['metadata'][i]
                             except (json.JSONDecodeError, TypeError) as e:
-                              messages.error(request,"⚠️ [DEBUG] Failed to parse metadata for {dataset_name}: {e}")
+                              messages.error(request,"WARNING: [DEBUG] Failed to parse metadata for {dataset_name}: {e}")
                         
                         # Extract target_info from metadata or create default structure
                         target_info = {
@@ -370,7 +350,7 @@ def datasets(request):
                                 'recommended_loss': target_metadata.get('recommended_loss', 'CrossEntropyLoss')
                             }
 
-                        print(f"📊 [DEBUG] Dataset: {dataset_name}, Target Info: {target_info}")
+                        print(f"[DEBUG] Dataset: {dataset_name}, Target Info: {target_info}")
                         # Create features_info from metadata if available
                         features_info = {'input_features': num_columns - 1, 'feature_types': {'numeric': num_columns - 1, 'categorical': 0}}
                         if metadata and 'statistical_summary' in metadata and 'column_types' in metadata['statistical_summary']:
@@ -387,6 +367,11 @@ def datasets(request):
                         # Remove any characters that aren't alphanumeric or hyphens
                         import re
                         safe_dataset_name = re.sub(r'[^a-z0-9-]', '', safe_dataset_name)
+                        # Privacy budget from Node (None if the dataset has no policy yet)
+                        privacy_policy = None
+                        if 'privacy_policy' in conn_data and i < len(conn_data['privacy_policy']):
+                            privacy_policy = conn_data['privacy_policy'][i]
+
                         dataset_info = {
                             'id': f"ds-{conn_id_str}-{safe_dataset_name}",
                             'connection': connection_obj,
@@ -403,10 +388,10 @@ def datasets(request):
                             'target_column': target_column,
                             'metadata': metadata,
                             'features_info': features_info,
-                            'target_info': target_info
+                            'target_info': target_info,
+                            'privacy_policy': privacy_policy,  # DP budget from Node
                         }
-                        
-                        # Check if selected
+
                         dataset_info['is_selected'] = any(
                             sd['connection']['ip'] == connection_obj.ip and 
                             sd['dataset_name'] == dataset_info['dataset_name']
@@ -450,15 +435,13 @@ def validate_connection(request):
     ip = request.GET.get('ip', '')
     port = request.GET.get('port', '')
     
-    # Validate IP
     valid_ip = False
     try:
         ipaddress.ip_address(ip)
         valid_ip = True
     except ValueError:
         valid_ip = False
-    
-    # Validate port
+
     valid_port = False
     try:
         port_num = int(port)
@@ -477,36 +460,45 @@ def validate_connection(request):
 @user_rate_limit(rate=settings.RATE_LIMITS['CONNECTION_TEST'], method='POST', block=True)
 def test_connection(request):
     """
-    API endpoint to test connection to a server
+    Ping the Node's /api/v2/ping endpoint using the stored API key for a given
+    connection. Returns reachability status and API key expiry info so the Hub
+    can warn researchers before their key expires.
+
+    GET params:
+        connection_id (int): Hub Connection pk
     """
-    ip = request.GET.get('ip', '')
-    port = request.GET.get('port', '')
-    
-    # This will be implemented to actually test the connection
-    # For now, we just validate the format
-    
-    # Validate IP
-    valid_ip = False
+    connection_id = request.GET.get('connection_id', '').strip()
+    if not connection_id:
+        return JsonResponse({'success': False, 'message': 'Missing connection_id'}, status=400)
+
     try:
-        ipaddress.ip_address(ip)
-        valid_ip = True
-    except ValueError:
-        valid_ip = False
-    
-    # Validate port
-    valid_port = False
+        connection = Connection.objects.get(pk=int(connection_id), user=request.user)
+    except (Connection.DoesNotExist, ValueError):
+        return JsonResponse({'success': False, 'message': 'Connection not found'}, status=404)
+
+    if not connection.api_key:
+        return JsonResponse({'success': False, 'message': 'No API key configured for this connection'})
+
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection.ip}:{connection.port}/api/v2/ping"
     try:
-        port_num = int(port)
-        valid_port = 1 <= port_num <= 65535
-    except ValueError:
-        valid_port = False
-    
-    success = valid_ip and valid_port
-    
-    return JsonResponse({
-        'success': success,
-        'message': 'Connection successful!' if success else 'Invalid IP or port'
-    })
+        response = requests.get(
+            node_url,
+            headers={'X-API-Key': connection.api_key, 'User-Agent': 'MediNet-Hub/1.0'},
+            timeout=5,
+        )
+        data = response.json()
+        api_key_info = data.get('api_key')  # {expires_at, days_remaining} or null
+        return JsonResponse({
+            'success': response.status_code == 200,
+            'message': 'Connection successful!' if response.status_code == 200 else f'Node returned {response.status_code}',
+            'api_key': api_key_info,
+        })
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'success': False, 'message': 'Cannot reach node — check IP and port'})
+    except requests.exceptions.Timeout:
+        return JsonResponse({'success': False, 'message': 'Node did not respond within 5 s'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Unexpected error: {str(e)}'})
 
 
 
@@ -520,8 +512,7 @@ def store_selected_datasets(request):
             
             current_datasets = request.session['selected_datasets']
             new_dataset = data['dataset']
-            
-            # Validar que el dataset té l'estructura correcta
+
             if not isinstance(new_dataset, dict):
                 return JsonResponse({'success': False, 'error': 'Invalid dataset format: must be a dictionary'})
             
@@ -533,7 +524,6 @@ def store_selected_datasets(request):
                     'error': f'Invalid dataset format: missing fields {", ".join(missing_fields)}'
                 })
             
-            # Comprovar si ja existeix la combinació dataset+connexió
             exists = any(
                 ds['dataset_name'] == new_dataset['dataset_name'] and 
                 ds['connection']['ip'] == new_dataset['connection']['ip'] and
@@ -542,7 +532,6 @@ def store_selected_datasets(request):
             )
             
             if not exists:
-                # Crear una còpia neta del dataset amb només els camps necessaris
                 clean_dataset = {
                     'dataset_id': new_dataset['dataset_id'],
                     'dataset_name': new_dataset['dataset_name'],
@@ -555,7 +544,8 @@ def store_selected_datasets(request):
                         'name': new_dataset['connection']['name'],
                         'ip': new_dataset['connection']['ip'],
                         'port': new_dataset['connection']['port']
-                    }
+                    },
+                    'privacy_policy': new_dataset.get('privacy_policy'),  # DP budget from Node
                 }
 
                 current_datasets.append(clean_dataset)
@@ -599,11 +589,9 @@ def check_dataset_status(request):
     try:
         data = json.loads(request.body)
         dataset_info = data.get('dataset', {})
-        
-        # Get selected datasets from session
+
         selected_datasets = request.session.get('selected_datasets', [])
-        
-        # Check if dataset is already selected
+
         is_selected = any(
             ds['dataset_name'] == dataset_info['dataset_name'] and
             ds['connection']['name'] == dataset_info['connection']['name'] and
@@ -630,11 +618,9 @@ def remove_selected_dataset(request):
     try:
         data = json.loads(request.body)
         dataset_info = data.get('dataset', {})
-        
-        # Get current selected datasets
+
         selected_datasets = request.session.get('selected_datasets', [])
-        
-        # Remove the dataset if it exists using all comparison fields
+
         selected_datasets = [
             ds for ds in selected_datasets
             if not (
@@ -644,8 +630,7 @@ def remove_selected_dataset(request):
                 ds['connection']['port'] == dataset_info['connection']['port']
             )
         ]
-        
-        # Update session
+
         request.session['selected_datasets'] = selected_datasets
         request.session.modified = True
         
@@ -673,10 +658,9 @@ def dataset_detail_view(request, dataset_id):
             messages.error(request, "Invalid dataset identifier format")
             return redirect('datasets')
         
-        # Remove 'ds-' prefix and split by '-'
-        id_without_prefix = dataset_id[3:]  # Remove 'ds-'
-        parts = id_without_prefix.split('-', 1)  # Split on first dash
-        
+        id_without_prefix = dataset_id[3:]
+        parts = id_without_prefix.split('-', 1)
+
         if len(parts) != 2:
             messages.error(request, "Invalid dataset identifier format")
             return redirect('datasets')
@@ -684,13 +668,11 @@ def dataset_detail_view(request, dataset_id):
         conn_id_str, safe_dataset_name = parts
 
         session_datasets = request.session.get('datasets', {})
-        
-        # Verify connection_id exists in session
+
         if conn_id_str not in session_datasets:
             messages.error(request, "Dataset not found or session expired. Please refresh datasets.")
             return redirect('datasets')
-        
-        # Get connection object and verify user access
+
         try:
             connection_id = int(conn_id_str)
             connection = get_object_or_404(Connection, id=connection_id, user=request.user)
@@ -705,15 +687,13 @@ def dataset_detail_view(request, dataset_id):
         
         try:
             dataset_names = conn_data.get('dataset_name', [])
-            
-            # Find the dataset by converting each name to safe format and comparing
+
             import re
             for i, name in enumerate(dataset_names):
                 # Apply same sanitization as in datasets view
                 safe_name = name.replace(' ', '-').replace('_', '-').lower()
                 safe_name = re.sub(r'[^a-z0-9-]', '', safe_name)
-                
-                
+
                 if safe_name == safe_dataset_name:
                     dataset_index = i
                     actual_dataset_name = name
@@ -729,7 +709,6 @@ def dataset_detail_view(request, dataset_id):
         # Build dataset object from session data (adapted for new API structure)
         try:
 
-            # Extract basic data using the new API structure
             dataset_id_val = conn_data.get('dataset_id', [None])[dataset_index] if isinstance(conn_data.get('dataset_id', []), list) else conn_data.get('dataset_id')
             medical_domain = conn_data.get('medical_domain', [None])[dataset_index] if isinstance(conn_data.get('medical_domain', []), list) else conn_data.get('medical_domain', 'General')
             data_type = conn_data.get('data_type', ['Tabular Data'])[dataset_index] if isinstance(conn_data.get('data_type', []), list) else conn_data.get('data_type', 'Tabular Data')
@@ -750,14 +729,10 @@ def dataset_detail_view(request, dataset_id):
             elif isinstance(metadata_raw, dict):
                 metadata = metadata_raw
 
-            # Extract rich metadata fields from statistical_summary
             statistical_summary = metadata.get('statistical_summary', {})
 
-            # Extract column types
             column_types = statistical_summary.get('column_types', {})
-            # Extract statistical summary for features (nested dict)
             features_statistics = statistical_summary.get('statistical_summary', {})
-            # Extract target_info with complete information
             target_info_raw = statistical_summary.get('target_info', {})
             target_info = {
                 'column_name': target_info_raw.get('column_name', target_column),
@@ -771,7 +746,6 @@ def dataset_detail_view(request, dataset_id):
                 'recommended_loss': target_info_raw.get('recommended_loss', 'CrossEntropyLoss')
             }
 
-            # Extract features info
             numeric_features = sum(1 for dtype in column_types.values() if dtype == 'numeric')
             categorical_features = sum(1 for dtype in column_types.values() if dtype == 'categorical')
             total_features = len(column_types) - (1 if target_column in column_types else 0)
@@ -783,17 +757,13 @@ def dataset_detail_view(request, dataset_id):
                 'feature_types': column_types
             }
 
-            # Extract quality metrics
             quality_score = metadata.get('quality_score', None)
             completeness_percentage = metadata.get('completeness_percentage', None)
 
-            # Extract missing values info
             missing_values = metadata.get('missing_values', {})
 
-            # Extract data distribution
             data_distribution = metadata.get('data_distribution', {})
 
-            # Extract timestamps
             generated_at = metadata.get('generated_at', None)
             updated_at = metadata.get('updated_at', None)
 
@@ -813,11 +783,10 @@ def dataset_detail_view(request, dataset_id):
                 'patient_count': patient_count,
                 'file_size': file_size,
                 'metadata': metadata,
-                # New rich fields
                 'column_types': column_types,
                 'target_info': target_info,
                 'features_info': features_info,
-                'features_statistics': features_statistics,  # Statistical summary for each feature
+                'features_statistics': features_statistics,
                 'quality_score': quality_score,
                 'completeness_percentage': completeness_percentage,
                 'missing_values': missing_values,
@@ -840,3 +809,78 @@ def dataset_detail_view(request, dataset_id):
     except Exception as e:
         messages.error(request, f"Error loading dataset details: {str(e)}")
         return redirect('datasets')
+
+
+@login_required
+def dataset_info_api(request, dataset_id):
+    """
+    Lightweight API called by Model Designer when ?dataset_id= is in the URL.
+    Returns num_features (input) and num_classes (output) so the designer
+    can pre-fill the first and last Linear layers automatically.
+
+    dataset_id format: "ds-<connection_id>-<safe_dataset_name>"
+    """
+    try:
+        if not dataset_id.startswith('ds-'):
+            return JsonResponse({'success': False, 'error': 'Invalid dataset id format'}, status=400)
+
+        id_without_prefix = dataset_id[3:]
+        parts = id_without_prefix.split('-', 1)
+        if len(parts) != 2:
+            return JsonResponse({'success': False, 'error': 'Invalid dataset id format'}, status=400)
+
+        conn_id_str, safe_dataset_name = parts
+
+        session_datasets = request.session.get('datasets', {})
+        if conn_id_str not in session_datasets:
+            return JsonResponse({'success': False, 'error': 'Dataset not found in session'}, status=404)
+
+        conn_data = session_datasets[conn_id_str]
+        dataset_names = conn_data.get('dataset_name', [])
+        dataset_index = None
+        actual_name = None
+
+        for i, name in enumerate(dataset_names):
+            safe = name.replace(' ', '-').replace('_', '-').lower()
+            safe = re.sub(r'[^a-z0-9-]', '', safe)
+            if safe == safe_dataset_name:
+                dataset_index = i
+                actual_name = name
+                break
+
+        if dataset_index is None:
+            return JsonResponse({'success': False, 'error': 'Dataset not found'}, status=404)
+
+        num_columns = conn_data.get('num_columns', [0])[dataset_index] if isinstance(conn_data.get('num_columns', []), list) else conn_data.get('num_columns', 0)
+        target_column = conn_data.get('target_column', [None])[dataset_index] if isinstance(conn_data.get('target_column', []), list) else conn_data.get('target_column', 'unknown')
+
+        # num_features = all columns minus the target column
+        num_features = max(1, int(num_columns) - 1)
+
+        metadata_raw = conn_data.get('metadata', [{}])[dataset_index] if isinstance(conn_data.get('metadata', []), list) else conn_data.get('metadata', {})
+        metadata = {}
+        if isinstance(metadata_raw, str):
+            try:
+                metadata = json.loads(metadata_raw)
+            except json.JSONDecodeError:
+                pass
+        elif isinstance(metadata_raw, dict):
+            metadata = metadata_raw
+
+        statistical_summary = metadata.get('statistical_summary', {})
+        target_info_raw = statistical_summary.get('target_info', {})
+        num_classes = target_info_raw.get('num_classes', 0) or target_info_raw.get('output_neurons', 0)
+        if not num_classes:
+            num_classes = 2  # safe default for binary classification
+
+        return JsonResponse({
+            'success': True,
+            'dataset_name': actual_name,
+            'num_features': num_features,
+            'num_classes': int(num_classes),
+            'target_column': target_column,
+            'num_columns': int(num_columns),
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

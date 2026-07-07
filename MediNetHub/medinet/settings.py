@@ -22,9 +22,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_DIR = BASE_DIR / 'config'
 
 
-# ==============================================================================
-# SECURITY: SECRET_KEY Configuration
-# ==============================================================================
 # SECURITY WARNING: keep the secret key used in production secret!
 #
 # The SECRET_KEY is loaded from a file for better security:
@@ -61,6 +58,11 @@ SECRET_KEY = load_secret_key()
 DEBUG = True
 
 ALLOWED_HOSTS = ['*'] # TODO: Restrict this to specific domains in production
+
+# Scheme used when the Hub calls MediNetNode REST endpoints.
+# 'http' is fine for local dev; set MEDINET_NODE_SCHEME=https (or rely on
+# DEBUG=False) to enforce HTTPS in production.
+MEDINET_NODE_SCHEME = os.getenv('MEDINET_NODE_SCHEME', 'http' if DEBUG else 'https')
 
 
 # Application definition
@@ -107,6 +109,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'webapp.base_views.notifications_processor',
+                'webapp.context_processors.connections_status',
 
             ],
         },
@@ -119,7 +122,6 @@ WSGI_APPLICATION = 'medinet.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# Original SQLite configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -173,9 +175,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-# ==============================================================================
-# SECURITY: Fernet Encryption Keys Configuration
-# ==============================================================================
 # Encryption key for database field encryption.
 # IMPORTANT: This key must remain fixed for encrypted data to remain valid.
 #
@@ -257,10 +256,6 @@ CACHES = {
     }
 }
 
-# =============================================================================
-# SECURITY SETTINGS - Content Security Policy (CSP)
-# =============================================================================
-
 # Security headers
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -272,7 +267,15 @@ CONTENT_SECURITY_POLICY = {
     'DIRECTIVES': {
         'base-uri': ("'self'",),
         'block-all-mixed-content': True,
-        'connect-src': ("'self'", 'ws:', 'wss:'),
+        'connect-src': (
+            "'self'",
+            'ws:',
+            'wss:',
+            'cdn.jsdelivr.net',
+            'cdnjs.cloudflare.com',
+            'stackpath.bootstrapcdn.com',
+            'code.jquery.com'
+        ),
         'default-src': ("'self'",),
         'font-src': (
             "'self'",
@@ -323,3 +326,40 @@ CONTENT_SECURITY_POLICY = {
 
 # Optional: CSP violation reporting endpoint
 # CSP_REPORT_URI = '/csp-violation-report/'
+
+
+# ── Logging ────────────────────────────────────────────────────────────────
+# Dev (DEBUG=True): verbose console + files. Prod: INFO+ to files only.
+# Never log secrets (API keys, passwords) or patient data at any level.
+LOGS_DIR = BASE_DIR / 'logs'
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {'format': '[{asctime}] {levelname} {name}:{lineno} {message}', 'style': '{'},
+        'simple': {'format': '[{asctime}] {levelname} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG' if DEBUG else 'WARNING',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'hub.log',
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+    },
+    'loggers': {
+        'django': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
+        'django.server': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'webapp': {'handlers': ['console', 'file'], 'level': 'DEBUG' if DEBUG else 'INFO', 'propagate': False},
+    },
+}

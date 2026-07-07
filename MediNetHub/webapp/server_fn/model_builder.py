@@ -6,6 +6,73 @@ from pathlib import Path
 from .json_cleaner import ModelConfigCleaner
 from typing import Dict, List, Any, Union
 
+# Maps UI layer-type strings (from model_designer.html) to PyTorch nn class names.
+# The UI uses snake_case / prefixed names; PyTorch uses PascalCase.
+_UI_TO_PYTORCH: dict = {
+    'linear':               'Linear',
+    # Activation aliases — lowercase UI names used by the test/API configs
+    'relu':                 'ReLU',
+    'sigmoid':              'Sigmoid',
+    'tanh':                 'Tanh',
+    'softmax':              'Softmax',
+    'leakyrelu':            'LeakyReLU',
+    # Conv layers
+    'conv1d':               'Conv1d',
+    'conv2d':               'Conv2d',
+    'conv3d':               'Conv3d',
+    'maxpool1d':            'MaxPool1d',
+    'maxpool2d':            'MaxPool2d',
+    'maxpool3d':            'MaxPool3d',
+    'avgpool1d':            'AvgPool1d',
+    'avgpool2d':            'AvgPool2d',
+    'avgpool3d':            'AvgPool3d',
+    'adaptive_avg_pool1d':  'AdaptiveAvgPool1d',
+    'adaptive_avg_pool2d':  'AdaptiveAvgPool2d',
+    'adaptive_avg_pool3d':  'AdaptiveAvgPool3d',
+    'batch_norm1d':         'BatchNorm1d',
+    'batch_norm2d':         'BatchNorm2d',
+    'batch_norm3d':         'BatchNorm3d',
+    'dropout':              'Dropout',
+    'flatten':              'Flatten',
+    'activation_relu':      'ReLU',
+    'activation_sigmoid':   'Sigmoid',
+    'activation_softmax':   'Softmax',
+    'activation_tanh':      'Tanh',
+    'activation_leakyrelu': 'LeakyReLU',
+    'lstm':                 'LSTM',
+    'gru':                  'GRU',
+}
+
+
+class _LSTMWrapper(nn.Module):
+    """Wraps nn.LSTM so it can live inside nn.Sequential.
+
+    nn.LSTM returns (output, (h_n, c_n)) — a tuple that the next layer in
+    nn.Sequential cannot consume.  This wrapper extracts the last time-step
+    hidden state so the downstream layer sees a plain [B, hidden_size] tensor.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.lstm = nn.LSTM(**kwargs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out, _ = self.lstm(x)
+        return out[:, -1, :]  # last time step → [B, hidden_size]
+
+
+class _GRUWrapper(nn.Module):
+    """Wraps nn.GRU analogously to _LSTMWrapper."""
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.gru = nn.GRU(**kwargs)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out, _ = self.gru(x)
+        return out[:, -1, :]  # last time step → [B, hidden_size]
+
+
 class OperationType:
     """Custom operations that are not direct PyTorch layers"""
     ADD = "Add"
@@ -35,8 +102,7 @@ class DynamicModel(nn.Module):
             config: Either a path to JSON config file, a config dict, or a list of layer configurations
         """
         super(DynamicModel, self).__init__()
-        
-        # Load configuration
+
         if isinstance(config, str):
             with open(config) as f:
                 loaded_config = json.load(f)
@@ -44,16 +110,14 @@ class DynamicModel(nn.Module):
             loaded_config = {"layers": config}
         else:
             loaded_config = config
-        
-        # Handle different JSON structures
+
         if 'model' in loaded_config and 'config_json' in loaded_config['model']:
             self.config = loaded_config['model']['config_json']
         elif 'model' in loaded_config and 'layers' in loaded_config['model']:
             self.config = loaded_config['model']
         else:
             self.config = loaded_config
-            
-        # Store layers in ModuleDict for easy access by ID
+
         self.layers = nn.ModuleDict()
         self.custom_ops = {
             OperationType.ADD: LayerOperations.add,
@@ -73,10 +137,8 @@ class DynamicModel(nn.Module):
             self.cleaned_config = self.config.copy()
             self._add_missing_ids()
             
-        # Create layers from cleaned config
         self._create_layers()
-        
-        # Set output layers
+
         layers = self.cleaned_config.get("architecture", {}).get("layers", [])
         if layers:
             self.output_layers = self.cleaned_config.get("output_layers", [layers[-1]["id"]])
@@ -85,9 +147,8 @@ class DynamicModel(nn.Module):
             
     def _add_missing_ids(self):
         """Add missing IDs to layers that don't have them"""
-        # Get layers from unified structure
         layers = self.cleaned_config.get("architecture", {}).get("layers", [])
-            
+
         for i, layer in enumerate(layers):
             if not layer.get("id"):
                 if layer.get("type") == "input":
@@ -107,9 +168,32 @@ class DynamicModel(nn.Module):
         
     def _create_layers(self):
         """Create all layers defined in the configuration"""
-        # Get layers from unified structure
+        # Get layers from unified structure — same search order as forward()
         layers = self.cleaned_config.get("architecture", {}).get("layers", [])
-            
+        if not layers:
+            layers = self.cleaned_config.get("layers", [])
+        if not layers and "model" in self.cleaned_config:
+            layers = self.cleaned_config["model"].get("layers", [])
+
+        # Auto-assign IDs and inputs for flat-format layers (no "id" field).
+        for i, layer_config in enumerate(layers):
+            if "id" not in layer_config:
+                ltype = layer_config.get("type", "").lower()
+                if ltype == "input":
+                    layer_config["id"] = "input_data"
+                elif i == len(layers) - 1:
+                    layer_config["id"] = "output_layer"
+                else:
+                    layer_config["id"] = f"layer_{i}"
+            if "inputs" not in layer_config:
+                if i == 0:
+                    # Input-type layers are pure pass-throughs; everything else
+                    # must connect to "input_data" (the tensor injected by forward()).
+                    ltype = layer_config.get("type", "").lower()
+                    layer_config["inputs"] = [] if ltype == "input" else ["input_data"]
+                else:
+                    layer_config["inputs"] = [layers[i - 1]["id"]]
+
         for layer_config in layers:
             layer_id = layer_config.get("id")
             if not layer_id:
@@ -131,13 +215,13 @@ class DynamicModel(nn.Module):
 
             layer_params = layer_config.get("params", {})
 
-            # Use layer_type directly as PyTorch class name
-            # model_designer.html now sends PyTorch class names directly (Linear, Conv2d, ReLU, etc.)
-            layer_class = layer_type if layer_type else layer_name
-            
+            # Translate UI type names (e.g. "activation_relu") to PyTorch class names (e.g. "ReLU")
+            raw = layer_type if layer_type else layer_name
+            layer_class = _UI_TO_PYTORCH.get(raw, raw)
+
             # Filter out display-only parameters that aren't valid for PyTorch
             filtered_params = self._filter_pytorch_params(layer_class, layer_params)
-            
+
             try:
                 layer = getattr(nn, layer_class)(**filtered_params)
                 self.layers[layer_id] = layer
@@ -146,14 +230,12 @@ class DynamicModel(nn.Module):
                 
     def _filter_pytorch_params(self, layer_class, params):
         """Filter out parameters that are for display only, not valid PyTorch parameters"""
-        # Remove display-only parameters
         filtered = {k: v for k, v in params.items() if k not in ['features', 'inputs', 'type']}
-        
-        # Layer-specific parameter filtering
+
         if layer_class == 'Linear':
             valid_keys = ['in_features', 'out_features', 'bias', 'device', 'dtype']
             filtered = {k: v for k, v in filtered.items() if k in valid_keys}
-            
+
         elif layer_class in ['Conv1d', 'Conv2d']:
             valid_keys = ['in_channels', 'out_channels', 'kernel_size', 'stride', 'padding', 
                          'dilation', 'groups', 'bias', 'padding_mode', 'device', 'dtype']
@@ -178,50 +260,58 @@ class DynamicModel(nn.Module):
         elif layer_class in ['ReLU', 'Sigmoid', 'Tanh']:
             valid_keys = ['inplace']
             filtered = {k: v for k, v in filtered.items() if k in valid_keys}
-            
+
+        elif layer_class == 'Softmax':
+            valid_keys = ['dim']
+            filtered = {k: v for k, v in filtered.items() if k in valid_keys}
+
         elif layer_class == 'LeakyReLU':
             valid_keys = ['negative_slope', 'inplace']
             filtered = {k: v for k, v in filtered.items() if k in valid_keys}
-            
+
         elif layer_class in ['LSTM', 'GRU']:
-            valid_keys = ['input_size', 'hidden_size', 'num_layers', 'bias', 'batch_first', 
+            valid_keys = ['input_size', 'hidden_size', 'num_layers', 'bias', 'batch_first',
                          'dropout', 'bidirectional', 'proj_size', 'device', 'dtype']
             filtered = {k: v for k, v in filtered.items() if k in valid_keys}
-            
+
+        elif layer_class == 'Flatten':
+            valid_keys = ['start_dim', 'end_dim']
+            filtered = {k: v for k, v in filtered.items() if k in valid_keys}
+
         return filtered
-    
+
     def forward(self, x: torch.Tensor) -> Union[torch.Tensor, List[torch.Tensor]]:
         outputs = {"input_data": x}
 
-        # Handle both flat and nested structures
         layers = self.cleaned_config.get("layers", [])
         if not layers and "architecture" in self.cleaned_config:
             layers = self.cleaned_config["architecture"].get("layers", [])
         if not layers and "model" in self.cleaned_config:
             layers = self.cleaned_config["model"].get("layers", [])
 
-        # Process each layer in order
         for layer_config in layers:
             layer_id = layer_config["id"]
             layer_type = layer_config["type"]
-            
-            # Skip input layer (already handled)
+
             if layer_id == "input_data" or layer_type == "input":
                 continue
-                
-            # Skip output placeholder layer
+
             if layer_type == "output" and layer_config.get("name") == "Output Layer":
                 continue
-            
-            # Get input tensors for this layer
+
             input_tensors = [outputs[input_id] for input_id in layer_config.get("inputs", [])]
-            
-            # Process based on layer type
+
             if layer_type in self.custom_ops:
                 outputs[layer_id] = self.custom_ops[layer_type](input_tensors)
-            elif layer_id in self.layers:  # Only process if layer exists in ModuleDict
+            elif layer_id in self.layers:
                 if len(input_tensors) == 1:
-                    outputs[layer_id] = self.layers[layer_id](input_tensors[0])
+                    raw = self.layers[layer_id](input_tensors[0])
+                    if isinstance(raw, tuple):
+                        # LSTM/GRU return (output [B,L,H], hidden_state).
+                        # Take the last time-step so the downstream layer sees [B, H].
+                        outputs[layer_id] = raw[0][:, -1, :]
+                    else:
+                        outputs[layer_id] = raw
                 else:
                     raise ValueError(f"Layer {layer_id} expects 1 input but got {len(input_tensors)}")
         
@@ -253,7 +343,6 @@ class SequentialModel(nn.Module):
     def __init__(self, config: Union[str, dict, List[dict]]):
         super(SequentialModel, self).__init__()
 
-        # Load configuration
         if isinstance(config, str):
             with open(config) as f:
                 loaded_config = json.load(f)
@@ -262,7 +351,6 @@ class SequentialModel(nn.Module):
         else:
             loaded_config = config
 
-        # Handle different JSON structures
         if 'model' in loaded_config and 'config_json' in loaded_config['model']:
             self.config = loaded_config['model']['config_json']
         elif 'model' in loaded_config and 'layers' in loaded_config['model']:
@@ -281,7 +369,6 @@ class SequentialModel(nn.Module):
         else:
             self.cleaned_config = self.config
 
-        # Build sequential model
         self.model = self._build_sequential()
 
     def _build_sequential(self) -> nn.Sequential:
@@ -304,19 +391,24 @@ class SequentialModel(nn.Module):
                 continue
             if layer_name == "Output Layer":
                 continue
-            
-            # Get layer parameters
+
             layer_params = layer_config.get("params", {})
 
-            # Use layer_type directly as PyTorch class name
-            layer_class = layer_type if layer_type else layer_name
+            # Translate UI type names to PyTorch class names
+            raw = layer_type if layer_type else layer_name
+            layer_class = _UI_TO_PYTORCH.get(raw, raw)
 
-            # Filter parameters for PyTorch
             filtered_params = self._filter_pytorch_params(layer_class, layer_params)
 
             try:
-                # Create PyTorch layer
-                layer = getattr(nn, layer_class)(**filtered_params)
+                # LSTM/GRU return tuples — use wrapper classes that extract
+                # the last time-step so nn.Sequential can pass output forward.
+                if layer_class == 'LSTM':
+                    layer = _LSTMWrapper(**filtered_params)
+                elif layer_class == 'GRU':
+                    layer = _GRUWrapper(**filtered_params)
+                else:
+                    layer = getattr(nn, layer_class)(**filtered_params)
                 pytorch_layers.append(layer)
             except Exception as e:
                 raise ValueError(f"Error creating layer {layer_config.get('id')} of type {layer_type}: {str(e)}")
@@ -325,10 +417,8 @@ class SequentialModel(nn.Module):
 
     def _filter_pytorch_params(self, layer_class, params):
         """Filter out parameters that are for display only, not valid PyTorch parameters"""
-        # Remove display-only parameters
         filtered = {k: v for k, v in params.items() if k not in ['features', 'inputs', 'type', 'category']}
 
-        # Layer-specific parameter filtering
         if layer_class == 'Linear':
             valid_keys = ['in_features', 'out_features', 'bias', 'device', 'dtype']
             filtered = {k: v for k, v in filtered.items() if k in valid_keys}
@@ -372,8 +462,8 @@ class SequentialModel(nn.Module):
             filtered = {k: v for k, v in filtered.items() if k in valid_keys}
 
         elif layer_class == 'Flatten':
-            # Flatten doesn't need parameters typically
-            filtered = {}
+            valid_keys = ['start_dim', 'end_dim']
+            filtered = {k: v for k, v in filtered.items() if k in valid_keys}
 
         return filtered
 

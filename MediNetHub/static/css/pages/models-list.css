@@ -1,0 +1,39 @@
+/* ============================================================
+   Models List page styles
+   ============================================================ */
+
+.model-item.active {
+    background-color: rgba(30,64,175,0.06);
+    outline: 2px solid var(--color-primary);
+}
+
+.layer-box {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.layer-box:hover { background: #e9ecef; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.input-layer      { background-color: #e3f0ff !important; border: 1px solid #c0d8f3 !important; }
+.output-layer     { background-color: #ffe8e8 !important; border: 1px solid #f5d1d1 !important; }
+.hidden-layer     { background-color: #e9f7f0 !important; border: 1px solid #c7e6d7 !important; }
+.conv-layer, .conv1d-layer, .conv2d-layer { background-color: #e6e6fa !important; border: 1px solid #d8d8f3 !important; }
+.norm-layer, .batchnorm1d-layer, .batchnorm2d-layer { background-color: #fff0f5 !important; border: 1px solid #f3d8e3 !important; }
+.pool-layer, .maxpool1d-layer, .maxpool2d-layer, .avgpool1d-layer, .avgpool2d-layer { background-color: #f0fff0 !important; border: 1px solid #d8f3d8 !important; }
+.dropout-layer    { background-color: #fffacd !important; border: 1px solid #f3edb3 !important; }
+.activation-layer, .relu-layer, .sigmoid-layer, .tanh-layer, .leakyrelu-layer { background-color: #ffdead !important; border: 1px solid #f3d8b3 !important; }
+.flatten-layer    { background-color: #e0ffff !important; border: 1px solid #b3f3f3 !important; }
+.recurrent-layer, .lstm-layer, .gru-layer { background-color: #dda0dd !important; border: 1px solid #d8b3f3 !important; }
+.operation-layer, .add-layer, .concat-layer { background-color: #e3f2fd !important; border: 1px solid #0d6efd !important; }
+.layer-connector  { width: 2px; height: 30px; background-color: #adb5bd; margin: 0 auto; }
+.layer-content    { font-weight: 600; margin-bottom: 5px; }
+.layer-features   { font-size: 0.85em; color: #6c757d; }
+.layers-list      { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 20px 10px; height: 600px; min-height: 600px; max-height: 600px; overflow-y: auto; }

@@ -1,0 +1,143 @@
+/* ============================================================
+   Client Dashboard page styles
+   ============================================================ */
+
+.client-sidebar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.client-sidebar-header {
+    padding: var(--space-4);
+    text-align: center;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.client-sidebar-header h5 {
+    font-weight: 600;
+    margin-bottom: 2px;
+    font-size: var(--text-base);
+}
+
+.client-sidebar-header small {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
+.client-list-item {
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--color-border-light);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.client-list-item:hover { background: var(--color-surface-hover); }
+
+.client-list-item.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+.client-list-item.active .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.client-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.status-training  { background-color: var(--color-secondary); }
+.status-completed { background-color: var(--color-success); }
+.status-warning   { background-color: var(--color-warning); }
+.status-error     { background-color: var(--color-danger); }
+.status-offline   { background-color: var(--color-text-muted); }
+
+.metric-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.metric-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: 4px;
+}
+
+.metric-trend { font-size: var(--text-xs); margin-top: 4px; }
+.trend-up   { color: var(--color-success); }
+.trend-down { color: var(--color-danger); }
+.trend-stable { color: var(--color-text-secondary); }
+
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border-light);
+}
+.info-item:last-child { border-bottom: none; margin-bottom: 0; }
+.info-icon  { width: 20px; margin-right: 8px; color: var(--color-accent); }
+.info-label { font-weight: 500; color: var(--color-text-secondary); margin-right: 8px; min-width: 120px; }
+.info-value { color: var(--color-text); font-weight: 600; }
+
+.overview-stats {
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-item {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    text-align: center;
+    padding: var(--space-4);
+    transition: background 0.2s ease;
+    height: 100%;
+}
+.stat-item:hover { background: rgba(255, 255, 255, 0.2); }
+.stat-number { font-size: 1.75rem; font-weight: 700; display: block; }
+.stat-label  { font-size: var(--text-xs); opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.chart-legend-custom {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-weight: 600;
+    font-size: var(--text-sm);
+}
+.legend-item:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.legend-color { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }

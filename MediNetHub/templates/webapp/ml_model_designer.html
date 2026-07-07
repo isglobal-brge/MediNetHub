@@ -3,16 +3,10 @@
 {% load webapp_filters %}
 
 {% block title %}ML Model Designer - MediNet{% endblock %}
+{% block page_title %}ML Model Designer{% endblock %}
 
 {% block extra_css %}
-<style>
-    .param-card {
-        transition: all 0.3s ease;
-    }
-    .param-card.d-none {
-        display: none !important;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/pages/ml-model-designer.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,21 +14,24 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="fas fa-cogs me-2"></i>Machine Learning Model Designer</h2>
+            <h2 class="d-flex align-items-center gap-2">
+                <i data-lucide="cpu" style="width:22px;height:22px;color:var(--color-primary);"></i>
+                Machine Learning Model Designer
+            </h2>
             <p class="text-muted">Configure classic Scikit-learn models for training</p>
         </div>
         <div>
-            <button type="button" class="btn btn-outline-info me-2" id="load-model-btn">
-                <i class="fas fa-folder-open me-1"></i>Load Model
+            <button type="button" class="btn btn-outline-secondary me-2" id="load-model-btn">
+                <i data-lucide="folder-open" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Load Model
             </button>
             <button type="button" class="btn btn-outline-secondary me-2" id="preview-json-btn">
-                <i class="fas fa-code me-1"></i>Preview JSON
+                <i data-lucide="code" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Preview JSON
             </button>
             <button type="button" class="btn btn-primary me-2" id="save-ml-model-btn">
-                <i class="fas fa-save me-1"></i>Save Model
+                <i data-lucide="save" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Save Model
             </button>
             <button type="button" class="btn btn-success" id="go-to-training-btn" disabled>
-                <i class="fas fa-play me-1"></i>Go to Training
+                <i data-lucide="play" class="me-1" style="width:14px;height:14px;vertical-align:middle;"></i>Go to Training
             </button>
         </div>
     </div>
@@ -43,8 +40,10 @@
         <!-- Main Configuration Panel -->
         <div class="col-lg-8">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Algorithm Configuration</h5>
+                <div class="card-header">
+                    <h5 class="mb-0 d-flex align-items-center gap-2">
+                        <i data-lucide="sliders" style="width:16px;height:16px;"></i>Algorithm Configuration
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form id="ml-model-form">
@@ -57,10 +56,8 @@
                             <div class="col-md-4">
                                 <label for="ml-model-algorithm" class="form-label">Algorithm</label>
                                 <select class="form-select" id="ml-model-algorithm">
-                                    <option value="RandomForestClassifier" selected>Random Forest Classifier</option>
-                                    <option value="DecisionTreeClassifier">Decision Tree Classifier</option>
-                                    <option value="KNeighborsClassifier">K-Nearest Neighbors</option>
-                                    <option value="KMeans">K-Means Clustering</option>
+                                    <option value="FedSVMOptMD" selected>FedSVM (Federated SVM OptMD)</option>
+                                    <option value="dp_random_forest">FedDP Random Forest (Differentially Private)</option>
                                 </select>
                             </div>
                         </div>
@@ -75,12 +72,12 @@
                         <h5 class="mb-3">Hyperparameters</h5>
                         <div id="hyperparameters-container">
                             <!-- RandomForestClassifier Parameters -->
-                            <div class="param-card" id="params-RandomForestClassifier">
+                            <div class="param-card d-none" id="params-RandomForestClassifier">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="rfc-n-estimators" class="form-label">
                                             Number of Estimators
-                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="rfc-n-estimators-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
+                                            <i data-lucide="alert-triangle" class="text-warning d-none ms-1 d-none ms-1" id="rfc-n-estimators-warning" style="width:13px;height:13px;" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting for classification tasks. Odd numbers are recommended."></i>
                                         </label>
                                         <input type="number" class="form-control" id="rfc-n-estimators" value="3" min="1">
                                         <div class="form-text">The number of trees in the forest.</div>
@@ -106,107 +103,99 @@
                                 </div>
                             </div>
 
-                            <!-- DecisionTreeClassifier Parameters -->
-                            <div class="param-card d-none" id="params-DecisionTreeClassifier">
+                            <!-- FedSVM OptMD Parameters -->
+                            <div class="param-card" id="params-FedSVMOptMD">
                                 <div class="row g-3">
+                                    <!-- Kernel Selection -->
                                     <div class="col-md-6">
-                                        <label for="dt-criterion" class="form-label">Criterion</label>
-                                        <select class="form-select" id="dt-criterion">
-                                            <option value="gini" selected>Gini</option>
-                                            <option value="entropy">Entropy</option>
+                                        <label for="fedsvm-kernel" class="form-label">Kernel</label>
+                                        <select class="form-select" id="fedsvm-kernel">
+                                            <option value="linear">Linear</option>
+                                            <option value="rbf" selected>RBF (Radial Basis Function)</option>
+                                            <option value="poly">Polynomial</option>
                                         </select>
-                                        <div class="form-text">The function to measure the quality of a split.</div>
+                                        <div class="form-text">Kernel function for the SVM. RBF is recommended for non-linear data.</div>
                                     </div>
+
+                                    <!-- C Parameter -->
                                     <div class="col-md-6">
-                                        <label for="dt-max-depth" class="form-label">Max Depth</label>
-                                        <input type="number" class="form-control" id="dt-max-depth" value="3" placeholder="None" min="1">
-                                        <div class="form-text">The maximum depth of the tree.</div>
+                                        <label for="fedsvm-c" class="form-label">C (Regularization)</label>
+                                        <input type="number" class="form-control" id="fedsvm-c" value="2.0" min="0.1" step="0.1">
+                                        <div class="form-text">Regularization parameter. Higher values = less regularization.</div>
                                     </div>
+
+                                    <!-- Gamma (for RBF/Poly) -->
+                                    <div class="col-md-6" id="fedsvm-gamma-container">
+                                        <label for="fedsvm-gamma" class="form-label">Gamma</label>
+                                        <input type="number" class="form-control" id="fedsvm-gamma" value="0.1" min="0.001" step="0.001">
+                                        <div class="form-text">Kernel coefficient for RBF/Poly. Default: 1/n_features.</div>
+                                    </div>
+
+                                    <!-- Degree (for Poly only) -->
+                                    <div class="col-md-6 d-none" id="fedsvm-degree-container">
+                                        <label for="fedsvm-degree" class="form-label">Degree (Polynomial)</label>
+                                        <input type="number" class="form-control" id="fedsvm-degree" value="3" min="2" max="5">
+                                        <div class="form-text">Degree of the polynomial kernel (2-5).</div>
+                                    </div>
+
+                                    <!-- Server Epsilon -->
                                     <div class="col-md-6">
-                                        <label for="dt-min-samples-split" class="form-label">Min Samples Split</label>
-                                        <input type="number" class="form-control" id="dt-min-samples-split" value="2" min="2">
-                                        <div class="form-text">The minimum number of samples required to split an internal node.</div>
+                                        <label for="fedsvm-server-eps" class="form-label">Server Epsilon (Convergence)</label>
+                                        <input type="number" class="form-control" id="fedsvm-server-eps" value="0.01" min="0.001" step="0.001">
+                                        <div class="form-text">Server convergence threshold (0.001-0.1).</div>
                                     </div>
+
+                                    <!-- Client Epsilon -->
                                     <div class="col-md-6">
-                                        <label for="dt-min-samples-leaf" class="form-label">Min Samples Leaf</label>
-                                        <input type="number" class="form-control" id="dt-min-samples-leaf" value="1" min="1">
-                                        <div class="form-text">The minimum number of samples required to be at a leaf node.</div>
+                                        <label for="fedsvm-client-eps" class="form-label">Client Epsilon (Delta Optimization)</label>
+                                        <input type="number" class="form-control" id="fedsvm-client-eps" value="0.0001" min="0.00001" step="0.00001">
+                                        <div class="form-text">Client delta optimization threshold (0.00001-0.001).</div>
                                     </div>
-                                </div>
-                            </div>
-                            
-                            <!-- KNeighborsClassifier Parameters -->
-                            <div class="param-card d-none" id="params-KNeighborsClassifier">
-                                <div class="row g-3">
+
+                                    <!-- Random Fourier Features -->
                                     <div class="col-md-6">
-                                        <label for="knn-n-neighbors" class="form-label">
-                                            Number of Neighbors (k)
-                                            <i class="fas fa-exclamation-triangle text-warning d-none ms-1" id="knn-k-warning" data-bs-toggle="tooltip" title="Even numbers can cause ties in voting. Odd numbers are recommended."></i>
-                                        </label>
-                                        <input type="number" class="form-control" id="knn-n-neighbors" value="5" min="1">
-                                        <div class="form-text">Number of neighbors to use.</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="knn-weights" class="form-label">Weights</label>
-                                        <select class="form-select" id="knn-weights">
-                                            <option value="uniform" selected>Uniform</option>
-                                            <option value="distance">Distance</option>
-                                        </select>
-                                        <div class="form-text">Weight function used in prediction.</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="knn-metric" class="form-label">Metric</label>
-                                        <select class="form-select" id="knn-metric">
-                                            <option value="minkowski" selected>Minkowski</option>
-                                            <option value="euclidean">Euclidean</option>
-                                            <option value="manhattan">Manhattan</option>
-                                            <option value="chebyshev">Chebyshev</option>
-                                        </select>
-                                        <div class="form-text">The distance metric to use for the tree.</div>
-                                    </div>
-                                    <div class="col-md-6" id="knn-p-container">
-                                        <label for="knn-p" class="form-label">P (for Minkowski metric)</label>
-                                        <input type="number" class="form-control" id="knn-p" value="2" min="1">
-                                        <div class="form-text">Power parameter. (1=Manhattan, 2=Euclidean).</div>
+                                        <label for="fedsvm-n-random-features" class="form-label">Random Fourier Features</label>
+                                        <input type="number" class="form-control" id="fedsvm-n-random-features" value="0" min="0" step="100">
+                                        <div class="form-text">0 = disabled. Use 1000-5000 for large datasets (>10k samples).</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- KMeans Parameters -->
-                            <div class="param-card d-none" id="params-KMeans">
+                            <!-- FedDP Random Forest Parameters -->
+                            <div class="param-card d-none" id="params-dp_random_forest">
                                 <div class="row g-3">
+                                    <!-- Epsilon Total -->
                                     <div class="col-md-6">
-                                        <label for="kmeans-n-clusters" class="form-label">Number of Clusters (k)</label>
-                                        <input type="number" class="form-control" id="kmeans-n-clusters" value="3" min="1">
-                                        <div class="form-text">The number of clusters to form.</div>
+                                        <label for="feddprf-epsilon" class="form-label">
+                                            Epsilon Total (Privacy Budget)
+                                            <i data-lucide="alert-triangle" class="text-danger d-none ms-1 d-none ms-1" id="feddprf-epsilon-error" style="width:13px;height:13px;" data-bs-toggle="tooltip" title="Epsilon must be at least 0.1 for meaningful privacy guarantees"></i>
+                                            <i data-lucide="alert-triangle" class="text-warning d-none ms-1" id="feddprf-epsilon-warning" style="width:13px;height:13px;" data-bs-toggle="tooltip" title="High epsilon values (>= 5.0) provide limited privacy protection"></i>
+                                        </label>
+                                        <input type="number" class="form-control" id="feddprf-epsilon" value="1.0" min="0.1" max="10.0" step="0.1">
+                                        <div class="form-text" id="feddprf-epsilon-help">
+                                            Total privacy budget (0.1-10.0). Lower values = stronger privacy. Recommended: 0.5-2.0.
+                                        </div>
                                     </div>
+
+                                    <!-- Max Depth -->
                                     <div class="col-md-6">
-                                        <label for="kmeans-init" class="form-label">Initialization Method</label>
-                                        <select class="form-select" id="kmeans-init">
-                                            <option value="k-means++" selected>k-means++</option>
-                                            <option value="random">Random</option>
-                                        </select>
-                                        <div class="form-text">Method for initialization.</div>
+                                        <label for="feddprf-max-depth" class="form-label">Max Depth</label>
+                                        <input type="number" class="form-control" id="feddprf-max-depth" value="10" min="1" max="30">
+                                        <div class="form-text">Maximum depth of each tree (1-30). Deeper trees = more complex models.</div>
                                     </div>
+
+                                    <!-- Trees per Client -->
                                     <div class="col-md-6">
-                                        <label for="kmeans-n-init" class="form-label">Number of Initializations</label>
-                                        <input type="number" class="form-control" id="kmeans-n-init" value="10" min="1">
-                                        <div class="form-text">Number of times the algorithm will run. Default is 10.</div>
+                                        <label for="feddprf-n-trees" class="form-label">Trees per Client</label>
+                                        <input type="number" class="form-control" id="feddprf-n-trees" value="10" min="1" max="100">
+                                        <div class="form-text">Number of trees each client trains (1-100).</div>
                                     </div>
+
+                                    <!-- Min Samples Split -->
                                     <div class="col-md-6">
-                                        <label for="kmeans-max-iter" class="form-label">Max Iterations</label>
-                                        <input type="number" class="form-control" id="kmeans-max-iter" value="300" min="1">
-                                        <div class="form-text">Maximum number of iterations for a single run.</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="kmeans-tol" class="form-label">Tolerance</label>
-                                        <input type="number" class="form-control" id="kmeans-tol" value="0.0001" step="0.0001" min="0">
-                                        <div class="form-text">Relative tolerance for convergence.</div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="kmeans-random-state" class="form-label">Random State</label>
-                                        <input type="number" class="form-control" id="kmeans-random-state" placeholder="None for random">
-                                        <div class="form-text">Seed for reproducible random initialization.</div>
+                                        <label for="feddprf-min-samples-split" class="form-label">Min Samples Split</label>
+                                        <input type="number" class="form-control" id="feddprf-min-samples-split" value="2" min="2">
+                                        <div class="form-text">Minimum samples required to split a node (>= 2).</div>
                                     </div>
                                 </div>
                             </div>
@@ -219,12 +208,12 @@
         <!-- Visualization Panel -->
         <div class="col-lg-4">
             <div class="card shadow-sm sticky-top" style="top: 20px;">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Hyperparameter Visualization</h5>
+                <div class="card-header">
+                    <h5 class="mb-0 d-flex align-items-center gap-2"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i>Hyperparameter Visualization</h5>
                 </div>
                 <div class="card-body text-center" style="min-height: 400px;" id="visualization-panel">
                     <div class="d-flex flex-column justify-content-center align-items-center h-100">
-                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <i data-lucide="bar-chart-2" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                         <h6 class="text-muted">Interactive visualizations will appear here.</h6>
                         <p class="text-muted small">Select a hyperparameter to see its effect.</p>
                     </div>
@@ -239,7 +228,7 @@
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Load Machine Learning Model</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="folder-open" style="width:16px;height:16px;"></i>Load Machine Learning Model</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -269,7 +258,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-code me-2"></i>Model Configuration JSON</h5>
+                <h5 class="modal-title d-flex align-items-center gap-2"><i data-lucide="code" style="width:16px;height:16px;"></i>Model Configuration JSON</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -363,6 +352,69 @@ document.addEventListener('DOMContentLoaded', function() {
     if (rfcNEstimatorsInput) {
         rfcNEstimatorsInput.addEventListener('input', function() {
             if(algorithmSelect.value === 'RandomForestClassifier') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add event listeners for FedSVM parameters
+    const fedsvmKernelInput = document.getElementById('fedsvm-kernel');
+    if (fedsvmKernelInput) {
+        fedsvmKernelInput.addEventListener('change', function() {
+            if(algorithmSelect.value === 'FedSVMOptMD') {
+                updateVisualization(algorithmSelect.value);
+            }
+        });
+    }
+
+    // Add epsilon validation for FedDP Random Forest
+    const feddprfEpsilonInput = document.getElementById('feddprf-epsilon');
+    const feddprfEpsilonError = document.getElementById('feddprf-epsilon-error');
+    const feddprfEpsilonWarning = document.getElementById('feddprf-epsilon-warning');
+    const feddprfEpsilonHelp = document.getElementById('feddprf-epsilon-help');
+
+    if (feddprfEpsilonInput) {
+        feddprfEpsilonInput.addEventListener('input', function() {
+            const epsilon = parseFloat(this.value);
+
+            // Reset styles
+            this.classList.remove('is-invalid', 'border-warning');
+            feddprfEpsilonError.classList.add('d-none');
+            feddprfEpsilonWarning.classList.add('d-none');
+            feddprfEpsilonHelp.classList.remove('text-danger', 'text-warning');
+
+            // Validate minimum epsilon (0.1)
+            if (epsilon < 0.1 || isNaN(epsilon)) {
+                this.classList.add('is-invalid');
+                feddprfEpsilonError.classList.remove('d-none');
+                feddprfEpsilonHelp.textContent = 'Epsilon must be at least 0.1 for meaningful privacy guarantees. Lower values provide false security.';
+                feddprfEpsilonHelp.classList.add('text-danger');
+            }
+            // Validate maximum epsilon (10.0)
+            else if (epsilon > 10.0) {
+                this.classList.add('is-invalid');
+                feddprfEpsilonError.classList.remove('d-none');
+                feddprfEpsilonHelp.textContent = 'Epsilon must not exceed 10.0. Higher values provide weaker privacy guarantees.';
+                feddprfEpsilonHelp.classList.add('text-danger');
+            }
+            // Warning for high-risk epsilon (>= 5.0)
+            else if (epsilon >= 5.0) {
+                this.classList.add('border-warning');
+                feddprfEpsilonWarning.classList.remove('d-none');
+                feddprfEpsilonHelp.textContent = 'High epsilon values (>= 5.0) provide limited privacy protection. Consider using a lower value (0.5-2.0) for stronger guarantees.';
+                feddprfEpsilonHelp.classList.add('text-warning');
+            }
+            // Valid range
+            else {
+                feddprfEpsilonHelp.textContent = 'Total privacy budget (0.1-10.0). Lower values = stronger privacy. Recommended: 0.5-2.0.';
+            }
+        });
+    }
+
+    const fedsvmCInput = document.getElementById('fedsvm-c');
+    if (fedsvmCInput) {
+        fedsvmCInput.addEventListener('input', function() {
+            if(algorithmSelect.value === 'FedSVMOptMD') {
                 updateVisualization(algorithmSelect.value);
             }
         });
@@ -668,16 +720,327 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             }
 
+            case 'FedSVMOptMD': {
+                const kernel = document.getElementById('fedsvm-kernel')?.value || 'rbf';
+                const C = parseFloat(document.getElementById('fedsvm-c')?.value) || 2.0;
+                vizContent = document.createElement('div');
+
+                let fedsvmSvgContent = `
+                    <h6 class="text-start mb-2">FedSVM Decision Boundary</h6>
+                    <p class="text-muted small text-start mt-0 mb-2" style="font-size: 0.75rem;">
+                        Support vectors (circled) are closest to the decision boundary. Kernel: <strong>${kernel.toUpperCase()}</strong>
+                    </p>
+                    <svg viewBox="0 0 400 350" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            .data-point-class0 { fill: #0d6efd; stroke: #fff; stroke-width: 1.5; }
+                            .data-point-class1 { fill: #dc3545; stroke: #fff; stroke-width: 1.5; }
+                            .support-vector { stroke: #ffc107; stroke-width: 3; fill: none; }
+                            .decision-boundary { stroke: #198754; stroke-width: 2.5; fill: none; }
+                            .margin-line { stroke: #198754; stroke-width: 1.5; stroke-dasharray: 5,5; fill: none; opacity: 0.6; }
+                            .legend-text { font-size: 10px; font-weight: 600; }
+                            .label-text { font-size: 11px; font-weight: bold; }
+                        </style>
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        <!-- Background region labels -->
+                        <text class="label-text" x="50" y="30" fill="#0d6efd" opacity="0.5">Class 0</text>
+                        <text class="label-text" x="300" y="320" fill="#dc3545" opacity="0.5">Class 1</text>
+                `;
+
+                // Generate data points - SVs are closest to boundary
+                let allPoints = [];
+
+                if (kernel === 'linear') {
+                    // Linear kernel - diagonal boundary (y = x line from top-left to bottom-right)
+                    allPoints = [
+                        // Class 0 (blue) - far from boundary (upper-left region)
+                        {x: 50, y: 70, cls: 0, isSV: false},
+                        {x: 70, y: 90, cls: 0, isSV: false},
+                        {x: 60, y: 50, cls: 0, isSV: false},
+                        {x: 80, y: 110, cls: 0, isSV: false},
+                        // Class 0 - support vectors (ON the upper margin line)
+                        {x: 80, y: 120, cls: 0, isSV: true},
+                        {x: 120, y: 160, cls: 0, isSV: true},
+                        {x: 160, y: 200, cls: 0, isSV: true},
+                        // Class 1 (red) - far from boundary (lower-right region)
+                        {x: 310, y: 270, cls: 1, isSV: false},
+                        {x: 290, y: 250, cls: 1, isSV: false},
+                        {x: 330, y: 290, cls: 1, isSV: false},
+                        {x: 320, y: 310, cls: 1, isSV: false},
+                        // Class 1 - support vectors (ON the lower margin line)
+                        {x: 200, y: 240, cls: 1, isSV: true},
+                        {x: 240, y: 280, cls: 1, isSV: true},
+                        {x: 280, y: 320, cls: 1, isSV: true}
+                    ];
+
+                    // Decision boundary: y = x (diagonal line)
+                    fedsvmSvgContent += `<line class="decision-boundary" x1="50" y1="50" x2="350" y2="350" filter="url(#glow)"/>`;
+                    // Upper margin: y = x - 40 (parallel line above)
+                    fedsvmSvgContent += `<line class="margin-line" x1="50" y1="10" x2="390" y2="350"/>`;
+                    // Lower margin: y = x + 40 (parallel line below)
+                    fedsvmSvgContent += `<line class="margin-line" x1="10" y1="50" x2="350" y2="390"/>`;
+                } else if (kernel === 'rbf') {
+                    // RBF kernel - curved boundary
+                    allPoints = [
+                        // Class 0 (blue) - far from boundary (upper-left region)
+                        {x: 70, y: 75, cls: 0, isSV: false},
+                        {x: 90, y: 95, cls: 0, isSV: false},
+                        {x: 80, y: 55, cls: 0, isSV: false},
+                        {x: 100, y: 115, cls: 0, isSV: false},
+                        // Class 0 - support vectors (ON the upper margin curve)
+                        {x: 130, y: 95, cls: 0, isSV: true},
+                        {x: 155, y: 130, cls: 0, isSV: true},
+                        {x: 165, y: 180, cls: 0, isSV: true},
+                        // Class 1 (red) - far from boundary (lower-right region)
+                        {x: 290, y: 235, cls: 1, isSV: false},
+                        {x: 310, y: 255, cls: 1, isSV: false},
+                        {x: 270, y: 265, cls: 1, isSV: false},
+                        {x: 300, y: 280, cls: 1, isSV: false},
+                        // Class 1 - support vectors (ON the lower margin curve)
+                        {x: 215, y: 210, cls: 1, isSV: true},
+                        {x: 240, y: 245, cls: 1, isSV: true},
+                        {x: 210, y: 265, cls: 1, isSV: true}
+                    ];
+
+                    // Decision boundary curve (S-shape)
+                    fedsvmSvgContent += `<path class="decision-boundary" d="M 150 65 Q 175 100, 185 155 Q 195 210, 175 260" filter="url(#glow)"/>`;
+                    // Upper margin curve (parallel to decision boundary, Class 0 side)
+                    fedsvmSvgContent += `<path class="margin-line" d="M 130 55 Q 155 90, 165 145 Q 175 200, 155 250"/>`;
+                    // Lower margin curve (parallel to decision boundary, Class 1 side)
+                    fedsvmSvgContent += `<path class="margin-line" d="M 170 75 Q 195 110, 205 165 Q 215 220, 195 270"/>`;
+                } else { // poly
+                    // Polynomial kernel - wavy boundary
+                    allPoints = [
+                        // Class 0 (blue) - far from boundary (upper-left region)
+                        {x: 60, y: 110, cls: 0, isSV: false},
+                        {x: 80, y: 130, cls: 0, isSV: false},
+                        {x: 70, y: 90, cls: 0, isSV: false},
+                        {x: 90, y: 150, cls: 0, isSV: false},
+                        // Class 0 - support vectors (ON the upper margin wave)
+                        {x: 125, y: 140, cls: 0, isSV: true},
+                        {x: 145, y: 160, cls: 0, isSV: true},
+                        {x: 165, y: 185, cls: 0, isSV: true},
+                        // Class 1 (red) - far from boundary (lower-right region)
+                        {x: 300, y: 250, cls: 1, isSV: false},
+                        {x: 280, y: 270, cls: 1, isSV: false},
+                        {x: 310, y: 230, cls: 1, isSV: false},
+                        {x: 290, y: 290, cls: 1, isSV: false},
+                        // Class 1 - support vectors (ON the lower margin wave)
+                        {x: 225, y: 215, cls: 1, isSV: true},
+                        {x: 245, y: 235, cls: 1, isSV: true},
+                        {x: 265, y: 260, cls: 1, isSV: true}
+                    ];
+
+                    // Decision boundary (polynomial curve)
+                    fedsvmSvgContent += `<path class="decision-boundary" d="M 150 120 Q 170 145, 185 175 Q 205 210, 235 245" filter="url(#glow)"/>`;
+                    // Upper margin (parallel curve, Class 0 side)
+                    fedsvmSvgContent += `<path class="margin-line" d="M 125 105 Q 145 130, 160 160 Q 180 195, 210 230"/>`;
+                    // Lower margin (parallel curve, Class 1 side)
+                    fedsvmSvgContent += `<path class="margin-line" d="M 175 135 Q 195 160, 210 190 Q 230 225, 260 260"/>`;
+                }
+
+                // Draw all points
+                allPoints.forEach(point => {
+                    const cssClass = point.cls === 0 ? 'data-point-class0' : 'data-point-class1';
+                    fedsvmSvgContent += `<circle class="${cssClass}" cx="${point.x}" cy="${point.y}" r="6"/>`;
+                    if (point.isSV) {
+                        fedsvmSvgContent += `<circle class="support-vector" cx="${point.x}" cy="${point.y}" r="11"/>`;
+                    }
+                });
+
+                // Legend
+                fedsvmSvgContent += `
+                    <g transform="translate(20, 300)">
+                        <circle class="data-point-class0" cx="0" cy="0" r="5"/>
+                        <text class="legend-text" x="10" y="4" fill="#333">Class 0</text>
+
+                        <circle class="data-point-class1" cx="80" cy="0" r="5"/>
+                        <text class="legend-text" x="90" y="4" fill="#333">Class 1</text>
+
+                        <circle cx="160" cy="0" r="5" fill="#666"/>
+                        <circle class="support-vector" cx="160" cy="0" r="10"/>
+                        <text class="legend-text" x="175" y="4" fill="#333">Support Vector</text>
+                    </g>
+                `;
+
+                fedsvmSvgContent += `</svg>`;
+
+                // Add explanation below
+                fedsvmSvgContent += `
+                    <div class="mt-3 p-2" style="background: #f8f9fa; border-radius: 5px; font-size: 0.8rem;">
+                        <strong>How FedSVM works:</strong>
+                        <ul class="mb-0 mt-1" style="padding-left: 1.2rem;">
+                            <li>Each client trains a local SVM on their data</li>
+                            <li>Only <strong>support vectors</strong> (circled points) are shared</li>
+                            <li>Vectors are <strong>perturbed</strong> for privacy (OptMD)</li>
+                            <li>Server aggregates SVs to build global model</li>
+                        </ul>
+                    </div>
+                `;
+
+                vizContent.innerHTML = fedsvmSvgContent;
+                break;
+            }
+
+            case 'dp_random_forest': {
+                const epsilon = parseFloat(document.getElementById('feddprf-epsilon')?.value) || 1.0;
+                const nTrees = parseInt(document.getElementById('feddprf-n-trees')?.value) || 10;
+                const maxDepth = parseInt(document.getElementById('feddprf-max-depth')?.value) || 10;
+                vizContent = document.createElement('div');
+
+                const treesToShow = Math.min(nTrees, 5);
+                const moreTreesText = nTrees > treesToShow ? `(showing ${treesToShow} of ${nTrees})` : `(${nTrees} trees)`;
+
+                let dpForestSvgContent = `
+                    <h6 class="text-start mb-2">FedDP Random Forest - Privacy-Preserving Ensemble <span class="text-muted small">${moreTreesText}</span></h6>
+                    <p class="text-muted small text-start mt-0 mb-2" style="font-size: 0.75rem;">
+                        Each client trains DP trees locally. Server aggregates without accessing raw data. <strong>ε = ${epsilon}</strong>
+                    </p>
+                    <svg viewBox="0 0 500 350" style="width: 100%; height: auto; border: 1px solid #eee; font-family: sans-serif;">
+                        <style>
+                            @keyframes dp-pulse {
+                                0%, 100% { opacity: 0.6; }
+                                50% { opacity: 1; }
+                            }
+                            @keyframes dp-shield {
+                                0%, 100% { transform: scale(1); opacity: 0.8; }
+                                50% { transform: scale(1.1); opacity: 1; }
+                            }
+                            .dp-tree-bg { fill: #f3e5f5; stroke: #9c27b0; stroke-width: 1.5; }
+                            .dp-tree-node { fill: #7b1fa2; }
+                            .dp-tree-leaf { fill: #c8e6c9; stroke: #388e3c; }
+                            .dp-noise { stroke: #ff6b6b; stroke-width: 1; stroke-dasharray: 2,2; opacity: 0.6; }
+                            .dp-shield { fill: #ffeb3b; opacity: 0.8; animation: dp-shield 2s ease-in-out infinite; }
+                            .client-box { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; }
+                            .server-box { fill: #fff3e0; stroke: #f57c00; stroke-width: 2; }
+                            .arrow-dp { stroke: #666; stroke-width: 2; marker-end: url(#arrowhead-dp); }
+                            .label-text { font-size: 11px; font-weight: bold; }
+                            .privacy-text { font-size: 9px; fill: #c62828; font-weight: 600; }
+                            .pulse { animation: dp-pulse 2s ease-in-out infinite; }
+                        </style>
+                        <defs>
+                            <marker id="arrowhead-dp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#666" />
+                            </marker>
+                            <filter id="glow-dp">
+                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                `;
+
+                // Draw clients with trees
+                const clientSpacing = 500 / (treesToShow + 1);
+                for (let i = 0; i < treesToShow; i++) {
+                    const x = (i + 1) * clientSpacing;
+                    const y = 30;
+
+                    dpForestSvgContent += `
+                        <g transform="translate(${x}, ${y})">
+                            <!-- Client box -->
+                            <rect class="client-box" x="-45" y="-5" width="90" height="110" rx="8"/>
+                            <text class="label-text" x="0" y="10" text-anchor="middle" fill="#1976d2">Client ${i + 1}</text>
+
+                            <!-- DP Tree -->
+                            <g transform="translate(0, 25)">
+                                <rect class="dp-tree-bg" x="-35" y="0" width="70" height="65" rx="5"/>
+                                <circle class="dp-tree-node" cx="0" cy="18" r="12" fill="#7b1fa2"/>
+                                <text x="0" y="22" text-anchor="middle" fill="#fff" font-size="9px" font-weight="bold">T${i + 1}</text>
+
+                                <!-- Tree branches -->
+                                <line x1="0" y1="30" x2="-15" y2="50" stroke="#7b1fa2" stroke-width="1.5"/>
+                                <line x1="0" y1="30" x2="15" y2="50" stroke="#7b1fa2" stroke-width="1.5"/>
+                                <circle class="dp-tree-leaf" cx="-15" cy="50" r="6"/>
+                                <circle class="dp-tree-leaf" cx="15" cy="50" r="6"/>
+
+                                <!-- Privacy noise indicator -->
+                                <circle class="dp-noise pulse" cx="0" cy="18" r="16" fill="none"/>
+                            </g>
+
+                            <!-- Privacy shield -->
+                            <path class="dp-shield" d="M -8 92 L 0 86 L 8 92 L 8 98 Q 8 102 0 104 Q -8 102 -8 98 Z" filter="url(#glow-dp)"/>
+                            <text class="privacy-text" x="0" y="102" text-anchor="middle">DP</text>
+                        </g>
+                    `;
+
+                    // Arrow to server
+                    dpForestSvgContent += `<path class="arrow-dp" d="M ${x} 145 Q ${x} 170 250 200" fill="none"/>`;
+                }
+
+                // Server aggregation box
+                dpForestSvgContent += `
+                    <g transform="translate(250, 210)">
+                        <rect class="server-box" x="-80" y="0" width="160" height="50" rx="8"/>
+                        <text class="label-text" x="0" y="18" text-anchor="middle" fill="#f57c00">Federated Server</text>
+                        <text x="0" y="32" text-anchor="middle" font-size="10px" fill="#666">Aggregates DP Trees</text>
+                        <text x="0" y="44" text-anchor="middle" font-size="9px" fill="#c62828" font-weight="600">No Raw Data</text>
+                    </g>
+                `;
+
+                // Arrow to global model
+                dpForestSvgContent += `<path class="arrow-dp" d="M 250 260 L 250 285" fill="none"/>`;
+
+                // Global model
+                dpForestSvgContent += `
+                    <g transform="translate(250, 305)">
+                        <rect x="-90" y="0" width="180" height="35" fill="#e8f5e9" stroke="#388e3c" stroke-width="2" rx="8"/>
+                        <text x="0" y="16" text-anchor="middle" font-size="11px" font-weight="bold" fill="#388e3c">Global DP Forest Model</text>
+                        <text x="0" y="28" text-anchor="middle" font-size="9px" fill="#666">${nTrees} trees • ε=${epsilon} • depth=${maxDepth}</text>
+                    </g>
+                `;
+
+                // Privacy info box
+                dpForestSvgContent += `
+                    <g transform="translate(30, 190)">
+                        <rect x="0" y="0" width="160" height="80" fill="#fff9c4" stroke="#f57c00" stroke-width="1.5" rx="6" opacity="0.95"/>
+                        <text x="80" y="18" text-anchor="middle" font-size="10px" font-weight="bold" fill="#e65100">Privacy Protection</text>
+                        <text x="10" y="35" font-size="8px" fill="#555">• Trees trained locally</text>
+                        <text x="10" y="48" font-size="8px" fill="#555">• DP noise added</text>
+                        <text x="10" y="61" font-size="8px" fill="#555">• Global bounds shared</text>
+                        <text x="10" y="74" font-size="8px" fill="#555">• Data never leaves client</text>
+                    </g>
+                `;
+
+                dpForestSvgContent += `</svg>`;
+
+                // Add explanation text
+                dpForestSvgContent += `
+                    <div class="mt-2 p-2" style="background: #f5f5f5; border-radius: 6px; font-size: 0.8rem;">
+                        <strong>How it works:</strong>
+                        <ul class="mb-0 mt-1" style="font-size: 0.75rem;">
+                            <li>Each client trains <strong>${nTrees} DP decision trees</strong> on local data</li>
+                            <li>Differential privacy (ε=${epsilon}) adds calibrated noise for privacy</li>
+                            <li>Server aggregates trees without seeing raw data</li>
+                            <li>Final model makes predictions via majority voting</li>
+                        </ul>
+                    </div>
+                `;
+
+                vizContent.innerHTML = dpForestSvgContent;
+                break;
+            }
+
             default: {
                 vizContent = document.createElement('div');
                 vizContent.className = 'd-flex flex-column justify-content-center align-items-center h-100';
-                vizContent.innerHTML = `<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                vizContent.innerHTML = `<i data-lucide="bar-chart-2" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                            <h6 class="text-muted">Interactive visualizations will appear here.</h6>
                            <p class="text-muted small">Select an algorithm to see its effect.</p>`;
                 break;
             }
         }
-        
+
         if (vizContent) {
             visualizationPanel.appendChild(vizContent);
         }
@@ -695,6 +1058,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 svcDegreeContainer.style.display = 'none';
             }
         });
+    }
+
+    // Handle FedSVM kernel parameter changes
+    const fedsvmKernelSelect = document.getElementById('fedsvm-kernel');
+    const fedsvmGammaContainer = document.getElementById('fedsvm-gamma-container');
+    const fedsvmDegreeContainer = document.getElementById('fedsvm-degree-container');
+
+    if (fedsvmKernelSelect && fedsvmGammaContainer && fedsvmDegreeContainer) {
+        fedsvmKernelSelect.addEventListener('change', function() {
+            if (this.value === 'linear') {
+                // Hide both gamma and degree for linear kernel
+                fedsvmGammaContainer.style.display = 'none';
+                fedsvmDegreeContainer.classList.add('d-none');
+            } else if (this.value === 'rbf') {
+                // Show gamma, hide degree for RBF
+                fedsvmGammaContainer.style.display = 'block';
+                fedsvmDegreeContainer.classList.add('d-none');
+            } else if (this.value === 'poly') {
+                // Show both gamma and degree for polynomial
+                fedsvmGammaContainer.style.display = 'block';
+                fedsvmDegreeContainer.classList.remove('d-none');
+            }
+        });
+        // Initial check
+        fedsvmKernelSelect.dispatchEvent(new Event('change'));
     }
 
     // Handle special case for KNN 'p' parameter
@@ -784,18 +1172,28 @@ document.addEventListener('DOMContentLoaded', function() {
     saveBtn.addEventListener('click', function() {
         try {
             const modelData = getModelDataFromForm();
-            
+
             // Basic validation
             if (!modelData.basic_info.name) {
                 showMessage('Model Name is a required field.', 'warning');
                 return;
             }
-            
+
             // Validate datasets
             const selectedDatasets = {{ selected_datasets|json_string }};
             if (!selectedDatasets || selectedDatasets.length === 0) {
                 showMessage('No datasets selected. Please go to Datasets section and select at least one dataset before saving the model.', 'warning');
                 return;
+            }
+
+            // Validate epsilon for FedDP Random Forest
+            if (algorithmSelect.value === 'dp_random_forest') {
+                const epsilon = parseFloat(feddprfEpsilonInput.value);
+                if (epsilon < 0.1 || epsilon > 10.0 || isNaN(epsilon)) {
+                    showMessage('Invalid epsilon value. Epsilon must be between 0.1 and 10.0 for meaningful privacy guarantees.', 'error');
+                    feddprfEpsilonInput.focus();
+                    return;
+                }
             }
 
             if (currentModelId) {
@@ -920,6 +1318,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 else if (algorithm === 'DecisionTreeClassifier') prefix = 'dt-';
                 else if (algorithm === 'KNeighborsClassifier') prefix = 'knn-';
                 else if (algorithm === 'KMeans') prefix = 'kmeans-';
+                else if (algorithm === 'FedSVMOptMD') prefix = 'fedsvm-';
+                else if (algorithm === 'dp_random_forest') prefix = 'feddprf-';
 
                 const inputId = prefix + key.replace(/_/g, '-');
                 const inputElement = document.getElementById(inputId);
@@ -930,6 +1330,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         inputElement.value = '';
                     }
                 }
+            }
+
+            // Trigger kernel change event for FedSVM to show/hide degree field
+            if (algorithm === 'FedSVMOptMD' && fedsvmKernelSelect) {
+                fedsvmKernelSelect.dispatchEvent(new Event('change'));
             }
         }
         
@@ -983,6 +1388,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Also trigger the initial visualization render on page load
     updateVisualization(algorithmSelect.value);
+
+    // Render Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 </script>
 

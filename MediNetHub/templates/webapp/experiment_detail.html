@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}MediNet - Experiment Detail{% endblock %}
+{% block page_title %}Experiment Detail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/pages/experiment-detail.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i data-lucide="bar-chart-2" style="width:20px;height:20px;color:var(--color-primary);vertical-align:middle;" class="me-2"></i>Experiment: {{ experiment.name }}</h2>
+            <p class="text-muted">{{ experiment.description }}</p>
+        </div>
+        <div>
+            <a href="{% url 'training' %}" class="btn btn-outline-secondary me-2">
+                <i data-lucide="arrow-left" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Back to Training
+            </a>
+            <button class="btn btn-primary" id="compare-selected-btn" style="border-radius: 8px;">
+                <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Compare Selected
+            </button>
+        </div>
+    </div>
+
+    <!-- Experiment Overview Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Total Jobs</div>
+                    <div class="metric-value text-primary">{{ experiment.total_jobs }}</div>
+                    <div class="small text-muted">{{ experiment.completed_jobs }} completed</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Best Accuracy</div>
+                    <div class="metric-value text-success">{{ experiment.best_accuracy|floatformat:2 }}%</div>
+                    <div class="small text-muted">Top performer</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Progress</div>
+                    <div class="metric-value" style="color: #0d6efd;">{{ experiment.progress }}%</div>
+                    <div class="small text-muted">Overall completion</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card dashboard-card">
+                <div class="card-body text-center py-4">
+                    <div class="metric-label">Status</div>
+                    <div class="metric-value">
+                        <span class="badge bg-{{ experiment.status_color }} p-2">{{ experiment.status|capfirst }}</span>
+                    </div>
+                    <div class="small text-muted">Created: {{ experiment.created }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jobs Comparison Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card dashboard-card">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: white; border-bottom: 1px solid #e9ecef; font-weight: 600;">
+                    <div>
+                        <i data-lucide="list" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Jobs Comparison
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-secondary active" id="view-table-btn">
+                            <i data-lucide="table" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Table
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="view-cards-btn">
+                            <i data-lucide="layout-grid" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Cards
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Cards View (Hidden by default) -->
+                    <div id="cards-view" style="display: none;">
+                        <div class="row">
+                            {% for job in jobs %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card job-comparison-card {% if job.rank == 1 %}rank-1{% elif job.rank == 2 %}rank-2{% elif job.rank == 3 %}rank-3{% endif %}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div class="d-flex align-items-center">
+                                                {% if job.rank <= 3 %}
+                                                <div class="rank-badge {% if job.rank == 1 %}gold{% elif job.rank == 2 %}silver{% elif job.rank == 3 %}bronze{% endif %} me-3">
+                                                    {{ job.rank }}
+                                                </div>
+                                                {% else %}
+                                                <div class="badge bg-secondary me-3" style="font-size: 1rem; padding: 8px 12px;">
+                                                    #{{ job.rank }}
+                                                </div>
+                                                {% endif %}
+                                                <div>
+                                                    <h6 class="mb-0">{{ job.name }}</h6>
+                                                    <small class="text-muted">Job #{{ job.id }}</small>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" class="form-check-input job-select-checkbox" data-job-id="{{ job.id }}" style="width: 20px; height: 20px;">
+                                        </div>
+
+                                        <div class="row mb-3">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Accuracy</small>
+                                                <strong class="text-primary" style="font-size: 1.25rem;">{{ job.accuracy|floatformat:2 }}%</strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Loss</small>
+                                                <strong class="text-danger" style="font-size: 1.25rem;">{{ job.loss|floatformat:4 }}</strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block mb-2">Parameters</small>
+                                            <div>
+                                                {% for key, value in job.params.items %}
+                                                <span class="param-pill">{{ key }}: {{ value }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary flex-fill">
+                                                <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Dashboard
+                                            </a>
+                                            <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary flex-fill">
+                                                <i data-lucide="radio" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Clients
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Table View -->
+                    <div id="table-view">
+                        <div class="table-responsive">
+                            <table class="table table-hover comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="select-all-table" class="form-check-input"></th>
+                                        <th>Rank</th>
+                                        <th>Job Name</th>
+                                        <th>Accuracy</th>
+                                        <th>Loss</th>
+                                        <th>F1 Score</th>
+                                        <th>Parameters</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for job in jobs %}
+                                    <tr>
+                                        <td><input type="checkbox" class="form-check-input job-select-checkbox" data-job-id="{{ job.id }}"></td>
+                                        <td>
+                                            {% if job.rank <= 3 %}
+                                            <span class="rank-badge {% if job.rank == 1 %}gold{% elif job.rank == 2 %}silver{% elif job.rank == 3 %}bronze{% endif %}" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                                                {{ job.rank }}
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ job.rank }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ job.name }}</strong><br>
+                                            <small class="text-muted">#{{ job.id }}</small>
+                                        </td>
+                                        <td><strong class="text-primary">{{ job.accuracy|floatformat:2 }}%</strong></td>
+                                        <td><strong class="text-danger">{{ job.loss|floatformat:4 }}</strong></td>
+                                        <td>{{ job.f1|floatformat:4 }}</td>
+                                        <td>
+                                            {% for key, value in job.params.items %}
+                                            <span class="param-pill">{{ key }}: {{ value }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-outline-primary" title="View detailed metrics">
+                                                    <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;"></i>
+                                                </a>
+                                                <a href="{% url 'client_dashboard' job.id %}" class="btn btn-sm btn-outline-secondary" title="View client details">
+                                                    <i data-lucide="radio" style="width:16px;height:16px;vertical-align:middle;"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Chart Section (Shows when jobs are selected) -->
+    <div class="row mt-4" id="comparison-chart-section" style="display: none;">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3"><i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Selected Jobs Comparison</h5>
+                <canvas id="comparison-chart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const cardsView = document.getElementById('cards-view');
+        const tableView = document.getElementById('table-view');
+        const viewCardsBtn = document.getElementById('view-cards-btn');
+        const viewTableBtn = document.getElementById('view-table-btn');
+        const compareBtn = document.getElementById('compare-selected-btn');
+        const chartSection = document.getElementById('comparison-chart-section');
+
+        let comparisonChart = null;
+
+        // Toggle view
+        viewCardsBtn.addEventListener('click', function() {
+            cardsView.style.display = 'block';
+            tableView.style.display = 'none';
+            viewCardsBtn.classList.add('active');
+            viewTableBtn.classList.remove('active');
+        });
+
+        viewTableBtn.addEventListener('click', function() {
+            cardsView.style.display = 'none';
+            tableView.style.display = 'block';
+            viewTableBtn.classList.add('active');
+            viewCardsBtn.classList.remove('active');
+        });
+
+        // Select all checkbox
+        document.getElementById('select-all-table')?.addEventListener('change', function(e) {
+            document.querySelectorAll('.job-select-checkbox').forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+            });
+        });
+
+        // Compare selected jobs
+        compareBtn.addEventListener('click', function() {
+            const selectedJobs = Array.from(document.querySelectorAll('.job-select-checkbox:checked'))
+                .map(cb => parseInt(cb.dataset.jobId));
+
+            if (selectedJobs.length < 2) {
+                alert('Please select at least 2 jobs to compare');
+                return;
+            }
+
+            // Show chart section and create comparison chart
+            chartSection.style.display = 'block';
+            createComparisonChart(selectedJobs);
+
+            // Scroll to chart
+            chartSection.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        function createComparisonChart(jobIds) {
+            // Destroy existing chart
+            if (comparisonChart) {
+                comparisonChart.destroy();
+            }
+
+            // Get job data from context
+            const jobsData = {{ jobs_json|safe }};
+            const selectedData = jobsData.filter(job => jobIds.includes(job.id));
+
+            const ctx = document.getElementById('comparison-chart').getContext('2d');
+            comparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: selectedData.map(job => job.name),
+                    datasets: [
+                        {
+                            label: 'Accuracy',
+                            data: selectedData.map(job => job.accuracy * 100),
+                            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Loss',
+                            data: selectedData.map(job => job.loss),
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            borderWidth: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Accuracy (%)'
+                            },
+                            min: 0,
+                            max: 100
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Loss'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Make job cards clickable to navigate to dashboard
+        document.querySelectorAll('.job-comparison-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Don't navigate if clicking checkbox or buttons
+                if (e.target.type !== 'checkbox' && !e.target.closest('a') && !e.target.closest('button')) {
+                    const dashboardLink = this.querySelector('a[href*="dashboard"]');
+                    if (dashboardLink) {
+                        window.location.href = dashboardLink.href;
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

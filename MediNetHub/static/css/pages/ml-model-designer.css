@@ -1,0 +1,156 @@
+/* ============================================================
+   ML Model Designer — Shared styles for:
+     - ml_model_designer.html
+     - ml_model_designer_experiment.html
+   ============================================================ */
+
+/* ============================================================
+   1. Page Header
+   ============================================================ */
+
+.ml-page-header {
+    margin-bottom: var(--space-5, 1.5rem);
+}
+
+.ml-page-title {
+    font-size: var(--text-xl, 1.25rem);
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0 0 2px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-sans);
+}
+
+.ml-page-subtitle {
+    font-size: var(--text-sm, 0.875rem);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+/* ============================================================
+   2. Card Headers — replace bg-primary/bg-secondary text-white
+   ============================================================ */
+
+.card-header.bg-primary,
+.card-header.bg-secondary {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+}
+
+.card-header.bg-primary h5,
+.card-header.bg-primary h6,
+.card-header.bg-secondary h5,
+.card-header.bg-secondary h6 {
+    color: var(--color-text) !important;
+    font-weight: 600;
+    font-family: var(--font-sans);
+}
+
+/* ============================================================
+   3. Algorithm param cards
+   ============================================================ */
+
+.param-card {
+    transition: opacity 0.2s ease;
+}
+
+.param-card.d-none {
+    display: none !important;
+}
+
+/* ============================================================
+   4. Visualization placeholder
+   ============================================================ */
+
+#visualization-panel .text-muted {
+    color: var(--color-text-secondary) !important;
+}
+
+/* ============================================================
+   5. Grid Search / Experiment card styling
+   ============================================================ */
+
+.card.border-warning {
+    border-color: rgba(217, 119, 6, 0.3) !important;
+}
+
+.card-header.bg-warning.bg-opacity-10 {
+    background: rgba(217, 119, 6, 0.06) !important;
+    border-bottom: 1px solid rgba(217, 119, 6, 0.2) !important;
+    color: var(--color-text) !important;
+}
+
+.card-header.bg-warning.bg-opacity-10 h5,
+.card-header.bg-warning.bg-opacity-10 h6 {
+    color: var(--color-text) !important;
+    font-weight: 600;
+}
+
+/* Modal header for experiment modal */
+.modal-header.bg-warning.bg-opacity-10 {
+    background: rgba(217, 119, 6, 0.06) !important;
+}
+
+/* ============================================================
+   6. Alert info styling
+   ============================================================ */
+
+.alert.alert-info {
+    background: rgba(8, 145, 178, 0.06);
+    border-color: rgba(8, 145, 178, 0.2);
+    color: var(--color-text);
+}
+
+/* ============================================================
+   7. Experiment summary badge
+   ============================================================ */
+
+.badge.bg-primary {
+    background: var(--color-primary) !important;
+}
+
+/* ============================================================
+   8. Warning / danger icon indicators
+   ============================================================ */
+
+.text-warning {
+    color: var(--color-warning, #d97706) !important;
+}
+
+.text-danger {
+    color: var(--color-danger, #dc2626) !important;
+}
+
+/* ============================================================
+   9. Form control focus — teal ring
+   ============================================================ */
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--color-accent, #0891b2) !important;
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1) !important;
+}
+
+/* ============================================================
+   10. Utility overrides
+   ============================================================ */
+
+.text-primary {
+    color: var(--color-primary, #1e40af) !important;
+}
+
+.card.shadow-sm {
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06)) !important;
+}
+
+.card.bg-light {
+    background: var(--color-surface-hover, #f1f5f9) !important;
+}
+
+/* Visualization panel icon */
+#visualization-panel [data-lucide] {
+    color: var(--color-text-secondary);
+}

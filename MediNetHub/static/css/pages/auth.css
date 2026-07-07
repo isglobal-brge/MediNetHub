@@ -1,0 +1,145 @@
+/* Auth Pages — login, register, logout */
+
+/* === Auth Layout === */
+.auth-wrapper {
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+/* === Auth Card === */
+.auth-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+}
+
+/* === Auth Header === */
+.auth-header {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  text-align: center;
+}
+
+.auth-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary);
+  color: white;
+  margin-bottom: var(--space-4);
+}
+
+.auth-header h4 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.auth-header p {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: var(--space-1) 0 0;
+}
+
+/* === Auth Body === */
+.auth-body {
+  padding: 0 var(--space-8) var(--space-6);
+}
+
+/* === Auth Footer === */
+.auth-footer {
+  padding: var(--space-4) var(--space-8);
+  border-top: 1px solid var(--color-border-light);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+}
+
+.auth-footer a {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.auth-footer a:hover {
+  color: var(--color-secondary);
+}
+
+/* === Input Group === */
+.auth-input-group {
+  position: relative;
+}
+
+.auth-input-group .input-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input-group .form-control {
+  padding-left: calc(var(--space-3) + 20px + var(--space-2));
+}
+
+/* === Password hints === */
+.password-hints {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+}
+
+.password-hints li {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.password-hints li::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* === Logout card === */
+.logout-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-12) var(--space-8);
+  text-align: center;
+}
+
+.logout-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--color-success);
+  margin-bottom: var(--space-6);
+}

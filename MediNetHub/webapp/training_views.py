@@ -3,21 +3,165 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
-from .models import ModelConfig, TrainingJob, Connection, Notification
+from django.http import JsonResponse, HttpResponse, Http404
+from django.views.decorators.http import require_POST
+from .models import ModelConfig, TrainingJob, Connection
+from webapp.server_process import run_flower_server_process
+from webapp.server_fn.server import get_ca_certificate, is_ssl_enabled
 import json
 import time
 import threading
 import random
 from django.utils import timezone
 import requests
-from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 from multiprocessing import Process
 from .decorators import user_rate_limit
-from datetime import datetime, timedelta
-from .base_views import create_notification, sanitize_config_for_client, create_center_specific_config
 import socket
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+def clean_model_json_for_ml(model_json):
+    """
+    Clean model JSON by removing DL-specific fields when model is ML type.
+
+    Args:
+        model_json (dict): Original model configuration
+
+    Returns:
+        dict: Cleaned model configuration
+    """
+    if not isinstance(model_json, dict):
+        return model_json
+
+    model_type = model_json.get('model', {}).get('metadata', {}).get('model_type')
+
+    if model_type != 'ml':
+        return model_json
+
+    cleaned = model_json.copy()
+
+    # Remove DL-specific fields from train section
+    if 'train' in cleaned:
+        train = cleaned['train'].copy()
+        train.pop('epochs', None)
+        train.pop('batch_size', None)
+        cleaned['train'] = train
+
+    # Remove DL-specific fields from model.training section
+    if 'model' in cleaned and 'training' in cleaned['model']:
+        training = cleaned['model']['training'].copy()
+        training.pop('epochs', None)
+        training.pop('batch_size', None)
+        cleaned['model']['training'] = training
+
+    return cleaned
+
+
+def extract_dataset_id_from_model(model_json):
+    """
+    Extract dataset ID from model configuration.
+    
+    Args:
+        model_json (dict): Model configuration JSON
+        
+    Returns:
+        int: Dataset ID or None if not found
+    """
+    try:
+        if isinstance(model_json, dict):
+            # Check model.dataset.selected_datasets[0] structure
+            model_config = model_json.get('model', {})
+            dataset_config = model_config.get('dataset', {})
+            selected_datasets = dataset_config.get('selected_datasets', [])
+            
+            if selected_datasets and len(selected_datasets) > 0:
+                first_dataset = selected_datasets[0]
+                if isinstance(first_dataset, dict):
+                    dataset_id = first_dataset.get('dataset_id')
+                    if dataset_id:
+                        return int(dataset_id)
+            
+            # Check direct dataset_id reference
+            dataset_id = model_json.get('dataset_id')
+            if dataset_id:
+                return int(dataset_id)
+                
+    except Exception as e:
+        logger.error(f"Error extracting dataset ID from model config: {str(e)}")
+        return None
+    
+    return None
+
+
+
+def create_center_specific_config(center_datasets, base_config):
+    """
+    Create configuration containing ONLY data for specific center.
+    Critical for federated learning security - prevents credential/data leakage between centers.
+    """
+    import copy
+    
+    print(f"Creating center-specific config for {len(center_datasets)} datasets")
+    
+    center_config = copy.deepcopy(base_config)
+    
+    # Include only datasets from this specific center (NO other center data)
+    center_config['dataset'] = {
+        'selected_datasets': [{
+            'dataset_name': ds['dataset_name'],
+            'features_info': ds['features_info'],
+            'target_info': ds['target_info'],
+            'num_columns': ds.get('num_columns', 0),
+            'num_rows': ds.get('num_rows', 0),
+            'size': ds.get('size', 0),
+            # SECURITY: NO connection info included to prevent credential leakage
+        } for ds in center_datasets]
+    }
+    
+    # Log security compliance
+    for ds in center_datasets:
+        print(f"[FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
+    
+    return center_config
+
+
+def prepare_center_authentication(connection):
+    """
+    Prepare authentication headers and credentials for center-specific API communication.
+    Follows the same pattern as the datasets function with enhanced security.
+    """
+    headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'MediNet-WebApp/1.0'
+    }
+    auth = None
+    
+    print(f"[AUTH] Preparing authentication for {connection.name}:")
+    print(f"  - IP: {connection.ip}")
+    print(f"  - Port: {connection.port}")
+    print(f"  - Username: {connection.username if connection.username else 'Not set'}")
+    print(f"  - Password: {'Set' if connection.password else 'Not set'}")
+    print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
+
+    # API Key authentication (preferred for external APIs)
+    if connection.api_key:
+        headers['Authorization'] = f'Bearer {connection.api_key}'
+        print("[AUTH] Using API Key authentication")
+
+    # Basic HTTP authentication fallback
+    elif connection.username and connection.password:
+        auth = (connection.username, connection.password)
+        print("[AUTH] Using Basic HTTP authentication")
+
+    else:
+        print("WARNING: [AUTH] No authentication method available")
+    
+    return headers, auth
+
+
 
 def is_running_in_docker():
     """
@@ -93,10 +237,10 @@ def get_server_ip_for_clients():
             try:
                 s.connect(('8.8.8.8', 80))
                 local_ip = s.getsockname()[0]
-                print(f"✅ [LOCAL] Using local network IP: {local_ip}")
+                print(f"[LOCAL] Using local network IP: {local_ip}")
                 return local_ip
             except Exception:
-                print("⚠️ [LOCAL] Using fallback: 127.0.0.1")
+                print("WARNING: [LOCAL] Using fallback: 127.0.0.1")
                 return '127.0.0.1'
             finally:
                 s.close()
@@ -111,9 +255,7 @@ def training(request):
     """
     Training view - allows configuring and starting federated training jobs
     """
-    # Get user's model configurations
     model_configs = ModelConfig.objects.filter(user=request.user)
-    # Recuperar el modelo guardado desde la sesión (solución clara)
     model_id = request.session.get('model_id')
 
     model_json = {}
@@ -127,13 +269,11 @@ def training(request):
             
     connections = Connection.objects.filter(user=request.user, active=True)
 
-    # Obtener los trabajos de entrenamiento del usuario
     training_jobs = TrainingJob.objects.filter(
         user=request.user
     ).order_by('-created_at')[:10]
 
-    # Helpers with detailed descriptions
-    NUM_ROUNDS_HELPER = "Number of federated learning rounds to perform. Each round involves training on selected clients and aggregating their models."
+    NUM_ROUNDS_HELPER ="Number of federated learning rounds to perform. Each round involves training on selected clients and aggregating their models."
     FRACTION_FIT_HELPER = "Fraction of available clients that will be selected for training in each round (0.1 = 10%, 1.0 = 100%)."
     FRACTION_EVALUATE_HELPER = "Fraction of available clients that will be selected for evaluation in each round (0.1 = 10%, 1.0 = 100%)."
     MIN_FIT_CLIENTS_HELPER = "Minimum number of clients required to participate in training for each round to proceed."
@@ -170,11 +310,9 @@ def training(request):
         {'name': 'mape', 'description': 'Mean Absolute Percentage Error', 'category': 'regression'},
     ]
 
-    # Get selected datasets from session
     selected_datasets = request.session.get('selected_datasets', [])
-    print("🔍 DEBUG: selected_datasets: ", selected_datasets)
     context = {
-        'model_json': json.dumps(model_json),  
+        'model_json': json.dumps(model_json),
         'model_configs': model_configs,
         'connections': connections,
         'selected_datasets': selected_datasets,  
@@ -210,10 +348,8 @@ def update_job_status(request, job_id):
                     'error': 'Invalid status'
                 })
             
-            # Actualitzar estat
             job.status = new_status
-            
-            # Actualitzar timestamps
+
             if new_status == 'running' and not job.started_at:
                 job.started_at = timezone.now()
             elif new_status in ['completed', 'failed', 'cancelled'] and not job.completed_at:
@@ -244,9 +380,11 @@ def get_job_metrics(request, job_id):
     API endpoint to get metrics for a training job
     """
     try:
-        job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # Obtenir mètriques
+        job = TrainingJob.objects.get(id=job_id, user=request.user)
+    except TrainingJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    try:
         metrics = []
         if job.metrics_json:
             if isinstance(job.metrics_json, str):
@@ -256,11 +394,11 @@ def get_job_metrics(request, job_id):
                     metrics = []
             else:
                 metrics = job.metrics_json
-        
+
         progress = job.progress
         if job.status == 'completed' and progress != 100:
             progress = 100
-        
+
         return JsonResponse({
             'success': True,
             'metrics': metrics,
@@ -269,7 +407,6 @@ def get_job_metrics(request, job_id):
             'current_round': job.current_round,
             'total_rounds': job.total_rounds
         })
-        
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -277,26 +414,27 @@ def get_job_metrics(request, job_id):
         })
 
 
-@login_required  
+@login_required
 def client_status(request, job_id):
     """
     API endpoint to get client status for a training job
     """
     try:
-        job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # Obtenir estat de clients
+        job = TrainingJob.objects.get(id=job_id, user=request.user)
+    except TrainingJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    try:
         clients = job.clients_status or {}
         #clients = json.loads(job.clients_status) if job.clients_status else {}
-        
+
         return JsonResponse({
             'success': True,
             'clients': clients,
             'client_count': len(clients),
-            'job_status': job.status,  # Inclou l'estat per saber si ha acabat
+            'job_status': job.status,
             'is_complete': job.status in ['completed', 'failed', 'cancelled']
         })
-        
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -371,22 +509,18 @@ def download_model(request, job_id):
     """
     try:
         job = TrainingJob.objects.get(id=job_id)
-        
-        # Check that the user has access to this job
+
         if job.user != request.user:
             messages.error(request, "You don't have permission to access this model.")
             return redirect('training')
-        
-        # Check that the job is completed
+
         if job.status != 'completed':
             messages.error(request, "This model has not yet completed training.")
             return redirect('job_detail', job_id=job_id)
-        
-        # Generate a simple model file with the configuration and metrics
+
         response = HttpResponse(content_type='application/json')
         response['Content-Disposition'] = f'attachment; filename="medinet_model_{job_id}.json"'
-        
-        # Create a model representation with metadata and metrics
+
         model_data = {
             'model_id': job_id,
             'name': job.name,
@@ -446,6 +580,28 @@ def download_metrics(request, job_id):
         return redirect('job_detail', job_id=job_id)
 
 
+def find_free_flower_port(start=8080, end=8099):
+    """Pick a free Flower-server port, skipping ports claimed by active jobs and
+    ports with a live listener. Returns None if the whole range is in use."""
+    claimed = set()
+    for job in TrainingJob.objects.filter(status__in=['pending', 'server_ready', 'running']):
+        try:
+            p = (job.config_json or {}).get('server', {}).get('port')
+            if p:
+                claimed.add(int(p))
+        except (TypeError, ValueError, AttributeError):
+            pass
+    for port in range(start, end + 1):
+        if port in claimed:
+            continue
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.2)
+            if probe.connect_ex(('127.0.0.1', port)) == 0:
+                continue  # already listening
+        return port
+    return None
+
+
 @login_required
 @user_rate_limit(rate=settings.RATE_LIMITS['START_TRAINING'], method='POST', block=True)
 def start_training(request):
@@ -465,7 +621,6 @@ def start_training(request):
             if not name:
                 return JsonResponse({'success': False, 'error': 'Job name is required'})
             
-            # Get model config
             model_config = get_object_or_404(ModelConfig, id=model_config_id, user=request.user)
             
             if 'model' not in config:
@@ -478,27 +633,23 @@ def start_training(request):
             clients_config = {}
             clients_status = {}
             
-            print(f"🎯 START_TRAINING: Generating IDs for {len(selected_datasets)} datasets")
+            print(f"START_TRAINING: Generating IDs for {len(selected_datasets)} datasets")
             
             for i, dataset in enumerate(selected_datasets):
                 connection_info = dataset.get('connection', {})
-                
-                # Generar ID único para el cliente
+
                 import uuid
                 client_id = f"client_{uuid.uuid4().hex[:8]}"
-                
-                print(f"🆔 GENERATED ID: {client_id} → {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
-                
-                # Guardar configuración del cliente
+
+                print(f"GENERATED ID: {client_id} -> {connection_info.get('name', 'Unknown')} ({connection_info.get('ip', 'No IP')})")
+
                 clients_config[client_id] = {
                     'connection_name': connection_info.get('name', ''),
                     'connection_ip': connection_info.get('ip', ''),
                     'connection_port': connection_info.get('port', 0),
                     'dataset_name': dataset.get('dataset_name', '')
                 }
-                
-                # Inicializar estado del cliente
-                from django.utils import timezone
+
                 clients_status[client_id] = {
                     'client_id': client_id,
                     'connection_name': connection_info.get('name', ''),
@@ -516,42 +667,59 @@ def start_training(request):
                     'created_at': timezone.now().isoformat()
                 }
                 
-            print(f"📋 CLIENTS_CONFIG: {clients_config}")
-            print(f"📊 CLIENTS_STATUS initialized with {len(clients_status)} clients")
+            print(f"CLIENTS_CONFIG: {clients_config}")
+            print(f"CLIENTS_STATUS initialized with {len(clients_status)} clients")
             
+            model_config = clean_model_json_for_ml(model_config)
+
+            # Dedicated port per job so concurrent trainings don't collide on 8080.
+            # The client reads this same field to know where to connect.
+            server_cfg = config.setdefault('server', {})
+            server_cfg.setdefault('host', '0.0.0.0')
+            if not server_cfg.get('port'):
+                free_port = find_free_flower_port()
+                if free_port is None:
+                    return JsonResponse({'success': False, 'error': 'No hay puertos libres (8080-8099) para el servidor de entrenamiento. Espera a que termine algún entrenamiento en curso.'})
+                server_cfg['port'] = free_port
+
             training_job = TrainingJob.objects.create(
                 user=request.user,
                 model_config=model_config,
                 name=name,
                 description=description,
                 dataset_id=dataset_id,
-                dataset_ids=selected_datasets,  # Store selected datasets
-                config_json=config,             # Store full config
-                total_rounds=total_rounds,      # Store total rounds
-                status='pending',               # Initial status
-                progress=0,                     # Initial progress
-                clients_config=clients_config,  # NUEVO: Configuración de clientes
-                clients_status=clients_status   # NUEVO: Estado inicial de clientes
+                dataset_ids=selected_datasets,
+                config_json=config,
+                total_rounds=total_rounds,
+                status='pending',
+                progress=0,
+                clients_config=clients_config,
+                clients_status=clients_status
             )
             
             # Use real Flower server in separate process
-            from webapp.server_process import run_flower_server_process
             server_process = Process(target=run_flower_server_process, args=(training_job.id,))
             server_process.start()
             
             # Store process PID in training job for cleanup
             training_job.server_pid = server_process.pid
             training_job.save()
-            print(f"🔧 Server process started with PID: {server_process.pid}")
+            print(f"Server process started with PID: {server_process.pid}")
             
-            # Monitor process in background thread
-            activate_clients_for_training(training_job, server_process)
+            # Activate clients in background thread (non-blocking — returns HTTP response immediately)
+            activation_thread = threading.Thread(
+                target=activate_clients_for_training,
+                args=(training_job, server_process),
+                daemon=True,
+            )
+            activation_thread.start()
+
             def monitor_server_process():
                 try:
-                    server_process.join()  # Wait for process to finish
-                    print(f"✅ Flower server process completed")
+                    server_process.join()
+                    print("[INFO] Flower server process completed")
                 except Exception as e:
-                    print(f"❌ Error in server process: {str(e)}")
+                    print(f"[ERROR] server process: {str(e)}")
                     # Update job status if process fails
                     training_job.refresh_from_db()
                     if training_job.status not in ['completed', 'failed']:
@@ -560,11 +728,11 @@ def start_training(request):
                         training_job.save()
                         # Kill the server process if it's still running
                         if server_process.is_alive():
-                            print(f"🔪 Terminating server process PID: {server_process.pid}")
+                            print(f"[INFO] Terminating server process PID: {server_process.pid}")
                             server_process.terminate()
                             server_process.join(timeout=5)
                             if server_process.is_alive():
-                                print(f"🔪 Force killing server process PID: {server_process.pid}")
+                                print(f"[INFO] Force killing server process PID: {server_process.pid}")
                                 server_process.kill()
             
             monitor_thread = threading.Thread(target=monitor_server_process)
@@ -601,6 +769,200 @@ def dashboard(request, job_id):
 
 
 @login_required
+@require_POST
+def request_budget_reset_proxy(request):
+    """
+    Proxy a researcher's budget-reset request from Hub to the relevant MediNetNode.
+
+    Expects JSON body:
+        connection_ip   (str)  — Node IP
+        connection_port (int)  — Node port
+        dataset_id      (int)  — Node-side dataset PK (from budget_exhausted_nodes)
+        reason          (str)  — Researcher's justification (max 1000 chars)
+
+    Returns the Node's JSON response verbatim (201 on success, 4xx on error).
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    connection_ip = body.get('connection_ip', '').strip()
+    connection_port = body.get('connection_port')
+    dataset_id = body.get('dataset_id')
+    reason = body.get('reason', '').strip()
+
+    if not connection_ip or not connection_port:
+        return JsonResponse({'error': 'connection_ip and connection_port are required'}, status=400)
+    if not isinstance(dataset_id, int):
+        return JsonResponse({'error': 'dataset_id must be an integer'}, status=400)
+    if not reason:
+        return JsonResponse({'error': 'reason is required'}, status=400)
+    if len(reason) > 1000:
+        return JsonResponse({'error': 'reason must be 1000 characters or fewer'}, status=400)
+
+    # Look up the Connection object so we can authenticate with the Node's API key
+    connection = Connection.objects.filter(
+        ip=connection_ip,
+        port=connection_port,
+        user=request.user,
+        active=True,
+    ).first()
+
+    if not connection:
+        return JsonResponse({'error': 'Connection not found'}, status=404)
+
+    if not connection.api_key:
+        return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
+
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection_ip}:{connection_port}/api/v2/budget-reset/"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-API-Key': connection.api_key,
+        'User-Agent': 'MediNet-Hub/1.0',
+    }
+    payload = {'dataset_id': dataset_id, 'reason': reason}
+
+    try:
+        response = requests.post(node_url, json=payload, headers=headers, timeout=10)
+        try:
+            data = response.json()
+        except Exception:
+            data = {'raw': response.text[:500]}
+        return JsonResponse(data, status=response.status_code)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Could not connect to Node'}, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Node request timed out'}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({'error': f'Request failed: {exc}'}, status=502)
+
+
+@login_required
+def budget_status_proxy(request):
+    """
+    Proxy GET /api/v2/budget-status/ from the Hub to the relevant MediNetNode.
+
+    Query parameters:
+        connection_ip   (str)  — Node IP
+        connection_port (int)  — Node port
+
+    Returns the Node's JSON response verbatim (list of per-dataset budgets).
+    """
+    connection_ip = request.GET.get('connection_ip', '').strip()
+    connection_port = request.GET.get('connection_port', '').strip()
+
+    if not connection_ip or not connection_port:
+        return JsonResponse({'error': 'connection_ip and connection_port are required'}, status=400)
+
+    try:
+        connection_port_int = int(connection_port)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'connection_port must be an integer'}, status=400)
+
+    connection = Connection.objects.filter(
+        ip=connection_ip,
+        port=connection_port_int,
+        user=request.user,
+        active=True,
+    ).first()
+
+    if not connection:
+        return JsonResponse({'error': 'Connection not found'}, status=404)
+    if not connection.api_key:
+        return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
+
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection_ip}:{connection_port_int}/api/v2/budget-status/"
+    headers = {
+        'X-API-Key': connection.api_key,
+        'User-Agent': 'MediNet-Hub/1.0',
+    }
+
+    try:
+        response = requests.get(node_url, headers=headers, timeout=10)
+        try:
+            data = response.json()
+        except Exception:
+            data = {'raw': response.text[:500]}
+        return JsonResponse(data, status=response.status_code)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Could not connect to Node'}, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Node request timed out'}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({'error': f'Request failed: {exc}'}, status=502)
+
+
+@login_required
+@require_POST
+def estimate_epsilon_proxy(request):
+    """
+    Proxy POST /api/v2/estimate-epsilon/ from the Hub to the relevant MediNetNode.
+
+    Expects JSON body:
+        connection_ip   (str)  — Node IP
+        connection_port (int)  — Node port
+        dataset_name    (str)  — Name of the dataset on the Node
+        model_json      (obj)  — Training config (same shape as start-client)
+
+    Returns the Node's JSON response: {estimated_epsilon, delta, dataset_id, dataset_size}
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    connection_ip = body.get('connection_ip', '').strip()
+    connection_port = body.get('connection_port')
+    dataset_name = body.get('dataset_name', '').strip()
+    model_json = body.get('model_json')
+
+    if not connection_ip or not connection_port:
+        return JsonResponse({'error': 'connection_ip and connection_port are required'}, status=400)
+    if not dataset_name:
+        return JsonResponse({'error': 'dataset_name is required'}, status=400)
+
+    try:
+        connection_port_int = int(connection_port)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'connection_port must be an integer'}, status=400)
+
+    connection = Connection.objects.filter(
+        ip=connection_ip,
+        port=connection_port_int,
+        user=request.user,
+        active=True,
+    ).first()
+
+    if not connection:
+        return JsonResponse({'error': 'Connection not found'}, status=404)
+    if not connection.api_key:
+        return JsonResponse({'error': 'Connection has no API key configured'}, status=400)
+
+    node_url = f"{settings.MEDINET_NODE_SCHEME}://{connection_ip}:{connection_port_int}/api/v2/estimate-epsilon/"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-API-Key': connection.api_key,
+        'User-Agent': 'MediNet-Hub/1.0',
+    }
+    payload = {'dataset_name': dataset_name, 'model_json': model_json}
+
+    try:
+        response = requests.post(node_url, json=payload, headers=headers, timeout=10)
+        try:
+            data = response.json()
+        except Exception:
+            data = {'raw': response.text[:500]}
+        return JsonResponse(data, status=response.status_code)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({'error': 'Could not connect to Node'}, status=503)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Node request timed out'}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({'error': f'Request failed: {exc}'}, status=502)
+
+
+@login_required
 def delete_job(request, job_id):
     """
     Delete a training job
@@ -628,23 +990,24 @@ def api_job_details(request, job_id):
     API endpoint to get job details
     """
     try:
-        job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
-        
-        # Parse metrics
+        job = TrainingJob.objects.get(id=job_id, user=request.user)
+    except TrainingJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+    try:
         metrics = []
         if job.metrics_json:
             try:
                 metrics = json.loads(job.metrics_json)
             except json.JSONDecodeError:
                 metrics = []
-        
-        # Calculate training duration
+
         duration = None
         if job.started_at and job.completed_at:
             duration = (job.completed_at - job.started_at).total_seconds()
         elif job.started_at:
             duration = (timezone.now() - job.started_at).total_seconds()
-        
+
         data = {
             'id': job.id,
             'name': job.name,
@@ -656,9 +1019,8 @@ def api_job_details(request, job_id):
             'metrics': metrics,
             'model_name': job.model_config.name if job.model_config else 'Unknown'
         }
-        
+
         return JsonResponse(data)
-        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -677,7 +1039,6 @@ def manage_job_artifacts(request, job_id):
             # In a real implementation, this would delete actual model files
             messages.success(request, 'Job artifacts would be deleted (not implemented)')
         elif action == 'archive_job':
-            # Archive the job
             job.archived = True
             job.save()
             messages.success(request, f'Job "{job.name}" archived successfully.')
@@ -693,22 +1054,21 @@ def client_dashboard(request, job_id):
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
         
-        # 🔍 DEBUG: Log real data from database
-        print(f"🌐 CLIENT_DASHBOARD: Job {job_id} requested")
-        print(f"📋 Job status: {job.status}")
-        print(f"📋 Job clients_status type: {type(job.clients_status)}")
-        print(f"📋 Job clients_status: {job.clients_status}")
-        print(f"📋 Job clients_config: {job.clients_config}")
-        
-        # 📊 Get real client data from database
+        # DEBUG: Log real data from database
+        print(f"CLIENT_DASHBOARD: Job {job_id} requested")
+        print(f"Job status: {job.status}")
+        print(f"Job clients_status type: {type(job.clients_status)}")
+        print(f"Job clients_status: {job.clients_status}")
+        print(f"Job clients_config: {job.clients_config}")
+
+        # Get real client data from database
         clients = []
         clients_status = job.clients_status or {}
         clients_config = job.clients_config or {}
         
-        print(f"📊 Processing {len(clients_status)} clients from database")
+        print(f"Processing {len(clients_status)} clients from database")
         
         for client_id, status_data in clients_status.items():
-            # Get connection info from clients_config
             config_data = clients_config.get(client_id, {})
             connection_name = config_data.get('connection_name', 'Unknown')
             connection_ip = config_data.get('connection_ip', 'unknown')
@@ -737,9 +1097,9 @@ def client_dashboard(request, job_id):
             }
             
             clients.append(client_data)
-            print(f"📊 Client processed: {client_id} → {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
+            print(f"Client processed: {client_id} -> {connection_name} | Status: {client_data['status']} | Acc: {client_data['accuracy']}%")
         
-        print(f"📊 Total clients processed: {len(clients)}")
+        print(f"Total clients processed: {len(clients)}")
         
         # Estadísticas generales usando datos reales
         total_clients = len(clients)
@@ -760,7 +1120,6 @@ def client_dashboard(request, job_id):
         
         # Extract real performance data from clients' rounds_history
         if clients:
-            # Get the maximum number of rounds from any client
             max_rounds = 0
             for client in clients:
                 client_status = clients_status.get(client['id'], {})
@@ -786,20 +1145,20 @@ def client_dashboard(request, job_id):
                     performance_chart_data['accuracy'].append(sum(round_accuracies) / len(round_accuracies))
                     performance_chart_data['loss'].append(sum(round_losses) / len(round_losses))
         
-        print(f"📊 PERFORMANCE_CHART_DATA: {len(performance_chart_data['labels'])} rounds of real data")
+        print(f"PERFORMANCE_CHART_DATA: {len(performance_chart_data['labels'])} rounds of real data")
         
         context = {
             'job': job,
             'job_id': job_id,
-            'clients': clients,  # Use real clients instead of dummy
+            'clients': clients,
             'overview_stats': overview_stats,
             'performance_chart_data': performance_chart_data,
             'total_rounds': job.total_rounds or 10
         }
         
-        print(f"📊 CONTEXT SENT: {len(clients)} clients, avg_accuracy: {avg_accuracy:.1f}%")
-        print(f"📊 SAMPLE CLIENT DATA: {clients[0] if clients else 'No clients'}")
-        print(f"📊 CHART DATA SAMPLE: Accuracy R1: {performance_chart_data['accuracy'][0] if performance_chart_data['accuracy'] else 'No data'}")
+        print(f"CONTEXT SENT: {len(clients)} clients, avg_accuracy: {avg_accuracy:.1f}%")
+        print(f"SAMPLE CLIENT DATA: {clients[0] if clients else 'No clients'}")
+        print(f"CHART DATA SAMPLE: Accuracy R1: {performance_chart_data['accuracy'][0] if performance_chart_data['accuracy'] else 'No data'}")
         
         return render(request, 'webapp/client_dashboard.html', context)
         
@@ -817,7 +1176,6 @@ def get_clients_data(request, job_id):
     try:
         job = get_object_or_404(TrainingJob, id=job_id, user=request.user)
         
-        # Parse client data
         client_data = []
         if job.client_data:
             try:
@@ -875,13 +1233,13 @@ def activate_clients_for_training(training_job, server_process=None):
     """
     try:
         # Wait for server to be ready (with timeout and failure check)
-        print(f"🔍 Waiting for server to be ready. Current status: {training_job.status}")
+        print(f"Waiting for server to be ready. Current status: {training_job.status}")
         timeout = 60  # 30 seconds timeout
         start_time = time.time()
         
         while training_job.status not in ['server_ready', 'failed', 'cancelled']:
             if time.time() - start_time > timeout:
-                print(f"⏰ Timeout waiting for server to be ready")
+                print(f"Timeout waiting for server to be ready")
                 training_job.status = 'failed'
                 training_job.logs = "Timeout waiting for server to start"
                 training_job.save()
@@ -889,25 +1247,24 @@ def activate_clients_for_training(training_job, server_process=None):
                 
             time.sleep(5)
             training_job.refresh_from_db()
-            print(f"🔍 Checking status: {training_job.status}")
+            print(f"Checking status: {training_job.status}")
         
         # Check if server failed to start
         if training_job.status in ['failed', 'cancelled']:
-            print(f"❌ Server failed to start. Status: {training_job.status}")
+            print(f"ERROR: Server failed to start. Status: {training_job.status}")
             return
         
         # Give additional time for server to fully start listening
         print(f"Server ready, waiting additional 5 seconds for full startup...")
         time.sleep(5)
         
-        print(f"[SECURE] activate_clients_for_training - using new authenticated API")
+        print("[SECURE] activate_clients_for_training - using new authenticated API")
         print(f"training_job: {training_job}")
         
         if not training_job.dataset_ids:
-            print(f"⚠️ No dataset_ids found in training job")
+            print("WARNING: No dataset_ids found in training job")
             return
         
-        # Parse selected datasets
         if isinstance(training_job.dataset_ids, str):
             selected_datasets = json.loads(training_job.dataset_ids)
         else:
@@ -930,6 +1287,7 @@ def activate_clients_for_training(training_job, server_process=None):
         # Track client activation results
         activated_clients = []
         failed_clients = []
+        budget_exhausted_nodes = []
 
         # Get server address for clients (automatically detects Docker vs non-Docker)
         server_ip = get_server_ip_for_clients()
@@ -940,7 +1298,7 @@ def activate_clients_for_training(training_job, server_process=None):
             server_port = server_config.get('port', 8080)
 
         client_server_address = f"{server_ip}:{server_port}"
-        print(f"🌐 [SERVER_ADDRESS] Clients will connect to: {client_server_address}")
+        print(f"[SERVER_ADDRESS] Clients will connect to: {client_server_address}")
 
         # Activate each client with secure, center-specific configuration
         for conn_key, conn in unique_connections.items():
@@ -956,11 +1314,11 @@ def activate_clients_for_training(training_job, server_process=None):
                     break
             
             if not client_id:
-                print(f"❌ CLIENT_ID not found for {conn['name']} ({conn['ip']}:{conn['port']})")
+                print(f"ERROR: CLIENT_ID not found for {conn['name']} ({conn['ip']}:{conn['port']})")
                 failed_clients.append(f"{conn['name']} (No client_id)")
                 continue
                 
-            print(f"🆔 FOUND CLIENT_ID: {conn['name']} → {client_id}")
+            print(f"FOUND CLIENT_ID: {conn['name']} -> {client_id}")
             
             # 🔐 SECURITY: Get center-specific credentials from database
             try:
@@ -969,9 +1327,9 @@ def activate_clients_for_training(training_job, server_process=None):
                     port=conn['port'], 
                     user=training_job.user
                 )
-                print(f"✅ [AUTH] Retrieved credentials for {connection_obj.name}")
+                print(f"[AUTH] Retrieved credentials for {connection_obj.name}")
             except Connection.DoesNotExist:
-                print(f"❌ [AUTH] No credentials found for {conn['name']} ({conn['ip']}:{conn['port']})")
+                print(f"ERROR: [AUTH] No credentials found for {conn['name']} ({conn['ip']}:{conn['port']})")
                 failed_clients.append(f"{conn['name']} (No credentials in database)")
                 continue
             
@@ -1002,21 +1360,39 @@ def activate_clients_for_training(training_job, server_process=None):
                 "client_id": client_id,
                 "center_datasets": [ds['dataset_name'] for ds in center_datasets]  # All datasets for this center
             }
-            
-            print(f"📋 [SECURE] Client will connect to: {client_server_address}")
-            print(f"📋 [SECURE] Sending center-specific config with {len(center_datasets)} datasets")
-            print(f"📋 [SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
+
+            # Add SSL/TLS CA certificate if SSL is enabled
+            if is_ssl_enabled():
+                ca_cert = get_ca_certificate()
+                if ca_cert:
+                    client_config["ca_cert"] = ca_cert
+                    client_config["ssl_enabled"] = True
+                    print("[SSL] Including CA certificate for secure connection")
+                else:
+                    client_config["ssl_enabled"] = False
+                    print("WARNING: [SSL] SSL enabled but CA certificate not available")
+            else:
+                client_config["ssl_enabled"] = False
+                print("[SSL] SSL disabled, client will connect without TLS")
+
+            print(f"[SECURE] Client will connect to: {client_server_address}")
+            print(f"[SECURE] Sending center-specific config with {len(center_datasets)} datasets")
+            print(f"[SECURE] Center datasets: {[ds['dataset_name'] for ds in center_datasets]}")
+            print(f"[SECURE] SSL enabled: {client_config.get('ssl_enabled', False)}")
 
             # Validate port in allowed range (5000-5099)
             if not (5000 <= int(conn['port']) <= 5099):
-                print(f"❌ Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
+                print(f"ERROR: Port {conn['port']} not in allowed range (5000-5099) for {conn['name']}")
                 failed_clients.append(f"{conn['name']} (Invalid port)")
                 continue
             
-            # 🚀 NEW API: Use authenticated /api/v1/start-client endpoint
-            client_url = f"http://{conn['ip']}:{conn['port']}/api/v1/start-client"
-            print(f"🌐 [API] Making authenticated request to: {client_url}")
-            print(f"📋 [API] Headers: {auth_config.headers}")
+            # 🚀 Use authenticated /api/v2/start-client endpoint
+            client_url = f"{settings.MEDINET_NODE_SCHEME}://{conn['ip']}:{conn['port']}/api/v2/start-client"
+            print(f"[API] Making authenticated request to: {client_url}")
+            # Redact credentials — API keys must never reach logs/console.
+            safe_headers = {k: ('***' if k.lower() in ('x-api-key', 'authorization') else v)
+                            for k, v in auth_config.headers.items()}
+            print(f"[API] Headers: {safe_headers}")
             
             try:
                 # Make authenticated request with center-specific credentials
@@ -1025,41 +1401,60 @@ def activate_clients_for_training(training_job, server_process=None):
                     json=client_config,
                     headers=auth_config.headers,
                     auth=auth_config.basic_auth,
-                    timeout=10
+                    # cold node may pay a first-time opacus/torch import
+                    timeout=75
                 )
                 
-                print(f"📡 [API] Response status: {response.status_code}")
-                print(f"📡 [API] Response headers: {dict(response.headers)}")
+                print(f"[API] Response status: {response.status_code}")
+                print(f"[API] Response headers: {dict(response.headers)}")
                 
                 if response.content:
                     try:
-                        print(f"📄 [API] Response content: {response.text[:500]}...")
+                        print(f"[API] Response content: {response.text[:500]}...")
                     except:
-                        print(f"📄 [API] Response content: [Could not decode]")
+                        print("[API] Response content: [Could not decode]")
                 
                 if response.status_code == 200:
-                    print(f"✅ [SUCCESS] Client {conn['name']} activated with secure API")
+                    print(f"[SUCCESS] Client {conn['name']} activated with secure API")
                     activated_clients.append(conn['name'])
                 else:
-                    print(f"❌ [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
+                    print(f"ERROR: [ERROR] Failed to activate client {conn['name']}: HTTP {response.status_code}")
                     try:
-                        error_detail = response.json() if response.content else response.text
-                        print(f"❌ [ERROR] Response detail: {error_detail}")
-                    except:
-                        print(f"❌ [ERROR] Response text: {response.text[:200]}")
+                        error_detail = response.json() if response.content else {}
+                        print(f"ERROR: [ERROR] Response detail: {error_detail}")
+                        # Detect Node budget exhaustion so Hub can surface the reset UI
+                        if response.status_code == 403 and error_detail.get('budget_exhausted'):
+                            node_dataset_id = error_detail.get('dataset_id')
+                            # Find dataset_name for this connection from selected_datasets
+                            node_dataset_name = next(
+                                (ds.get('dataset_name', '') for ds in selected_datasets
+                                 if ds.get('connection', {}).get('ip') == conn['ip']
+                                 and ds.get('connection', {}).get('port') == conn['port']),
+                                ''
+                            )
+                            budget_exhausted_nodes.append({
+                                'connection_name': conn['name'],
+                                'connection_ip': conn['ip'],
+                                'connection_port': conn['port'],
+                                'dataset_id': node_dataset_id,
+                                'dataset_name': node_dataset_name,
+                            })
+                            print(f"WARNING: [BUDGET] Budget exhausted for {conn['name']} dataset_id={node_dataset_id}")
+                    except Exception:
+                        print(f"ERROR: [ERROR] Response text: {response.text[:200]}")
                     failed_clients.append(f"{conn['name']} (HTTP {response.status_code})")
                     
             except requests.exceptions.HTTPError as e:
-                print(f"❌ [HTTP] HTTP error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [HTTP] HTTP error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (HTTP Error: {str(e)})")
             except requests.exceptions.ConnectionError as e:
-                print(f"❌ [CONN] Connection error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [CONN] Connection error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Connection Error)")
             except requests.exceptions.Timeout as e:
-                print(f"❌ [TIMEOUT] Request timeout for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [TIMEOUT] Request timeout for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Timeout)")
             except requests.exceptions.RequestException as e:
-                print(f"❌ [REQUEST] Request error for client {conn['name']}: {str(e)}")
+                print(f"ERROR: [REQUEST] Request error for client {conn['name']}: {str(e)}")
                 failed_clients.append(f"{conn['name']} (Request Error: {str(e)})")
         
         # Update training job status based on client activation results
@@ -1067,22 +1462,26 @@ def activate_clients_for_training(training_job, server_process=None):
         activated_count = len(activated_clients)
         failed_count = len(failed_clients)
         
-        print(f"📊 [SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
+        print(f"[SUMMARY] Client activation: {activated_count}/{total_clients} centers activated")
         
+        if budget_exhausted_nodes:
+            training_job.budget_exhausted_nodes = budget_exhausted_nodes
+            training_job.save(update_fields=['budget_exhausted_nodes'])
+
         if activated_count == 0:
             # No clients activated - mark as failed and kill server
             training_job.status = 'failed'
             training_job.logs = f"Failed to activate any federated learning centers. Errors: {'; '.join(failed_clients)}"
             training_job.save()
-            print(f"❌ Training job marked as FAILED - no centers activated")
-            
+            print("ERROR: Training job marked as FAILED - no centers activated")
+
             # Kill the server process since no clients can connect
             if server_process and server_process.is_alive():
-                print(f"🔪 Terminating server process due to center activation failure")
+                print("Terminating server process due to center activation failure")
                 server_process.terminate()
                 server_process.join(timeout=5)
                 if server_process.is_alive():
-                    print(f"🔪 Force killing server process")
+                    print("Force killing server process")
                     server_process.kill()
             
         elif failed_count > 0:
@@ -1090,24 +1489,24 @@ def activate_clients_for_training(training_job, server_process=None):
             warning_msg = f"Warning: {failed_count}/{total_clients} centers failed to activate: {'; '.join(failed_clients)}"
             training_job.logs = warning_msg
             training_job.save()
-            print(f"⚠️ Federated training continuing with {activated_count} centers. {warning_msg}")
+            print(f"WARNING: Federated training continuing with {activated_count} centers. {warning_msg}")
             
         else:
             # All clients activated successfully
             success_msg = f"All {activated_count} federated learning centers activated successfully: {', '.join(activated_clients)}"
             training_job.logs = success_msg
             training_job.save()
-            print(f"✅ All federated learning centers activated with secure authentication")
+            print("All federated learning centers activated with secure authentication")
                 
     except Exception as e:
-        print(f"❌ Error activating federated learning clients: {str(e)}")
+        print(f"ERROR: Error activating federated learning clients: {str(e)}")
         import traceback
-        print(f"❌ Full traceback: {traceback.format_exc()}")
+        print(f"ERROR: Full traceback: {traceback.format_exc()}")
         # Mark training job as failed due to client activation error
         training_job.status = 'failed'
         training_job.logs = f"Federated client activation failed: {str(e)}"
         training_job.save()
-        print(f"❌ Training job marked as FAILED due to client activation error")
+        print("ERROR: Training job marked as FAILED due to client activation error")
         
         
 def prepare_center_authentication(connection):
@@ -1121,26 +1520,110 @@ def prepare_center_authentication(connection):
     }
     auth = None
     
-    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
+    print(f"[AUTH] Preparing authentication for {connection.name}:")
     print(f"  - IP: {connection.ip}")
     print(f"  - Port: {connection.port}")
     print(f"  - Username: {connection.username if connection.username else 'Not set'}")
     print(f"  - Password: {'Set' if connection.password else 'Not set'}")
     print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
-    
+
     # API Key authentication (primary)
     if connection.api_key:
         headers['X-API-Key'] = connection.api_key
-        print(f"🔑 [AUTH] Using API key authentication (X-API-Key header)")
-    
+        print(f"[AUTH] Using API key authentication (X-API-Key header)")
+
     # Basic authentication (secondary/fallback)
     if connection.username and connection.password:
         auth = (connection.username, connection.password)
-        print(f"👤 [AUTH] Using basic authentication with username: {connection.username}")
+        print(f"[AUTH] Using basic authentication with username: {connection.username}")
     
     class AuthConfig:
         def __init__(self, headers, basic_auth):
             self.headers = headers
             self.basic_auth = basic_auth
-    
+
     return AuthConfig(headers, auth)
+
+
+@login_required
+@user_rate_limit('training')
+def experiment_detail(request, experiment_id):
+    """
+    Display experiment detail with all jobs comparison.
+    Currently uses dummy data until Experiment model is implemented.
+    """
+    # Dummy experiment data (will be replaced with database query later)
+    experiments_data = {
+        1: {
+            'id': 1,
+            'name': 'FedSVM Kernel Grid Search',
+            'description': 'Testing RBF kernel with gamma variations',
+            'status': 'completed',
+            'status_color': 'success',
+            'progress': 100,
+            'created': '2024-01-15',
+            'total_jobs': 9,
+            'completed_jobs': 9,
+            'best_accuracy': 92.34,
+            'jobs': [
+                {'id': 101, 'name': 'rbf_gamma_0.001', 'accuracy': 92.34, 'loss': 0.1245, 'f1': 0.9156, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 1.0}, 'rank': 1},
+                {'id': 102, 'name': 'rbf_gamma_0.01', 'accuracy': 91.56, 'loss': 0.1389, 'f1': 0.9078, 'params': {'kernel': 'rbf', 'gamma': 0.01, 'C': 1.0}, 'rank': 2},
+                {'id': 103, 'name': 'rbf_gamma_0.1', 'accuracy': 90.87, 'loss': 0.1523, 'f1': 0.8998, 'params': {'kernel': 'rbf', 'gamma': 0.1, 'C': 1.0}, 'rank': 3},
+                {'id': 104, 'name': 'rbf_gamma_1.0', 'accuracy': 89.23, 'loss': 0.1876, 'f1': 0.8845, 'params': {'kernel': 'rbf', 'gamma': 1.0, 'C': 1.0}, 'rank': 4},
+                {'id': 105, 'name': 'linear_C_0.1', 'accuracy': 88.45, 'loss': 0.1945, 'f1': 0.8767, 'params': {'kernel': 'linear', 'C': 0.1}, 'rank': 5},
+                {'id': 106, 'name': 'linear_C_1.0', 'accuracy': 87.34, 'loss': 0.2123, 'f1': 0.8656, 'params': {'kernel': 'linear', 'C': 1.0}, 'rank': 6},
+                {'id': 107, 'name': 'poly_degree_2', 'accuracy': 86.12, 'loss': 0.2289, 'f1': 0.8534, 'params': {'kernel': 'poly', 'degree': 2, 'C': 1.0}, 'rank': 7},
+                {'id': 108, 'name': 'poly_degree_3', 'accuracy': 85.34, 'loss': 0.2456, 'f1': 0.8456, 'params': {'kernel': 'poly', 'degree': 3, 'C': 1.0}, 'rank': 8},
+                {'id': 109, 'name': 'sigmoid', 'accuracy': 84.01, 'loss': 0.2678, 'f1': 0.8323, 'params': {'kernel': 'sigmoid', 'C': 1.0}, 'rank': 9}
+            ]
+        },
+        2: {
+            'id': 2,
+            'name': 'FedSVM Regularization Tuning',
+            'description': 'Optimizing C parameter for RBF kernel',
+            'status': 'running',
+            'status_color': 'primary',
+            'progress': 67,
+            'created': '2024-01-16',
+            'total_jobs': 6,
+            'completed_jobs': 4,
+            'best_accuracy': 91.45,
+            'jobs': [
+                {'id': 201, 'name': 'C_0.01', 'accuracy': 89.23, 'loss': 0.1876, 'f1': 0.8845, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 0.01}, 'rank': 3},
+                {'id': 202, 'name': 'C_0.1', 'accuracy': 91.45, 'loss': 0.1423, 'f1': 0.9067, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 0.1}, 'rank': 1},
+                {'id': 203, 'name': 'C_1.0', 'accuracy': 90.98, 'loss': 0.1534, 'f1': 0.9012, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 1.0}, 'rank': 2},
+                {'id': 204, 'name': 'C_10.0', 'accuracy': 88.67, 'loss': 0.1912, 'f1': 0.8789, 'params': {'kernel': 'rbf', 'gamma': 0.001, 'C': 10.0}, 'rank': 4},
+            ]
+        },
+        3: {
+            'id': 3,
+            'name': 'Multi-kernel Comparison',
+            'description': 'Comparing different kernel types with optimal parameters',
+            'status': 'pending',
+            'status_color': 'secondary',
+            'progress': 0,
+            'created': '2024-01-17',
+            'total_jobs': 4,
+            'completed_jobs': 0,
+            'best_accuracy': None,
+            'jobs': []
+        }
+    }
+
+    # Get experiment data (or 404 if not found)
+    if experiment_id not in experiments_data:
+        messages.error(request, f'Experiment with ID {experiment_id} not found.')
+        return redirect('training')
+
+    experiment = experiments_data[experiment_id]
+
+    # Prepare jobs data as JSON for JavaScript
+    jobs_json = json.dumps(experiment['jobs'])
+
+    context = {
+        'experiment': experiment,
+        'jobs': experiment['jobs'],
+        'jobs_json': jobs_json,
+    }
+
+    return render(request, 'webapp/experiment_detail.html', context)

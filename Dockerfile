@@ -13,6 +13,7 @@ WORKDIR /usr/src/app
 # Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
@@ -33,6 +34,7 @@ RUN sed -i 's/\r$//' /usr/src/app/entrypoint.sh && \
 
 # Crear directorios para volúmenes si no existen
 RUN mkdir -p /usr/src/app/config \
+    /usr/src/app/config/certs \
     /usr/src/app/media \
     /usr/src/app/staticfiles
 

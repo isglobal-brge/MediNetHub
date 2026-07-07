@@ -4,16 +4,15 @@
     <!-- Basic Information & Class Balance -->
     <div class="col-lg-8">
         <div class="card h-100 metrics-card border-0 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-images me-2"></i>Basic Information
-                </h5>
+            <div class="card-header-custom d-flex align-items-center gap-2">
+                <i data-lucide="image" style="width:14px;height:14px;color:var(--color-accent);"></i>
+                Basic Information
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-sm-3">
                         <div class="text-center p-3 rounded bg-light">
-                            <i class="fas fa-image metric-icon text-success"></i>
+                            <i data-lucide="image" style="width:32px;height:32px;" class="text-success"></i>
                             <div class="mt-2">
                                 <div class="small text-muted">Images</div>
                                 <div class="h4 mb-0">{{ metrics.basic_info.num_samples|intcomma }}</div>
@@ -22,7 +21,7 @@
                     </div>
                     <div class="col-sm-3">
                         <div class="text-center p-3 rounded bg-light">
-                            <i class="fas fa-expand metric-icon text-info"></i>
+                            <i data-lucide="maximize" style="width:32px;height:32px;" class="text-info"></i>
                             <div class="mt-2">
                                 <div class="small text-muted">Resolution</div>
                                 <div class="small mb-0">{{ metrics.image_stats.avg_resolution }}</div>
@@ -31,7 +30,7 @@
                     </div>
                     <div class="col-sm-3">
                         <div class="text-center p-3 rounded bg-light">
-                            <i class="fas fa-hdd metric-icon text-warning"></i>
+                            <i data-lucide="hard-drive" style="width:32px;height:32px;" class="text-warning"></i>
                             <div class="mt-2">
                                 <div class="small text-muted">Avg Size</div>
                                 <div class="small mb-0">{{ metrics.image_stats.avg_file_size }}</div>
@@ -40,7 +39,7 @@
                     </div>
                     <div class="col-sm-3">
                         <div class="text-center p-3 rounded bg-light">
-                            <i class="fas fa-layer-group metric-icon text-primary"></i>
+                            <i data-lucide="layers" style="width:32px;height:32px;" class="text-primary"></i>
                             <div class="mt-2">
                                 <div class="small text-muted">Channels</div>
                                 <div class="h4 mb-0">{{ metrics.image_stats.color_channels }}</div>
@@ -55,9 +54,9 @@
     <!-- Class Balance -->
     <div class="col-lg-4">
         <div class="card h-100 metrics-card border-0 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-balance-scale me-2"></i>Class Distribution
+            <div class="card-header">
+                <h5 class="mb-0 d-flex align-items-center gap-2">
+                    <i data-lucide="scale" style="width:14px;height:14px;"></i>Class Distribution
                 </h5>
             </div>
             <div class="card-body">
@@ -85,9 +84,9 @@
 <div class="row g-4 mt-2">
     <div class="col-lg-6">
         <div class="card metrics-card border-0 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>Image Statistics
+            <div class="card-header">
+                <h5 class="mb-0 d-flex align-items-center gap-2">
+                    <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i>Image Statistics
                 </h5>
             </div>
             <div class="card-body">
@@ -115,16 +114,16 @@
     <!-- Recommendations -->
     <div class="col-lg-6">
         <div class="card metrics-card border-0 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-lightbulb me-2"></i>Recommendations
+            <div class="card-header">
+                <h5 class="mb-0 d-flex align-items-center gap-2">
+                    <i data-lucide="lightbulb" style="width:14px;height:14px;"></i>Recommendations
                 </h5>
             </div>
             <div class="card-body">
                 {% if metrics.recommendations.model_types %}
                     <div class="mb-3">
-                        <h6 class="text-muted mb-2">
-                            <i class="fas fa-brain me-1"></i>Model Types
+                        <h6 class="text-muted mb-2 d-flex align-items-center gap-1">
+                            <i data-lucide="cpu" style="width:13px;height:13px;"></i>Model Types
                         </h6>
                         <div class="d-flex flex-wrap gap-1">
                             {% for model in metrics.recommendations.model_types %}
@@ -136,8 +135,8 @@
                 
                 {% if metrics.recommendations.balancing_techniques %}
                     <div class="mb-3">
-                        <h6 class="text-muted mb-2">
-                            <i class="fas fa-balance-scale me-1"></i>Balancing
+                        <h6 class="text-muted mb-2 d-flex align-items-center gap-1">
+                            <i data-lucide="scale" style="width:13px;height:13px;"></i>Balancing
                         </h6>
                         <div class="d-flex flex-wrap gap-1">
                             {% for technique in metrics.recommendations.balancing_techniques %}
@@ -149,8 +148,8 @@
                 
                 {% if metrics.recommendations.metrics %}
                     <div class="mb-3">
-                        <h6 class="text-muted mb-2">
-                            <i class="fas fa-chart-line me-1"></i>Metrics
+                        <h6 class="text-muted mb-2 d-flex align-items-center gap-1">
+                            <i data-lucide="trending-up" style="width:13px;height:13px;"></i>Metrics
                         </h6>
                         <div class="d-flex flex-wrap gap-1">
                             {% for metric in metrics.recommendations.metrics %}

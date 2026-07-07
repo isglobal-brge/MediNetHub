@@ -1,103 +1,11 @@
 {% extends 'base.html' %}
 {% load webapp_filters %}
 
-{% block title %}MediNet - Entrenamiento Federado{% endblock %}
+{% block title %}MediNet - Federated Training{% endblock %}
+{% block page_title %}New Training Job{% endblock %}
 
 {% block extra_css %}
-{{ block.super }}
-<style>
-    .advanced-params {
-        display: none;
-        margin-top: 15px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border-left: 3px solid #0d6efd;
-    }
-    
-
-    
-    /* Assegurar que els menus desplegables es mostren correctament */
-    .dropdown-menu {
-        z-index: 1030;    /* Valor alt per assegurar que està per sobre de tot */
-    }
-    
-    /* Contenedor de tabla adaptativo */
-    .jobs-card .card-body {
-        display: flex;
-        flex-direction: column;
-        height: calc(90.5vh - 300px); /* Altura dinámica basada en viewport */
-        min-height: 400px;
-    }
-    
-    .job-table-container {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-    }
-    
-    /* Important: Fer que els elements desplegables surtin del contenidor */
-    .dropdown {
-        position: static;
-    }
-    
-    .dropdown-menu {
-        position: absolute;
-        right: 0;
-        left: auto;
-    }
-    
-    /* Millorar la visibilitat dels elements de la taula */
-    .table td, .table th {
-        vertical-align: middle;
-    }
-
-    /* Custom styles for Metric Cards Accordion */
-    .metric-cards .accordion-item {
-        border: 1px solid #dee2e6;
-        border-radius: .5rem;
-        margin-bottom: .75rem;
-        overflow: hidden; /* Ensures rounded corners are respected */
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        transition: box-shadow 0.2s ease-in-out;
-    }
-
-    .metric-cards .accordion-item:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    .metric-cards .accordion-button {
-        background-color: #fff;
-        font-weight: 500;
-        color: #212529;
-        padding: 1rem 1.25rem;
-    }
-
-    .metric-cards .accordion-button:not(.collapsed) {
-        color: #0d6efd;
-        background-color: #f8f9fa;
-        box-shadow: none;
-    }
-    
-    .metric-cards .accordion-button:focus {
-        box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
-    }
-
-    .metric-cards .accordion-button::after {
-        /* Hides the default Bootstrap chevron icon */
-        display: none;
-    }
-
-    .metric-cards .metric-counter {
-        min-width: 22px;
-        transition: opacity 0.2s ease;
-    }
-
-    .metric-cards .accordion-body {
-        background-color: #fcfdff;
-        padding: 1rem 1.25rem;
-    }
-</style>
+<link rel="stylesheet" href="/static/css/pages/training.css">
 {% endblock %}
 
 {% block content %}
@@ -107,22 +15,22 @@
     
     <div class="row mb-4 align-items-center">
         <div class="col">
-            <h2 class="mb-0"><i class="fas fa-network-wired me-2"></i>Federated Training</h2>
+            <h2 class="mb-0"><i data-lucide="layers" style="width:20px;height:20px;color:var(--color-primary);vertical-align:middle;" class="me-2"></i>Federated Training</h2>
             <p class="text-muted">Configure and run distributed training jobs on multiple data sources</p>
         </div>
         <div class="col-auto">
             <a href="{% url 'model_studio' %}" class="btn btn-outline-primary">
-                <i class="fas fa-edit me-2"></i>Design New Model
+                <i data-lucide="edit" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Design New Model
             </a>
         </div>
     </div>
     
     <div class="row">
-        <!-- Panel izquierdo: configuración de entrenamiento -->
+        <!-- Left panel: training configuration -->
         <div class="col-lg-5 mb-4">
             <div class="card h-90">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Training Configuration</h5>
+                <div class="card-header">
+                    <h5 class="mb-0"><i data-lucide="settings" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Configuration</h5>
                 </div>
                 <div class="card-body">
                     <form id="trainingConfigForm">
@@ -156,7 +64,7 @@
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrainingParams">
                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                             <div>
-                                                <i class="fas fa-cogs me-2 text-secondary"></i>
+                                                <i data-lucide="settings" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-secondary"></i>
                                                 <strong>Core Training Parameters</strong>
                                                 <div class="d-block text-muted fw-normal small" id="training-summary">
                                                     Epochs: <strong id="epochs-summary" class="text-dark">5</strong> |
@@ -174,7 +82,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label for="train-epochs" class="form-label d-flex align-items-center">
                                                     Epochs
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="train-epochs" name="epochs" min="1" value="5" required>
                                             </div>
@@ -182,7 +90,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label for="train-batch-size" class="form-label d-flex align-items-center">
                                                     Batch Size
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of samples processed before updating the model"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of samples processed before updating the model"></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="train-batch-size" name="batch_size" min="1" value="32" required>
                                             </div>
@@ -190,7 +98,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label class="form-label d-flex align-items-center">
                                                     Federated Rounds
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ NUM_ROUNDS_HELPER }}"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ NUM_ROUNDS_HELPER }}"></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="train-rounds" name="rounds" min="1" value="10" required>
                                             </div>
@@ -198,7 +106,7 @@
                                             <div class="col-md-6 param-container">
                                                 <label for="save-frequency" class="form-label d-flex align-items-center">
                                                     Save Checkpoint Every
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Saves a model every X rounds. Set 0 to save only the final model."></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Saves a model every X rounds. Set 0 to save only the final model."></i>
                                                 </label>
                                                 <input type="number" class="form-control" id="save-frequency" name="save_frequency" min="0" value="0" required>
                                             </div>
@@ -206,7 +114,7 @@
                                             <div class="col-md-12 param-container">
                                                 <label for="fed-strategy" class="form-label d-flex align-items-center">
                                                     Federated Strategy
-                                                    <i class="fas fa-question-circle help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ STRATEGY_HELPER }}"></i>
+                                                    <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ STRATEGY_HELPER }}"></i>
                                                 </label>
                                                 <select class="form-select" id="fed-strategy" name="fed_strategy">
                                                     <option value="FedAvg" selected>Federated Averaging</option>
@@ -234,7 +142,7 @@
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetrics">
                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                             <div>
-                                                <i class="fas fa-flask me-2 text-primary"></i>
+                                                <i data-lucide="filter" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-primary"></i>
                                                 <strong>Additional Specialized Metrics</strong>
                                                 <small class="d-block text-muted fw-normal">Select metrics specific to your task.</small>
                                             </div>
@@ -252,7 +160,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSegmentation">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-vector-square me-2 text-primary"></i>
+                                                                <i data-lucide="layers" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-primary"></i>
                                                                 <strong>Segmentation</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for pixel-level tasks like organ or tumor segmentation.</small>
                                                             </div>
@@ -284,7 +192,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMedical">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-heartbeat me-2 text-success"></i>
+                                                                <i data-lucide="activity" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>
                                                                 <strong>Medical Diagnostics</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for evaluating diagnostic test performance.</small>
                                                             </div>
@@ -316,7 +224,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDetection">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-search-plus me-2 text-warning"></i>
+                                                                <i data-lucide="search" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-warning"></i>
                                                                 <strong>Detection & Classification</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for object detection and classification tasks.</small>
                                                             </div>
@@ -348,7 +256,7 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression">
                                                         <div class="d-flex w-100 justify-content-between align-items-center">
                                                             <div>
-                                                                <i class="fas fa-chart-line me-2 text-info"></i>
+                                                                <i data-lucide="trending-up" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-info"></i>
                                                                 <strong>Regression & Time Series</strong>
                                                                 <small class="d-block text-muted fw-normal">Metrics for regression and time series tasks.</small>
                                                             </div>
@@ -382,7 +290,7 @@
                         <!-- Botón para mostrar/ocultar parámetros avanzados -->
                         <div class="d-grid mt-3">
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-advanced-params">
-                                <i class="fas fa-sliders-h me-2"></i>Advanced Parameters
+                                <i data-lucide="sliders" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Advanced Parameters
                             </button>
                         </div>
                         
@@ -394,9 +302,7 @@
                                 <div class="col-md-6 param-container">
                                     <label for="fraction-fit" class="form-label d-flex align-items-center">
                                         Fraction Fit
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ FRACTION_FIT_HELPER }}">
                                         </i>
                                     </label>
@@ -406,9 +312,7 @@
                                 <div class="col-md-6 param-container">
                                     <label for="fraction-eval" class="form-label d-flex align-items-center">
                                         Fraction Eval
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ FRACTION_EVALUATE_HELPER }}">
                                         </i>
                                     </label>
@@ -418,9 +322,7 @@
                                 <div class="col-md-4 param-container">
                                     <label for="min-fit-clients" class="form-label d-flex align-items-center">
                                         Min Fit Clients
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ MIN_FIT_CLIENTS_HELPER }}">
                                         </i>
                                     </label>
@@ -430,9 +332,7 @@
                                 <div class="col-md-4 param-container">
                                     <label for="min-eval-clients" class="form-label d-flex align-items-center">
                                         Min Eval Clients
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ MIN_EVALUATE_CLIENTS_HELPER }}">
                                         </i>
                                     </label>
@@ -442,9 +342,7 @@
                                 <div class="col-md-4 param-container">
                                     <label for="min-available-clients" class="form-label d-flex align-items-center">
                                         Min Clients
-                                        <i class="fas fa-question-circle help-icon ms-2" 
-                                           data-bs-toggle="tooltip" 
-                                           data-bs-placement="right" 
+                                        <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right"
                                            title="{{ MIN_AVAILABLE_CLIENTS_HELPER }}">
                                         </i>
                                     </label>
@@ -455,13 +353,77 @@
                           
                         </div>
                         
+                        <!-- Privacy Budget Panel (shown when production datasets are selected) -->
+                        <div id="budget-panel" class="mt-3 d-none">
+                            <div class="card border-0 shadow-sm" style="border-radius:10px;overflow:hidden;">
+                                <div class="card-header d-flex justify-content-between align-items-center py-2 px-3"
+                                     style="background:linear-gradient(135deg,#1a237e 0%,#1976d2 100%);color:#fff;">
+                                    <span class="small fw-semibold">
+                                        <i data-lucide="shield" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>
+                                        Privacy Budget (ε)
+                                    </span>
+                                    <button type="button" class="btn btn-sm py-0 px-2 text-white opacity-75"
+                                            id="refresh-budget-btn" title="Refresh budget from nodes"
+                                            style="border:1px solid rgba(255,255,255,.4);border-radius:5px;background:transparent;">
+                                        <i data-lucide="refresh-cw" style="width:12px;height:12px;vertical-align:middle;"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body p-3">
+
+                                    <!-- Loading state -->
+                                    <div id="budget-loading" class="text-center py-2 d-none">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                                        <span class="ms-2 small text-muted">Fetching budget…</span>
+                                    </div>
+
+                                    <!-- Error state -->
+                                    <div id="budget-error" class="alert alert-warning alert-sm py-1 px-2 small mb-0 d-none" role="alert"></div>
+
+                                    <!-- Budget content (hidden until loaded) -->
+                                    <div id="budget-content" class="d-none">
+
+                                        <!-- Ruling budget row -->
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="small text-muted fw-semibold text-uppercase" style="letter-spacing:.4px;font-size:.7rem;">Ruling Budget</span>
+                                            <span id="ruling-budget-value" class="fw-bold small"></span>
+                                        </div>
+                                        <div style="background:#e9ecef;border-radius:6px;height:8px;overflow:hidden;" class="mb-1">
+                                            <div id="ruling-budget-bar" style="height:100%;border-radius:6px;transition:width .4s ease;"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small class="text-muted" id="ruling-budget-spent"></small>
+                                            <small class="text-muted" id="ruling-budget-limit"></small>
+                                        </div>
+
+                                        <!-- ε estimate row -->
+                                        <div id="epsilon-estimate-row" class="d-none">
+                                            <hr class="my-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small text-muted">Estimated ε this job</span>
+                                                <span id="epsilon-estimate-value" class="fw-bold small">—</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="small text-muted">Remaining after job</span>
+                                                <span id="epsilon-after-value" class="fw-bold small">—</span>
+                                            </div>
+                                            <div id="epsilon-warning" class="mt-1 small rounded px-2 py-1 d-none"></div>
+                                        </div>
+
+                                        <!-- Per-node expandable details -->
+                                        <div id="per-node-budget" class="mt-2"></div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Botones de acción -->
                         <div class="d-grid gap-2 mt-4">
                             <button type="button" class="btn btn-primary" id="start-training-btn">
-                                <i class="fas fa-play me-2"></i>Start Training
+                                <i data-lucide="play" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Start Training
                             </button>
                             <button type="button" class="btn btn-outline-secondary" id="preview-config-json-btn">
-                                <i class="fas fa-code me-2"></i>Preview JSON
+                                <i data-lucide="code" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Preview JSON
                             </button>
                         </div>
                     </form>
@@ -469,16 +431,20 @@
             </div>
         </div>
         
-        <!-- Panel derecho: trabajos de entrenamiento y estado -->
+        <!-- Right panel: training jobs and status -->
         <div class="col-lg-7 mb-4">
             <div class="card h-90 jobs-card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Training Jobs</h5>
-                    <button type="button" class="btn btn-sm btn-light" id="refresh-jobs-btn">
-                        <i class="fas fa-sync-alt"></i>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i data-lucide="list-checks" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training Management</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-jobs-btn">
+                        <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;"></i>
                     </button>
                 </div>
                 <div class="card-body">
+                    <!-- Tabs Content -->
+                    <div class="tab-content" id="trainingTabsContent">
+                        <!-- Training Jobs -->
+                        <div id="jobs-panel">
                     {% if training_jobs %}
                     <div class="table-responsive job-table-container">
                         <table class="table table-hover">
@@ -488,16 +454,16 @@
                                     <th>Model</th>
                                     <th>Status</th>
                                     <th>Progress</th>
-                                    <th class="text-end">Actions</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for job in training_jobs %}
                                 <tr>
                                     <td>
-                                        <strong>{{ job.name }}</strong>
+                                        <strong class="job-name" title="{{ job.name }}">{{ job.name }}</strong>
                                         {% if job.description %}
-                                        <p class="small text-muted mb-0">{{ job.description }}</p>
+                                        <p class="small text-muted mb-0">{{ job.description|truncatewords:8 }}</p>
                                         {% endif %}
                                     </td>
                                     <td>{{ job.model_config.name }}</td>
@@ -522,36 +488,45 @@
                                         <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-end">
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="job{{ job.id }}Actions" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-cog"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="job{{ job.id }}Actions">
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'job_detail' job.id %}">
-                                                        <i class="fas fa-info-circle me-2"></i>Details
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'dashboard' job.id %}">
-                                                        <i class="fas fa-chart-line me-2"></i>Dashboard
-                                                    </a>
-                                                </li>
-                                                {% if job.status == 'completed' %}
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'download_model' job.id %}">
-                                                        <i class="fas fa-download me-2"></i>Download model
-                                                    </a>
-                                                </li>
-                                                {% endif %}
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <button class="dropdown-item text-danger delete-job" data-delete-url="{% url 'delete_job' job.id %}" data-job-name="{{ job.name }}">
-                                                        <i class="fas fa-trash-alt me-2"></i>Delete
-                                                    </button>
-                                                </li>
-                                            </ul>
+                                    <td class="text-center">
+                                        <div class="action-buttons">
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'dashboard' job.id %}" class="btn btn-sm btn-dashboard" title="View detailed metrics and analytics">
+                                                    <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Dashboard
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" id="job{{ job.id }}More" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
+                                                    <i data-lucide="more-vertical" style="width:16px;height:16px;vertical-align:middle;"></i>
+                                                    <span class="visually-hidden">More options</span>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="job{{ job.id }}More">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'job_detail' job.id %}">
+                                                            <i data-lucide="info" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-info"></i>Details
+                                                        </a>
+                                                    </li>
+                                                    {% if job.status == 'completed' %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'download_model' job.id %}">
+                                                            <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-success"></i>Download model
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% if job.budget_exhausted_nodes %}
+                                                    <li>
+                                                        <button class="dropdown-item text-warning request-budget-reset"
+                                                                data-nodes="{{ job.budget_exhausted_nodes|json_string }}">
+                                                            <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Request budget reset
+                                                        </button>
+                                                    </li>
+                                                    {% endif %}
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button class="dropdown-item text-danger delete-job" data-delete-url="{% url 'delete_job' job.id %}" data-job-name="{{ job.name }}">
+                                                            <i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Delete
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -561,10 +536,13 @@
                     </div>
                     {% else %}
                     <div class="text-center py-5">
-                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <i data-lucide="list-checks" style="width:48px;height:48px;" class="text-muted mb-3"></i>
                         <p>There are no training jobs. Configure and start a new training.</p>
                     </div>
                     {% endif %}
+                        </div>
+                    </div>
+                    <!-- End Tab Content -->
                 </div>
             </div>
         </div>
@@ -575,9 +553,9 @@
 <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="jobDetailsModalLabel"><i class="fas fa-info-circle me-2"></i>Job Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobDetailsModalLabel"><i data-lucide="info" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Job Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="text-center py-3" id="jobDetailsLoading">
@@ -632,7 +610,7 @@
                         </div>
                     </div>
                     
-                    <!-- Configuración del entrenamiento -->
+                    <!-- Training configuration -->
                     <div class="card">
                         <div class="card-header">
                             <h6 class="mb-0">Training Configuration</h6>
@@ -644,7 +622,7 @@
                 </div>
                 
                 <div class="alert alert-danger" id="jobDetailsError" style="display: none;">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <i data-lucide="alert-triangle" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>
                     <span id="jobDetailsErrorMessage">Error loading job details</span>
                 </div>
             </div>
@@ -655,13 +633,63 @@
     </div>
 </div>
 
+<!-- Modal: Request Budget Reset -->
+<div class="modal fade" id="budgetResetModal" tabindex="-1" aria-labelledby="budgetResetModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="budgetResetModalLabel">
+                    <i data-lucide="refresh-cw" style="width:16px;height:16px;vertical-align:middle;" class="me-2 text-warning"></i>Request Privacy Budget Reset
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning d-flex align-items-start mb-3" role="alert">
+                    <i data-lucide="shield-alert" style="width:18px;height:18px;flex-shrink:0;" class="me-2 mt-1"></i>
+                    <div>
+                        <strong>Privacy budget exhausted.</strong> The differential-privacy budget (ε) for the selected dataset has been consumed. The Node administrator must approve this request before further training is allowed.
+                    </div>
+                </div>
+
+                <!-- Node selector (only shown when there are multiple exhausted nodes) -->
+                <div class="mb-3" id="budgetResetNodeSelectorWrapper">
+                    <label for="budgetResetNodeSelect" class="form-label">Affected Node &amp; Dataset</label>
+                    <select class="form-select" id="budgetResetNodeSelect"></select>
+                </div>
+
+                <!-- Single-node display (hidden if multiple) -->
+                <div class="mb-3" id="budgetResetNodeInfo">
+                    <label class="form-label">Affected Node &amp; Dataset</label>
+                    <p class="form-control-plaintext fw-semibold" id="budgetResetNodeInfoText"></p>
+                </div>
+
+                <div class="mb-3">
+                    <label for="budgetResetReason" class="form-label">Justification <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="budgetResetReason" rows="4"
+                              placeholder="Describe why additional training is needed and how the privacy budget will be used responsibly..."
+                              maxlength="1000"></textarea>
+                    <div class="form-text"><span id="budgetResetReasonCount">0</span>/1000 characters</div>
+                </div>
+
+                <div id="budgetResetFeedback"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="budgetResetSubmitBtn">
+                    <i data-lucide="send" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de exportación de modelo -->
 <div class="modal fade" id="exportModelModal" tabindex="-1" aria-labelledby="exportModelModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="exportModelModalLabel"><i class="fas fa-file-export me-2"></i>Export Model</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModelModalLabel"><i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Export Model</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>You can export the trained model in different formats for use in production.</p>
@@ -685,28 +713,28 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="download-model-btn">
-                    <i class="fas fa-download me-2"></i>Download
+                    <i data-lucide="download" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Download
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para Vista Previa JSON de Configuración -->
+<!-- Modal: Configuration JSON Preview -->
 <div class="modal fade" id="configJsonModal" tabindex="-1" aria-labelledby="configJsonModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="configJsonModalLabel"><i class="fas fa-code me-2"></i>Training JSON Configuration</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="configJsonModalLabel"><i data-lucide="code" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Training JSON Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <pre class="bg-light p-3 rounded" id="config-json-preview"></pre>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" id="copy-config-json-btn">
-                    <i class="fas fa-copy me-1"></i>Copy
+                    <i data-lucide="copy" style="width:16px;height:16px;vertical-align:middle;" class="me-1"></i>Copy
                 </button>
             </div>
         </div>
@@ -717,9 +745,9 @@
 <div class="modal fade" id="deleteJobModal" tabindex="-1" aria-labelledby="deleteJobModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteJobModalLabel"><i class="fas fa-trash me-2"></i>Delete Training Job</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteJobModalLabel"><i data-lucide="trash-2" style="width:16px;height:16px;vertical-align:middle;" class="me-2"></i>Delete Training Job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this training job?</p>
@@ -747,10 +775,10 @@
             const advancedParams = document.getElementById('advanced-fed-params');
             if (advancedParams.style.display === 'none' || advancedParams.style.display === '') {
                 advancedParams.style.display = 'block';
-                this.innerHTML = '<i class="fas fa-minus me-2"></i>Hide Advanced Parameters';
+                this.textContent = 'Hide Advanced Parameters';
             } else {
                 advancedParams.style.display = 'none';
-                this.innerHTML = '<i class="fas fa-sliders-h me-2"></i>Show Advanced Parameters';
+                this.textContent = 'Show Advanced Parameters';
             }
         });
         
@@ -793,7 +821,14 @@
                     .then(data => {
                         document.getElementById('model-name').value = data.name;
                         document.getElementById('model-id').value = data.id;
-                        
+
+                        // Adapt UI based on model type
+                        const modelType = data.config_json?.metadata?.model_type || 'dl';
+                        const algorithm = data.config_json?.architecture?.ml_algorithm?.type || null;
+
+                        console.log('Model config loaded:', {modelType, algorithm, config: data.config_json});
+                        adaptTrainingParamsForModelType(modelType, algorithm);
+
                         // Obtenir informació del dataset
                         const datasetInfo = data.config_json?.dataset?.selected_datasets?.[0];
                         if (datasetInfo) {
@@ -807,10 +842,85 @@
                     });
             }
         }
+
+        // Adapt training parameters based on model type
+        function adaptTrainingParamsForModelType(modelType, algorithm) {
+            console.log(`Adapting UI for model_type: ${modelType}, algorithm: ${algorithm}`);
+
+            // Get parameter containers
+            const batchSizeContainer = document.querySelector('#train-batch-size').closest('.param-container');
+            const epochsContainer = document.querySelector('#train-epochs').closest('.param-container');
+            const roundsContainer = document.querySelector('#train-rounds').closest('.param-container');
+            const saveFreqContainer = document.querySelector('#save-frequency').closest('.param-container');
+            const strategyContainer = document.querySelector('#fed-strategy').closest('.param-container');
+            const flowerVersionContainer = document.querySelector('#flower-version').closest('.param-container');
+
+            if (modelType === 'ml') {
+                // ML models (FedSVM, RandomForest, etc.) - Hide batch size, show iterations as epochs
+                batchSizeContainer.style.display = 'none';
+                saveFreqContainer.style.display = 'none';  // No checkpoints for ML models
+
+                // Change epochs label to "Iterations" for ML
+                const epochsLabel = epochsContainer.querySelector('label');
+                epochsLabel.innerHTML = `Iterations <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of training iterations for the ML algorithm"></i>`;
+
+                // Update summary - hide batch size and save frequency
+                const trainingSummary = document.querySelector('#training-summary');
+                trainingSummary.innerHTML = `
+                    Iterations: <strong id="epochs-summary" class="text-dark">5</strong> |
+                    Rounds: <strong id="rounds-summary" class="text-dark">10</strong>
+                `;
+
+                // Change strategy options to show FedSVM-specific strategies
+                const strategySelect = document.getElementById('fed-strategy');
+                strategySelect.innerHTML = `
+                    <option value="FedSVM" selected>Federated SVM</option>
+                `;
+
+                // Add ML algorithm indicator
+                const modelNameInput = document.getElementById('model-name');
+                if (algorithm && !modelNameInput.value.includes('[ML]')) {
+                    modelNameInput.value = `${modelNameInput.value} [ML: ${algorithm}]`;
+                }
+
+            } else {
+                // DL models - Show all standard parameters
+                batchSizeContainer.style.display = '';
+                saveFreqContainer.style.display = '';
+
+                // Reset epochs label
+                const epochsLabel = epochsContainer.querySelector('label');
+                epochsLabel.innerHTML = `Epochs <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;" class="help-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" title="Number of complete passes over the training data"></i>`;
+
+                // Reset summary
+                const trainingSummary = document.querySelector('#training-summary');
+                trainingSummary.innerHTML = `
+                    Epochs: <strong id="epochs-summary" class="text-dark">5</strong> |
+                    Batch Size: <strong id="batch-summary" class="text-dark">32</strong> |
+                    Rounds: <strong id="rounds-summary" class="text-dark">10</strong> |
+                    Save Every: <strong id="save-freq-summary" class="text-dark">0</strong>
+                `;
+
+                // Reset strategy options
+                const strategySelect = document.getElementById('fed-strategy');
+                strategySelect.innerHTML = `
+                    <option value="FedAvg" selected>Federated Averaging</option>
+                    <option value="FedProx">Federated Proximal</option>
+                `;
+            }
+
+            // Re-initialize tooltips after DOM changes
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
         
         // Cargar datos al iniciar
         loadModelData();
-        
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         // Preview config JSON button
         document.getElementById('preview-config-json-btn').addEventListener('click', function() {
             updateConfigJsonPreview();
@@ -841,7 +951,7 @@
             startTraining(formData);
         });
         
-        // Función para generar el JSON de configuración
+        // Generate configuration JSON
         function generateTrainingConfig() {
             // Recoger métricas seleccionadas
             const selectedMetrics = [];
@@ -853,7 +963,7 @@
             const modelId = document.getElementById('model-id').value;
             let modelConfig = null;
             
-            // Crear objeto de configuración base
+            // Build base configuration object
             const formData = {
                 model_id: modelId,
                 job_name: document.getElementById('job-name').value,
@@ -915,7 +1025,7 @@
             return formData;
         }
         
-        // Función para actualizar la vista previa del JSON
+        // Update JSON preview
         function updateConfigJsonPreview() {
             const config = generateTrainingConfig();
             
@@ -1290,7 +1400,7 @@
 
         function showButtonFeedback(button, message) {
             const originalText = button.innerHTML;
-            button.innerHTML = `<i class="fas fa-check me-2 text-success"></i>${message}`;
+            button.textContent = message;
             button.classList.add('btn-outline-success');
             button.classList.remove('btn-primary');
             
@@ -1342,14 +1452,36 @@
         // Logic for Training Parameters Summary
         function updateTrainingSummary() {
             const epochs = document.getElementById('train-epochs').value;
-            const batchSize = document.getElementById('train-batch-size').value;
             const rounds = document.getElementById('train-rounds').value;
-            const saveFreq = document.getElementById('save-frequency').value;
 
-            document.getElementById('epochs-summary').textContent = epochs || '...';
-            document.getElementById('batch-summary').textContent = batchSize || '...';
-            document.getElementById('rounds-summary').textContent = rounds || '...';
-            document.getElementById('save-freq-summary').textContent = saveFreq || '...';
+            // Update epochs/iterations
+            const epochsSummary = document.getElementById('epochs-summary');
+            if (epochsSummary) {
+                epochsSummary.textContent = epochs || '...';
+            }
+
+            // Update batch size (only if visible for DL models)
+            const batchSummary = document.getElementById('batch-summary');
+            if (batchSummary) {
+                const batchSize = document.getElementById('train-batch-size').value;
+                const batchSizeContainer = document.querySelector('#train-batch-size').closest('.param-container');
+                if (batchSizeContainer && batchSizeContainer.style.display !== 'none') {
+                    batchSummary.textContent = batchSize || '...';
+                }
+            }
+
+            // Update rounds
+            const roundsSummary = document.getElementById('rounds-summary');
+            if (roundsSummary) {
+                roundsSummary.textContent = rounds || '...';
+            }
+
+            // Update save frequency (only if visible for DL models)
+            const saveFreqSummary = document.getElementById('save-freq-summary');
+            if (saveFreqSummary) {
+                const saveFreq = document.getElementById('save-frequency').value;
+                saveFreqSummary.textContent = saveFreq || '...';
+            }
         }
 
         const paramInputs = ['train-epochs', 'train-batch-size', 'train-rounds', 'save-frequency'];
@@ -1363,5 +1495,438 @@
         // Initial call on page load
         updateTrainingSummary();
     });
+
+    // ------------------------------------------------------------------ //
+    // Budget Reset Modal
+    // ------------------------------------------------------------------ //
+    (function () {
+        'use strict';
+
+        let _resetNodes = [];      // list of exhausted node objects
+        let _resetModal = null;
+
+        // Open modal when user clicks "Request budget reset" from any job dropdown
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.request-budget-reset');
+            if (!btn) return;
+
+            try {
+                _resetNodes = JSON.parse(btn.dataset.nodes || '[]');
+            } catch (_) {
+                _resetNodes = [];
+            }
+
+            if (!_resetNodes.length) return;
+
+            const nodeSelect = document.getElementById('budgetResetNodeSelect');
+            const nodeInfo   = document.getElementById('budgetResetNodeInfo');
+            const nodeInfoTxt = document.getElementById('budgetResetNodeInfoText');
+            const selectorWrapper = document.getElementById('budgetResetNodeSelectorWrapper');
+
+            // Populate node selector / info text
+            nodeSelect.innerHTML = '';
+            _resetNodes.forEach(function (n, idx) {
+                const label = `${n.connection_name} — ${n.dataset_name || 'dataset #' + n.dataset_id}`;
+                nodeSelect.appendChild(new Option(label, idx));
+            });
+
+            if (_resetNodes.length === 1) {
+                const n = _resetNodes[0];
+                nodeInfoTxt.textContent = `${n.connection_name} — ${n.dataset_name || 'dataset #' + n.dataset_id}`;
+                selectorWrapper.style.display = 'none';
+                nodeInfo.style.display = '';
+            } else {
+                selectorWrapper.style.display = '';
+                nodeInfo.style.display = 'none';
+            }
+
+            // Reset form state
+            document.getElementById('budgetResetReason').value = '';
+            document.getElementById('budgetResetReasonCount').textContent = '0';
+            document.getElementById('budgetResetFeedback').innerHTML = '';
+            document.getElementById('budgetResetSubmitBtn').disabled = false;
+
+            if (!_resetModal) {
+                _resetModal = new bootstrap.Modal(document.getElementById('budgetResetModal'));
+            }
+            _resetModal.show();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+
+        // Character counter
+        document.getElementById('budgetResetReason').addEventListener('input', function () {
+            document.getElementById('budgetResetReasonCount').textContent = this.value.length;
+        });
+
+        // Submit
+        document.getElementById('budgetResetSubmitBtn').addEventListener('click', function () {
+            const reason = document.getElementById('budgetResetReason').value.trim();
+            const feedback = document.getElementById('budgetResetFeedback');
+
+            if (!reason) {
+                feedback.innerHTML = '<div class="alert alert-danger py-2">Please enter a justification.</div>';
+                return;
+            }
+
+            const nodeIdx = parseInt(document.getElementById('budgetResetNodeSelect').value || '0', 10);
+            const node = _resetNodes[nodeIdx] || _resetNodes[0];
+
+            if (!node) return;
+
+            this.disabled = true;
+            feedback.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>Submitting request…</div>';
+
+            fetch('{% url "request_budget_reset_proxy" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({
+                    connection_ip:   node.connection_ip,
+                    connection_port: node.connection_port,
+                    dataset_id:      node.dataset_id,
+                    reason:          reason,
+                }),
+            })
+            .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+            .then(function (res) {
+                if (res.status === 201) {
+                    feedback.innerHTML = '<div class="alert alert-success py-2"><i data-lucide="check-circle" style="width:14px;height:14px;vertical-align:middle;" class="me-1"></i>Request submitted. The Node administrator will review it shortly.</div>';
+                    document.getElementById('budgetResetSubmitBtn').disabled = true;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                } else if (res.status === 409) {
+                    feedback.innerHTML = '<div class="alert alert-info py-2">A pending request already exists for this dataset.</div>';
+                    document.getElementById('budgetResetSubmitBtn').disabled = false;
+                } else {
+                    const msg = (res.data && res.data.error) ? res.data.error : 'Unexpected error. Please try again.';
+                    feedback.innerHTML = `<div class="alert alert-danger py-2">${msg}</div>`;
+                    document.getElementById('budgetResetSubmitBtn').disabled = false;
+                }
+            })
+            .catch(function (err) {
+                feedback.innerHTML = `<div class="alert alert-danger py-2">Communication error: ${err}</div>`;
+                document.getElementById('budgetResetSubmitBtn').disabled = false;
+            });
+        });
+    }());
+
+    // ─── Privacy Budget Panel ──────────────────────────────────────────────────
+    (function () {
+        'use strict';
+
+        const BUDGET_STATUS_URL  = '{% url "budget_status_proxy" %}';
+        const ESTIMATE_EPS_URL   = '{% url "estimate_epsilon_proxy" %}';
+        const CSRF_TOKEN         = '{{ csrf_token }}';
+
+        // selectedDatasets injected from Django context — each entry has:
+        // { dataset_name, connection: {name, ip, port}, privacy_policy: {is_experimental, ...} }
+        const ALL_DATASETS = {{ selected_datasets|default:'[]'|to_json }};
+
+        // Filter to production-only datasets (experimental ones have no budget tracking)
+        const productionDatasets = ALL_DATASETS.filter(function (ds) {
+            const pp = ds.privacy_policy;
+            return pp && !pp.is_experimental;
+        });
+
+        // Unique connections from production datasets
+        function uniqueConnections(datasets) {
+            const seen = {};
+            const out  = [];
+            datasets.forEach(function (ds) {
+                const key = ds.connection.ip + ':' + ds.connection.port;
+                if (!seen[key]) {
+                    seen[key] = true;
+                    out.push(ds.connection);
+                }
+            });
+            return out;
+        }
+
+        // ── State ──────────────────────────────────────────────────────────────
+        let _budgetByNode = {};      // key "ip:port" → Node's budget-status response
+        let _rulingBudget = null;    // { remaining, lifetime, spent, connection_name, dataset_name }
+        let _epsilonTimer  = null;   // debounce timer
+
+        // ── DOM helpers ────────────────────────────────────────────────────────
+        const $panel    = document.getElementById('budget-panel');
+        const $loading  = document.getElementById('budget-loading');
+        const $error    = document.getElementById('budget-error');
+        const $content  = document.getElementById('budget-content');
+        const $rulingVal   = document.getElementById('ruling-budget-value');
+        const $rulingBar   = document.getElementById('ruling-budget-bar');
+        const $rulingSpent = document.getElementById('ruling-budget-spent');
+        const $rulingLimit = document.getElementById('ruling-budget-limit');
+        const $perNode     = document.getElementById('per-node-budget');
+        const $epsRow      = document.getElementById('epsilon-estimate-row');
+        const $epsVal      = document.getElementById('epsilon-estimate-value');
+        const $epsAfter    = document.getElementById('epsilon-after-value');
+        const $epsWarn     = document.getElementById('epsilon-warning');
+
+        function showLoading() {
+            $loading.classList.remove('d-none');
+            $error.classList.add('d-none');
+            $content.classList.add('d-none');
+        }
+
+        function showError(msg) {
+            $loading.classList.add('d-none');
+            $error.textContent = msg;
+            $error.classList.remove('d-none');
+            $content.classList.add('d-none');
+        }
+
+        function showContent() {
+            $loading.classList.add('d-none');
+            $error.classList.add('d-none');
+            $content.classList.remove('d-none');
+        }
+
+        // ── Fetch budget from one node ─────────────────────────────────────────
+        function fetchNodeBudget(conn) {
+            const qs = '?connection_ip=' + encodeURIComponent(conn.ip) +
+                       '&connection_port=' + encodeURIComponent(conn.port);
+            return fetch(BUDGET_STATUS_URL + qs, {credentials: 'same-origin'})
+                .then(function (r) { return r.json(); })
+                .catch(function () { return {error: 'Network error'}; });
+        }
+
+        // ── Refresh all nodes in parallel ──────────────────────────────────────
+        function refreshBudgets() {
+            const connections = uniqueConnections(productionDatasets);
+            if (!connections.length) return;
+
+            showLoading();
+            const promises = connections.map(function (conn) {
+                return fetchNodeBudget(conn).then(function (data) {
+                    const key = conn.ip + ':' + conn.port;
+                    _budgetByNode[key] = {conn: conn, data: data};
+                });
+            });
+
+            Promise.all(promises).then(function () {
+                renderBudgetPanel();
+                // Trigger epsilon estimate with current params
+                scheduleEpsilonEstimate(0);
+            });
+        }
+
+        // ── Render ruling budget + per-node cards ──────────────────────────────
+        function renderBudgetPanel() {
+            // Collect one budget entry per production dataset
+            const entries = [];
+            productionDatasets.forEach(function (ds) {
+                const key  = ds.connection.ip + ':' + ds.connection.port;
+                const node = _budgetByNode[key];
+                if (!node || node.data.error) return;
+
+                const datasets = node.data.datasets || [];
+                const match = datasets.find(function (d) {
+                    return d.dataset_name === ds.dataset_name && !d.is_experimental;
+                });
+                if (!match) return;
+
+                entries.push({
+                    connection_name: ds.connection.name,
+                    dataset_name:    ds.dataset_name,
+                    remaining:       match.remaining_budget,
+                    lifetime:        match.lifetime_budget,
+                    spent:           match.spent_epsilon,
+                    max_per_job:     match.max_per_job,
+                });
+            });
+
+            if (!entries.length) {
+                showError('No production budget data available from the selected nodes.');
+                return;
+            }
+
+            // Ruling budget = entry with the smallest remaining_budget
+            _rulingBudget = entries.reduce(function (min, e) {
+                return e.remaining < min.remaining ? e : min;
+            });
+
+            const pct = _rulingBudget.lifetime > 0
+                ? Math.min(100, (_rulingBudget.spent / _rulingBudget.lifetime) * 100)
+                : 0;
+
+            // Bar colour: green → amber → red
+            const barColour = pct >= 95 ? '#dc3545' : pct >= 80 ? '#ffc107' : '#28a745';
+
+            $rulingVal.textContent   = _rulingBudget.remaining.toFixed(4) + ' ε remaining';
+            $rulingVal.style.color   = pct >= 95 ? '#dc3545' : pct >= 80 ? '#856404' : '#198754';
+            $rulingBar.style.width   = pct + '%';
+            $rulingBar.style.background = barColour;
+            $rulingSpent.textContent = 'Spent: ' + _rulingBudget.spent.toFixed(4);
+            $rulingLimit.textContent = 'Limit: ' + _rulingBudget.lifetime.toFixed(4);
+
+            // Per-node expandable cards
+            $perNode.innerHTML = '';
+            if (entries.length > 1) {
+                const toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'btn btn-link btn-sm text-muted p-0 mt-1';
+                toggle.style.fontSize = '.75rem';
+                toggle.textContent = 'Show per-node details ▾';
+                const detail = document.createElement('div');
+                detail.className = 'd-none mt-2';
+                detail.id = 'per-node-detail';
+                toggle.addEventListener('click', function () {
+                    const hidden = detail.classList.toggle('d-none');
+                    toggle.textContent = hidden ? 'Show per-node details ▾' : 'Hide per-node details ▴';
+                });
+                entries.forEach(function (e) {
+                    detail.appendChild(buildNodeCard(e));
+                });
+                $perNode.appendChild(toggle);
+                $perNode.appendChild(detail);
+            } else {
+                // Only one node — show inline without toggle
+                $perNode.appendChild(buildNodeCard(entries[0]));
+            }
+
+            showContent();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function buildNodeCard(e) {
+            const pct = e.lifetime > 0 ? Math.min(100, (e.spent / e.lifetime) * 100) : 0;
+            const col  = pct >= 95 ? '#dc3545' : pct >= 80 ? '#ffc107' : '#28a745';
+            const div  = document.createElement('div');
+            div.className = 'border rounded p-2 mb-2';
+            div.style.fontSize = '.78rem';
+            div.innerHTML =
+                '<div class="d-flex justify-content-between"><strong>' + escHtml(e.connection_name) +
+                '</strong><span class="text-muted">' + escHtml(e.dataset_name) + '</span></div>' +
+                '<div style="background:#e9ecef;border-radius:4px;height:5px;overflow:hidden;margin:.3rem 0;">' +
+                  '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:4px;"></div>' +
+                '</div>' +
+                '<div class="d-flex justify-content-between text-muted">' +
+                  '<span>' + e.spent.toFixed(4) + ' spent</span>' +
+                  '<span>' + e.remaining.toFixed(4) + ' left / ' + e.lifetime.toFixed(4) + '</span>' +
+                '</div>';
+            return div;
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        // ── ε Estimate ────────────────────────────────────────────────────────
+        function getCurrentTrainingParams() {
+            const epochs = parseInt(document.getElementById('train-epochs').value) || 3;
+            const rounds = parseInt(document.getElementById('train-rounds').value) || 10;
+            const batch  = parseInt(document.getElementById('train-batch-size').value) || 32;
+            return {epochs: epochs, rounds: rounds, batch_size: batch};
+        }
+
+        function buildModelJson(params) {
+            // Construct a minimal model_json that estimate_job_epsilon can consume.
+            // Total effective epochs for federated training = rounds × local_epochs.
+            return {
+                train: { epochs: params.epochs * params.rounds },
+                model: {
+                    training: {
+                        optimizer: {
+                            differential_privacy: {
+                                noise_multiplier: 1.2   // Node-enforced minimum floor
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        function scheduleEpsilonEstimate(delayMs) {
+            if (_epsilonTimer) clearTimeout(_epsilonTimer);
+            _epsilonTimer = setTimeout(runEpsilonEstimate, delayMs === undefined ? 600 : delayMs);
+        }
+
+        function runEpsilonEstimate() {
+            if (!_rulingBudget || !productionDatasets.length) return;
+
+            const params  = getCurrentTrainingParams();
+            const mj      = buildModelJson(params);
+
+            // Use the first production dataset whose node replied successfully
+            const ds = productionDatasets.find(function (d) {
+                const key = d.connection.ip + ':' + d.connection.port;
+                return _budgetByNode[key] && !_budgetByNode[key].data.error;
+            });
+            if (!ds) return;
+
+            $epsRow.classList.remove('d-none');
+            $epsVal.textContent   = '…';
+            $epsAfter.textContent = '…';
+            $epsWarn.classList.add('d-none');
+
+            fetch(ESTIMATE_EPS_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                },
+                body: JSON.stringify({
+                    connection_ip:   ds.connection.ip,
+                    connection_port: ds.connection.port,
+                    dataset_name:    ds.dataset_name,
+                    model_json:      mj,
+                }),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.estimated_epsilon === undefined) {
+                    $epsVal.textContent   = '—';
+                    $epsAfter.textContent = '—';
+                    return;
+                }
+                const eps   = data.estimated_epsilon;
+                const after = _rulingBudget.remaining - eps;
+
+                $epsVal.textContent   = eps.toFixed(4) + ' ε';
+                $epsAfter.textContent = after.toFixed(4) + ' ε';
+                $epsAfter.style.color = after < 0 ? '#dc3545' : after < _rulingBudget.remaining * 0.2 ? '#856404' : '#198754';
+
+                // Warning badge
+                $epsWarn.classList.remove('d-none');
+                if (after < 0) {
+                    $epsWarn.textContent = '⚠ This job would exceed the ruling budget.';
+                    $epsWarn.style.background = '#f8d7da';
+                    $epsWarn.style.color = '#842029';
+                } else if (eps / _rulingBudget.remaining > 0.8) {
+                    $epsWarn.textContent = '⚠ This job will consume >80 % of the remaining budget.';
+                    $epsWarn.style.background = '#fff3cd';
+                    $epsWarn.style.color = '#856404';
+                } else {
+                    $epsWarn.classList.add('d-none');
+                }
+            })
+            .catch(function () {
+                $epsVal.textContent = '—';
+            });
+        }
+
+        // ── Init ───────────────────────────────────────────────────────────────
+        if (productionDatasets.length > 0) {
+            $panel.classList.remove('d-none');
+            refreshBudgets();
+        }
+
+        // Refresh button
+        document.getElementById('refresh-budget-btn').addEventListener('click', function () {
+            _budgetByNode = {};
+            refreshBudgets();
+        });
+
+        // Debounced ε re-estimate when training params change
+        ['train-epochs', 'train-batch-size', 'train-rounds'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', function () { scheduleEpsilonEstimate(600); });
+            }
+        });
+
+    }());
 </script>
-{% endblock %} 
+{% endblock %}

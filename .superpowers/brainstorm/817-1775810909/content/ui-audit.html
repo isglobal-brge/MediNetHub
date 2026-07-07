@@ -1,0 +1,122 @@
+<h2>UI/UX Audit - MediNetHub</h2>
+<p class="subtitle">Analisis de problemas detectados en la UI actual, ordenados por severidad</p>
+
+<div class="section">
+  <h3 style="color:#d32f2f;">CRITICAL - Problemas que afectan usabilidad</h3>
+
+  <div style="background:#ffebee; border-left:4px solid #d32f2f; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">1. Sin Design System coherente</h4>
+    <p style="margin:0; color:#555;">Cada template redefine sus propias <code>:root</code> variables CSS. <strong>style.css</strong> usa <code>#2C3E50/#3498DB</code>, <strong>dashboard_home.html</strong> usa <code>#1976d2/#0d47a1</code>, <strong>profile.html</strong> redefine todo de nuevo. Resultado: colores inconsistentes entre paginas.</p>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <div style="width:40px;height:40px;background:#2C3E50;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">CSS</div>
+      <div style="width:40px;height:40px;background:#1976d2;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">Dash</div>
+      <div style="width:40px;height:40px;background:#0d6efd;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">Train</div>
+      <div style="width:40px;height:40px;background:#007bff;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">Home</div>
+      <span style="align-self:center;color:#999;font-size:13px;margin-left:8px;">← 4 "primarios" diferentes</span>
+    </div>
+  </div>
+
+  <div style="background:#ffebee; border-left:4px solid #d32f2f; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">2. Mezcla de idiomas en la UI</h4>
+    <p style="margin:0; color:#555;">Catalan ("Notificacions", "Veure totes"), espanol ("Entrenamiento Federado", "Dissenyador de Models"), e ingles ("Dashboard", "Login") mezclados sin patron. Confunde al usuario y da aspecto no profesional.</p>
+    <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+      <span style="background:#e3f2fd;padding:4px 12px;border-radius:12px;font-size:13px;">🇬🇧 "View all notifications"</span>
+      <span style="background:#fff3e0;padding:4px 12px;border-radius:12px;font-size:13px;">🇪🇸 "Nombre de usuario"</span>
+      <span style="background:#f3e5f5;padding:4px 12px;border-radius:12px;font-size:13px;">🏳️ "Notificacions" (CAT)</span>
+    </div>
+  </div>
+
+  <div style="background:#ffebee; border-left:4px solid #d32f2f; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">3. ~3500 lineas de CSS inline en templates</h4>
+    <p style="margin:0; color:#555;">Cada template tiene su propio bloque <code>&lt;style&gt;</code> masivo (dashboard.html ~100 lineas, training.html ~80, model_designer.html ~200+). Solo hay un <code>style.css</code> global de 230 lineas. Esto causa duplicacion, inconsistencias, y hace imposible mantener un look unificado.</p>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#f57c00;">HIGH - La UI se siente "plana"</h3>
+
+  <div style="background:#fff3e0; border-left:4px solid #f57c00; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">4. Tipografia generica del sistema</h4>
+    <p style="margin:0; color:#555;">Usa <code>'Segoe UI', Tahoma, Geneva, Verdana, sans-serif</code> sin ningun font pairing profesional. Sin escala tipografica definida. Los headings no tienen peso visual suficiente para crear jerarquia.</p>
+    <div style="margin-top:12px;padding:12px;background:white;border-radius:8px;border:1px solid #eee;">
+      <div style="font-family:Segoe UI,sans-serif;">
+        <div style="font-size:24px;font-weight:600;color:#2C3E50;">Heading actual → plano</div>
+        <div style="font-size:14px;color:#6c757d;margin-top:4px;">Body text sin personalidad, se siente como un template generico</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:#fff3e0; border-left:4px solid #f57c00; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">5. Cards sin profundidad ni diferenciacion</h4>
+    <p style="margin:0; color:#555;">Todas las cards usan el mismo estilo: <code>border-radius: 8-10px</code>, <code>box-shadow: 0 4px 6px rgba(0,0,0,0.1)</code>. Sin variacion de elevacion, sin bordes sutiles, sin gradientes. Cada pagina se siente igual.</p>
+    <div style="display:flex;gap:16px;margin-top:12px;">
+      <div style="flex:1;background:white;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);padding:16px;text-align:center;">
+        <div style="font-size:11px;color:#999;">Card Home</div>
+      </div>
+      <div style="flex:1;background:white;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);padding:16px;text-align:center;">
+        <div style="font-size:11px;color:#999;">Card Studio</div>
+      </div>
+      <div style="flex:1;background:white;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);padding:16px;text-align:center;">
+        <div style="font-size:11px;color:#999;">Card Training</div>
+      </div>
+      <span style="align-self:center;font-size:24px;">= = =</span>
+    </div>
+  </div>
+
+  <div style="background:#fff3e0; border-left:4px solid #f57c00; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">6. Navbar Bootstrap default</h4>
+    <p style="margin:0; color:#555;">Navbar <code>navbar-dark bg-primary</code> sin personalizacion. Solo texto + iconos Font Awesome. Sin logo real, sin gradiente, sin brand identity. La navegacion lateral (sidebar) no existe — todo va en la top bar que se colapsa en mobile.</p>
+  </div>
+
+  <div style="background:#fff3e0; border-left:4px solid #f57c00; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">7. Home page sin impacto visual</h4>
+    <p style="margin:0; color:#555;">Hero section es solo texto centrado + botones. Las feature cards son identicas sin iconografia diferenciadora. La seccion "Federated Learning for Medicine" usa un icono FA gigante (<code>fa-6x</code>) en lugar de una ilustracion o grafico real. Sin social proof, sin metricas, sin call-to-action con urgencia.</p>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#1976d2;">MEDIUM - Problemas de UX y estructura</h3>
+
+  <div style="background:#e3f2fd; border-left:4px solid #1976d2; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">8. Sin dark mode</h4>
+    <p style="margin:0; color:#555;">Para una herramienta tecnica que los investigadores usan durante horas, no tener dark mode es una carencia significativa. Los colores no usan tokens semanticos, haciendo muy dificil implementarlo despues.</p>
+  </div>
+
+  <div style="background:#e3f2fd; border-left:4px solid #1976d2; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">9. Navegacion lineal sin contexto</h4>
+    <p style="margin:0; color:#555;">El flujo Datasets → Model Studio → Training no tiene breadcrumbs ni indicador de progreso consistente. El stepper solo aparece en Datasets. El usuario pierde el contexto de donde esta en el workflow.</p>
+  </div>
+
+  <div style="background:#e3f2fd; border-left:4px solid #1976d2; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">10. Footer generico e inutil</h4>
+    <p style="margin:0; color:#555;">Links rotos (Documentation → #, API → #, Support → #). Ocupa espacio sin aportar valor. En una app tool, el footer deberia ser minimo o inexistente.</p>
+  </div>
+
+  <div style="background:#e3f2fd; border-left:4px solid #1976d2; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">11. Login/Register sin personalidad</h4>
+    <p style="margin:0; color:#555;">Card centrada con header <code>bg-primary</code>. Patron Bootstrap 101. Placeholders en espanol mientras labels estan en ingles. Sin ilustracion, sin contexto de la plataforma, sin branding.</p>
+  </div>
+
+  <div style="background:#e3f2fd; border-left:4px solid #1976d2; padding:16px; border-radius:8px; margin-bottom:16px;">
+    <h4 style="margin:0 0 8px;">12. Model Designer inconsistente con el resto</h4>
+    <p style="margin:0; color:#555;">Usa su propia paleta de colores (verdes, rosas, lavandas para layer types) que no tiene relacion con el design system global. Es la pagina mas compleja pero la mas desconectada visualmente.</p>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#757575;">Resumen de impacto</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px;">
+    <div style="background:#ffebee;padding:20px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#d32f2f;">3</div>
+      <div style="font-size:13px;color:#555;">Critical</div>
+    </div>
+    <div style="background:#fff3e0;padding:20px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#f57c00;">4</div>
+      <div style="font-size:13px;color:#555;">High</div>
+    </div>
+    <div style="background:#e3f2fd;padding:20px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#1976d2;">5</div>
+      <div style="font-size:13px;color:#555;">Medium</div>
+    </div>
+  </div>
+</div>

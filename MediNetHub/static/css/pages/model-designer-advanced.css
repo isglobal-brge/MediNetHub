@@ -1,0 +1,490 @@
+/* ============================================================
+   model-designer-advanced.css  v6
+   Multi-Branch Vertical Grid canvas
+   ============================================================ */
+
+/* ── Canvas body ── */
+.adv-canvas-body {
+  overflow: auto;
+  padding: 24px 24px 24px;
+  min-height: 200px;
+}
+
+/* ── Vertical grid container ── */
+.adv-grid {
+  display: grid;
+  column-gap: 8px;
+  row-gap: 0;
+  margin: 0 auto;
+  width: fit-content;
+  position: relative;       /* SVG fork-line overlay anchor */
+}
+
+/* ── Column header ── */
+.adv-vgrid-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px 7px;
+  background: #1e293b;
+  border-top: 2px solid #6366f1;          /* default; overridden per branch */
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 7px 7px 0 0;
+  min-width: 180px;
+}
+
+/* Per-branch top accent colors */
+.adv-vgrid-hdr[data-branch-idx="0"] { border-top-color: #6366f1; }
+.adv-vgrid-hdr[data-branch-idx="1"] { border-top-color: #0891B2; }
+.adv-vgrid-hdr[data-branch-idx="2"] { border-top-color: #f59e0b; }
+.adv-vgrid-hdr[data-branch-idx="3"] { border-top-color: #10b981; }
+.adv-vgrid-hdr[data-branch-idx="4"] { border-top-color: #a78bfa; }
+.adv-vgrid-hdr[data-branch-idx="5"] { border-top-color: #f87171; }
+.adv-vgrid-hdr[data-branch-idx="6"] { border-top-color: #fb923c; }
+.adv-vgrid-hdr[data-branch-idx="7"] { border-top-color: #e879f9; }
+
+.adv-vgrid-hdr-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* Label color matches branch accent */
+.adv-vgrid-hdr[data-branch-idx="0"] .adv-vgrid-hdr-label { color: #818cf8; }
+.adv-vgrid-hdr[data-branch-idx="1"] .adv-vgrid-hdr-label { color: #22d3ee; }
+.adv-vgrid-hdr[data-branch-idx="2"] .adv-vgrid-hdr-label { color: #fbbf24; }
+.adv-vgrid-hdr[data-branch-idx="3"] .adv-vgrid-hdr-label { color: #34d399; }
+.adv-vgrid-hdr[data-branch-idx="4"] .adv-vgrid-hdr-label { color: #c4b5fd; }
+.adv-vgrid-hdr[data-branch-idx="5"] .adv-vgrid-hdr-label { color: #fca5a5; }
+.adv-vgrid-hdr[data-branch-idx="6"] .adv-vgrid-hdr-label { color: #fdba74; }
+.adv-vgrid-hdr[data-branch-idx="7"] .adv-vgrid-hdr-label { color: #f0abfc; }
+
+/* ── Branch delete button ── */
+.adv-branch-del {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, #64748b);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.65;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.adv-branch-del:hover {
+  opacity: 1;
+  color: var(--color-danger, #f87171);
+}
+
+/* ── Base grid cell ── */
+.adv-vgrid-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 10px 16px;  /* bottom = connector space */
+  position: relative;
+  min-height: 62px;
+}
+
+/* IO cell (INPUT row only) */
+.adv-vgrid-cell--io {
+  padding-top: 10px;
+}
+
+/* Pre-fork cell — contributes no height, row height set by active columns */
+.adv-vgrid-cell--prefork {
+  min-height: 0;
+  padding: 0 10px;
+  overflow: hidden;
+}
+
+/* Subtle dashed rail through pre-fork cells */
+.adv-vgrid-cell--prefork::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  border-left: 1px dashed rgba(148, 163, 184, 0.12);
+}
+
+/* Fork connection cell — row where the trunk layer forks into a new branch */
+.adv-vgrid-cell--prefork.adv-vgrid-cell--fork-conn {
+  overflow: visible;
+  min-height: 44px;
+  padding: 0;
+}
+/* Suppress the dashed rail in fork-conn cells */
+.adv-vgrid-cell--prefork.adv-vgrid-cell--fork-conn::after {
+  content: none;
+}
+
+/* Fork connection lines are rendered as an SVG overlay — no CSS needed here */
+
+/* Post-end cell — same as pre-fork */
+.adv-vgrid-cell--postend {
+  min-height: 0;
+  padding: 0 10px;
+  overflow: hidden;
+}
+
+/* ── Downward connector DOM element (replaces ::after/::before on cell) ── */
+.adv-conn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  height: 44px;     /* tall enough for the fork button to sit on it */
+}
+/* Vertical line */
+.adv-conn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  background: var(--color-accent, #0891B2);
+  border-radius: 1px;
+}
+/* Arrowhead */
+.adv-conn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--color-accent, #0891B2);
+}
+
+/* ── Fork button — lives inside .adv-conn, centered on the arrow ── */
+.adv-fork-btn {
+  position: absolute;
+  left: calc(50% + 8px);   /* just to the right of the 2px line */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-text-muted, #94a3b8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
+  z-index: 5;
+  padding: 0;
+}
+.adv-conn:hover .adv-fork-btn {
+  opacity: 1;
+}
+.adv-fork-btn:hover {
+  background: var(--color-accent, #0891B2);
+  border-color: var(--color-accent, #0891B2);
+  color: #fff;
+}
+
+/* ── Merge warning hint (shown when >1 branch but no merge layer placed) ── */
+.adv-vgrid-merge-warn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px 6px;
+}
+.adv-vgrid-merge-warn-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  font-size: 11px;
+  color: #92400e;
+  color: var(--color-text-muted, #94a3b8);
+}
+.adv-vgrid-merge-warn-inner svg,
+.adv-vgrid-merge-warn-inner i {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* ── Merge layer card (Concat / Add placed by user) ── */
+.adv-slot-filled.adv-slot-merge {
+  border-left: 3px solid #a78bfa;
+  background: rgba(167, 139, 250, 0.04);
+}
+.adv-slot-filled.adv-slot-merge.selected {
+  box-shadow: 0 0 0 2px #a78bfa;
+}
+
+/* Branch input chips inside merge card */
+.adv-merge-inputs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.adv-merge-chip {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+}
+.adv-merge-chip.active {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: #a78bfa;
+  color: #7c3aed;
+}
+
+/* Branch consumed by a merge — pure spacer, SVG draws the connection */
+.adv-vgrid-cell--merge-consumed {
+  position: relative;
+  min-height: 60px;
+}
+
+/* ── Output row ── */
+.adv-vgrid-output-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 12px 10px;
+  position: relative;
+}
+/* The connector into OUTPUT is drawn by the SVG overlay (renderConnectionLines),
+   anchored under the main branch (B1). No CSS nub needed here. */
+
+/* ── Base slot ── */
+.adv-stage-slot {
+  flex-shrink: 0;
+  border-radius: 8px;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  width: 100%;
+  max-width: 200px;
+  box-sizing: border-box;
+}
+
+/* ── Filled slot (layer card) ── */
+.adv-slot-filled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.04));
+  cursor: pointer;
+  position: relative;
+}
+.adv-slot-filled:hover {
+  border-color: var(--color-accent, #0891B2);
+  box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,0.06));
+}
+.adv-slot-filled.selected {
+  border-color: transparent;
+  background: rgba(8, 145, 178, 0.05);
+  box-shadow: 0 0 0 2px var(--color-accent, #0891B2);
+}
+
+/* ── Slot info ── */
+.adv-slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.adv-slot-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adv-slot-sub {
+  font-size: 10px;
+  color: var(--color-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Remove button (shows on hover) ── */
+.adv-slot-remove {
+  background: none;
+  border: none;
+  padding: 3px;
+  cursor: pointer;
+  color: var(--color-text-muted, #64748b);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.adv-slot-filled:hover .adv-slot-remove {
+  opacity: 1;
+}
+.adv-slot-remove:hover {
+  color: var(--color-danger, #f87171);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ── Empty slot (append target) ── */
+.adv-slot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 44px;            /* matches filled card ~44px visual height */
+  border: 1.5px dashed rgba(148, 163, 184, 0.28);
+  cursor: pointer;
+  background: transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.adv-slot-empty:hover {
+  border-color: var(--color-accent, #14b8a6);
+  background: rgba(20, 184, 166, 0.04);
+}
+.adv-slot-empty:hover .adv-slot-plus {
+  color: var(--color-accent, #14b8a6);
+}
+.adv-slot-empty.pending {
+  border-style: solid;
+  border-color: var(--color-accent, #14b8a6);
+  background: rgba(20, 184, 166, 0.07);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.15);
+}
+.adv-slot-empty.pending .adv-slot-plus {
+  color: var(--color-accent, #14b8a6);
+}
+
+/* ── Plus symbol ── */
+.adv-slot-plus {
+  font-size: 18px;
+  font-weight: 200;
+  color: rgba(148, 163, 184, 0.4);
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+/* ── Hint text (when pending) ── */
+.adv-slot-hint {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--color-accent, #14b8a6);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Category accent border on filled slots ── */
+.adv-slot-filled[data-category="dense"]          { border-left: 3px solid var(--color-cat-dense,   #6366f1); }
+.adv-slot-filled[data-category="conv"]           { border-left: 3px solid var(--color-cat-conv,    #0ea5e9); }
+.adv-slot-filled[data-category="activation"]     { border-left: 3px solid var(--color-cat-act,     #14b8a6); }
+.adv-slot-filled[data-category="regularization"] { border-left: 3px solid var(--color-cat-reg,     #f59e0b); }
+.adv-slot-filled[data-category="structural"]     { border-left: 3px solid var(--color-cat-struct,  #a78bfa); }
+
+/* ── Input / Output fixed nodes ── */
+.adv-slot-io {
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
+}
+.adv-slot-io .adv-slot-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #64748b);
+}
+
+/* Input node: blue */
+.adv-slot-io-input {
+  border-left: 3px solid #1E40AF;
+  background: rgba(30, 64, 175, 0.06) !important;
+}
+
+/* Output node: green */
+.adv-slot-io-output {
+  border-left: 3px solid #059669;
+  background: rgba(5, 150, 105, 0.06) !important;
+}
+
+/* Icon wrap for IO nodes */
+.adv-io-icon-wrap {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.adv-io-icon-wrap--input {
+  background: rgba(30, 64, 175, 0.12);
+  border: 1px solid rgba(30, 64, 175, 0.2);
+}
+.adv-io-icon-wrap--input i { color: #1E40AF; }
+.adv-io-icon-wrap--output {
+  background: rgba(5, 150, 105, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+.adv-io-icon-wrap--output i { color: #059669; }
+
+/* ── Empty-canvas guidance hint ── */
+.adv-empty-hint {
+  padding: 8px 12px;
+  margin: 6px 0 4px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  font-size: 11px;
+  color: var(--color-text-muted, #94a3b8);
+  line-height: 1.5;
+  text-align: center;
+  justify-self: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+.adv-empty-hint strong {
+  color: var(--color-text, #0f172a);
+  font-weight: 700;
+}
+
+/* ── Empty state ── */
+.adv-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 20px;
+  text-align: center;
+}

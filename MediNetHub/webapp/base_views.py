@@ -5,29 +5,19 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse
 from .models import UserProfile, ModelConfig, TrainingJob, Connection, Dataset, Model, Notification, Project
 from .forms import (
-    UserProfileForm,
-    ConnectionForm,
     UserUpdateForm,
     ProfileUpdateForm,
     CustomPasswordChangeForm,
 )
 import json
-import re
-import ipaddress
-import threading
-import random
-import time
+
 from django.utils import timezone
-import requests
 from django.views.decorators.http import require_http_methods
-from multiprocessing import Process
 from .decorators import ip_rate_limit, user_rate_limit
-from datetime import datetime, timedelta
-from .helpers import parameter_helpers
-from .training_params import layer_types, optimizer_types, loss_types, strategy_types
+
 
 
 def sanitize_config_for_client(config):
@@ -37,8 +27,7 @@ def sanitize_config_for_client(config):
     """
     import copy
     sanitized = copy.deepcopy(config)
-    
-    # Remove connection information from datasets
+
     if 'dataset' in sanitized and 'selected_datasets' in sanitized['dataset']:
         for dataset in sanitized['dataset']['selected_datasets']:
             if 'connection' in dataset:
@@ -47,74 +36,10 @@ def sanitize_config_for_client(config):
                     'name': dataset['connection'].get('name', 'unknown')
                     # Removed: ip, port, user, password
                 }
-                print(f"🔒 Removed sensitive connection info for dataset: {dataset.get('dataset_name', 'unknown')}")
+                print(f"Removed sensitive connection info for dataset: {dataset.get('dataset_name', 'unknown')}")
     
     return sanitized
 
-
-def create_center_specific_config(center_datasets, base_config):
-    """
-    Create configuration containing ONLY data for specific center.
-    Critical for federated learning security - prevents credential/data leakage between centers.
-    """
-    import copy
-    
-    print(f"🎯 Creating center-specific config for {len(center_datasets)} datasets")
-    
-    center_config = copy.deepcopy(base_config)
-    
-    # Include only datasets from this specific center (NO other center data)
-    center_config['dataset'] = {
-        'selected_datasets': [{
-            'dataset_name': ds['dataset_name'],
-            'features_info': ds['features_info'],
-            'target_info': ds['target_info'],
-            'num_columns': ds.get('num_columns', 0),
-            'num_rows': ds.get('num_rows', 0),
-            'size': ds.get('size', 0),
-            # ✅ SECURITY: NO connection info included to prevent credential leakage
-        } for ds in center_datasets]
-    }
-    
-    # Log security compliance
-    for ds in center_datasets:
-        print(f"🔐 [FEDERATED] Including dataset '{ds['dataset_name']}' for this center only")
-    
-    return center_config
-
-
-def prepare_center_authentication(connection):
-    """
-    Prepare authentication headers and credentials for center-specific API communication.
-    Follows the same pattern as the datasets function with enhanced security.
-    """
-    headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'MediNet-WebApp/1.0'
-    }
-    auth = None
-    
-    print(f"🔍 [AUTH] Preparing authentication for {connection.name}:")
-    print(f"  - IP: {connection.ip}")
-    print(f"  - Port: {connection.port}")
-    print(f"  - Username: {connection.username if connection.username else 'Not set'}")
-    print(f"  - Password: {'Set' if connection.password else 'Not set'}")
-    print(f"  - API Key: {'Set' if connection.api_key else 'Not set'}")
-    
-    # API Key authentication (preferred for external APIs)
-    if connection.api_key:
-        headers['Authorization'] = f'Bearer {connection.api_key}'
-        print("🔑 [AUTH] Using API Key authentication")
-    
-    # Basic HTTP authentication fallback
-    elif connection.username and connection.password:
-        auth = (connection.username, connection.password)
-        print("🔐 [AUTH] Using Basic HTTP authentication")
-    
-    else:
-        print("⚠️ [AUTH] No authentication method available")
-    
-    return headers, auth
 
 
 def create_notification(user, title, message, link=None):
@@ -145,10 +70,9 @@ def register(request):
             user = form.save()
             username = form.cleaned_data.get('username')
             messages.success(request, f'Account created for {username}!')
-            
-            # Create UserProfile
+
             UserProfile.objects.get_or_create(user=user)
-            
+
             # Auto-login after registration
             user = authenticate(username=user.username, password=request.POST['password1'])
             if user is not None:
@@ -157,7 +81,6 @@ def register(request):
             else:
                 return redirect('login')
         else:
-            # Add form errors to messages
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field.title()}: {error}")
@@ -169,7 +92,6 @@ def register(request):
 
 @login_required
 def profile(request):
-    # Ensure a UserProfile object exists for the user.
     user_profile, created = UserProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
@@ -219,13 +141,11 @@ def user_dashboard(request):
     """
     Main dashboard for authenticated users showing recent activity and quick stats
     """
-    # Get user's projects 
     projects = Project.objects.filter(user=request.user).order_by('name')
-    
-    # Get selected project from session
+
     selected_project_id = request.session.get('selected_project_id')
     selected_project = None
-    
+
     if selected_project_id:
         try:
             selected_project = Project.objects.get(id=selected_project_id, user=request.user)
@@ -233,38 +153,69 @@ def user_dashboard(request):
             # Clear invalid project from session
             del request.session['selected_project_id']
             selected_project_id = None
-    
-    # Get recent training jobs for the selected project or user
+
     if selected_project:
         recent_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project).order_by('-created_at')[:5]
     else:
         recent_jobs = TrainingJob.objects.filter(user=request.user).order_by('-created_at')[:5]
-    
-    # Get recent notifications
+
     recent_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]
-    
-    # Get models count for the selected project or user
+
     if selected_project:
         models_count = ModelConfig.objects.filter(user=request.user, project=selected_project).count()
     else:
         models_count = ModelConfig.objects.filter(user=request.user).count()
-    
-    # Get connections count for the selected project or user
+
     if selected_project:
         connections_count = Connection.objects.filter(user=request.user, project=selected_project).count()
     else:
         connections_count = Connection.objects.filter(user=request.user).count()
-    
+
+    datasets_count = Dataset.objects.filter(connection__user=request.user).count()
+
+    if selected_project:
+        total_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project).count()
+    else:
+        total_jobs = TrainingJob.objects.filter(user=request.user).count()
+
+    if total_jobs > 0:
+        if selected_project:
+            completed_jobs = TrainingJob.objects.filter(user=request.user, project=selected_project, status='completed').count()
+        else:
+            completed_jobs = TrainingJob.objects.filter(user=request.user, status='completed').count()
+        success_rate = round((completed_jobs / total_jobs) * 100) if total_jobs > 0 else 0
+    else:
+        success_rate = 0
+
+    if selected_project:
+        active_jobs = TrainingJob.objects.filter(
+            user=request.user,
+            project=selected_project,
+            status__in=['running', 'pending', 'server_ready']
+        ).order_by('-created_at')[:3]
+    else:
+        active_jobs = TrainingJob.objects.filter(
+            user=request.user,
+            status__in=['running', 'pending', 'server_ready']
+        ).order_by('-created_at')[:3]
+
+    stats = {
+        'total_models': models_count,
+        'total_jobs': total_jobs,
+        'active_connections': connections_count,
+        'success_rate': success_rate,
+        'datasets_count': datasets_count,
+    }
+
     context = {
         'projects': projects,
         'selected_project': selected_project,
         'recent_jobs': recent_jobs,
+        'active_jobs': active_jobs,
         'recent_notifications': recent_notifications,
-        'models_count': models_count,
-        'connections_count': connections_count,
-        'jobs_count': recent_jobs.count() if selected_project else TrainingJob.objects.filter(user=request.user).count()
+        'stats': stats
     }
-    
+
     return render(request, 'webapp/dashboard_home.html', context)
 
 
@@ -273,7 +224,6 @@ def notifications(request):
     """
     View to display all notifications for the current user
     """
-    # Mark all as read when viewing
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     
     notifications_list = Notification.objects.filter(user=request.user).order_by('-created_at')
@@ -330,7 +280,6 @@ def switch_project_api(request):
         project_id = data.get('project_id')
         
         if project_id == 'none':
-            # Clear project selection
             request.session.pop('selected_project_id', None)
             return JsonResponse({
                 'status': 'success',

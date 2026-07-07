@@ -1,12 +1,11 @@
 {% load humanize %}
 <!-- Compact Dataset Information Card -->
-<div class="card border-0 shadow-sm h-100">
-    <div class="card-header bg-primary text-white">
-        <h6 class="mb-0">
-            <i class="fas fa-info-circle me-2"></i>Dataset Information
-        </h6>
+<div class="card-flat h-100" style="border-radius:var(--radius-lg);overflow:hidden;">
+    <div class="card-header-custom d-flex align-items-center gap-2">
+        <i data-lucide="info" style="width:14px;height:14px;color:var(--color-accent);"></i>
+        Dataset Information
     </div>
-    <div class="card-body py-3" style="background-color: #fff;">
+    <div class="card-body py-3">
         <table class="table table-sm mb-0" style="font-size: 13px;">
             <tbody>
                 <tr>
@@ -16,7 +15,7 @@
                 <tr>
                     <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Domain</td>
                     <td style="padding: 4px 8px; border: none;">
-                        <span class="badge" style="background-color: #0ea5e9; color: white; font-size: 10px;">{{ dataset.medical_domain|default:"Cardiology" }}</span>
+                        <span class="badge-type">{{ dataset.medical_domain|default:"Cardiology" }}</span>
                     </td>
                 </tr>
                 <tr>
@@ -26,7 +25,7 @@
                 <tr>
                     <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Format</td>
                     <td style="padding: 4px 8px; border: none;">
-                        <span class="badge bg-secondary" style="font-size: 10px;">
+                        <span class="status-badge status-completed" style="font-size: 10px;">
                             {% if dataset.metadata.statistical_summary.file_type %}
                                 {{ dataset.metadata.statistical_summary.file_type|upper }}
                             {% else %}
@@ -66,15 +65,13 @@
                 <tr>
                     <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Status</td>
                     <td style="padding: 4px 8px; border: none;">
-                        <span class="badge" style="background-color: #10b981; color: white; font-size: 10px;">
-                            <i class="fas fa-check me-1"></i>Active
-                        </span>
+                        <span class="status-badge status-running">Active</span>
                     </td>
                 </tr>
                 <tr>
                     <td class="fw-bold text-muted" style="padding: 4px 8px; border: none;">Target Column</td>
                     <td style="padding: 4px 8px; border: none;">
-                        <span class="badge" style="background-color: #f59e0b; color: white; font-size: 10px;">{{ dataset.target_column|default:"DEATH_EVENT" }}</span>
+                        <span class="badge-type">{{ dataset.target_column|default:"DEATH_EVENT" }}</span>
                     </td>
                 </tr>
             </tbody>
@@ -82,9 +79,9 @@
         
         <!-- Description -->
         {% if dataset.description %}
-        <div class="mt-2 pt-2 border-top">
-            <p class="text-muted mb-0" style="font-size: 12px;">
-                <i class="fas fa-file-alt me-2"></i>
+        <div class="mt-2 pt-2" style="border-top:1px solid var(--color-border-light);">
+            <p style="font-size:var(--text-xs);color:var(--color-text-secondary);margin:0;">
+                <i data-lucide="file-text" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>
                 {{ dataset.description }}
             </p>
         </div>

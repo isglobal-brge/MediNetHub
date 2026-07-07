@@ -18,6 +18,7 @@ urlpatterns = [
     path('model-designer-advanced/<int:model_id>/', modelStudio_views.model_designer_advanced, name='edit_model_advanced'),
     path('model-studio/', modelStudio_views.model_studio, name='model_studio'),
     path('training/', training_views.training, name='training'),
+    path('experiment/<int:experiment_id>/', training_views.experiment_detail, name='experiment_detail'),
     path('dashboard/<int:job_id>/', training_views.dashboard, name='dashboard'),
     path('dashboard/<int:job_id>/clients/', training_views.client_dashboard, name='client_dashboard'),
     path('notifications/', base_views.notifications, name='notifications'),
@@ -37,6 +38,7 @@ urlpatterns = [
     path('jobs/<int:job_id>/delete/', training_views.delete_job, name='delete_job'),
     
     # API endpoints
+    path('api/datasets/<str:dataset_id>/info/', dataset_views.dataset_info_api, name='dataset_info_api'),
     path('api/validate-connection/', dataset_views.validate_connection, name='validate_connection'),
     path('api/test-connection/', dataset_views.test_connection, name='test_connection'),
     path('api/save-model-config/', modelStudio_views.save_model_config, name='api_save_model_config'),
@@ -57,6 +59,9 @@ urlpatterns = [
     path('api/update-job-status/<int:job_id>/', training_views.update_job_status, name='update_job_status'),
     path('api/download-model/<int:job_id>/', training_views.download_model, name='download_model'),
     path('api/download-metrics/<int:job_id>/', training_views.download_metrics, name='download_metrics'),
+    path('api/request-budget-reset/', training_views.request_budget_reset_proxy, name='request_budget_reset_proxy'),
+    path('api/budget-status/', training_views.budget_status_proxy, name='budget_status_proxy'),
+    path('api/estimate-epsilon/', training_views.estimate_epsilon_proxy, name='estimate_epsilon_proxy'),
     
     # APIs para client dashboard
     path('api/jobs/<int:job_id>/clients/', training_views.get_clients_data, name='get_clients_data'),

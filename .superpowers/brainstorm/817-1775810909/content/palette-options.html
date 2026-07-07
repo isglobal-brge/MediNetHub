@@ -1,0 +1,186 @@
+<h2>Paleta de colores para MediNetHub</h2>
+<p class="subtitle">3 propuestas evolucionando vuestros azules actuales. Sin purpura. Estilo Tech-Cientifico Light.</p>
+
+<!-- Current palette reference -->
+<div class="section">
+  <h3 style="font-size:14px;color:#999;">Paleta actual (referencia)</h3>
+  <div style="display:flex;gap:6px;margin-bottom:8px;">
+    <div style="flex:1;height:40px;background:#2C3E50;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">#2C3E50</div>
+    <div style="flex:1;height:40px;background:#3498DB;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">#3498DB</div>
+    <div style="flex:1;height:40px;background:#E74C3C;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">#E74C3C</div>
+    <div style="flex:1;height:40px;background:#2ECC71;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">#2ECC71</div>
+    <div style="flex:1;height:40px;background:#F39C12;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:10px;">#F39C12</div>
+  </div>
+  <p style="font-size:11px;color:#aaa;">Problema: colores "flat design 2014" sin profundidad, sin gradientes, sin tokens semanticos</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr;gap:28px;">
+
+  <!-- OPTION A: Navy + Cyan (evolved from current) -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="letter">A</div>
+    <div class="content" style="width:100%;">
+      <h3 style="margin:0 0 4px;">Navy + Teal — Evolucion natural</h3>
+      <p style="margin:0 0 12px;color:#888;font-size:13px;">Parte de vuestro #2C3E50 y #3498DB, los moderniza con mas contraste y un teal medico como acento</p>
+
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <div style="flex:1;height:50px;background:#0f172a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Primary</span>#0F172A
+        </div>
+        <div style="flex:1;height:50px;background:#1e40af;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Secondary</span>#1E40AF
+        </div>
+        <div style="flex:1;height:50px;background:#0891b2;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Accent</span>#0891B2
+        </div>
+        <div style="flex:1;height:50px;background:#059669;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Success</span>#059669
+        </div>
+        <div style="flex:1;height:50px;background:#d97706;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Warning</span>#D97706
+        </div>
+        <div style="flex:1;height:50px;background:#dc2626;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Danger</span>#DC2626
+        </div>
+      </div>
+
+      <!-- Mini mockup -->
+      <div style="background:#f8fafc;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+        <div style="background:white;padding:8px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e2e8f0;">
+          <div style="width:20px;height:20px;background:linear-gradient(135deg,#1e40af,#0891b2);border-radius:5px;"></div>
+          <span style="font-family:Inter,system-ui;font-size:11px;font-weight:700;color:#0f172a;">MediNet</span>
+          <span style="font-size:10px;color:#0891b2;margin-left:auto;background:rgba(8,145,178,0.08);padding:2px 8px;border-radius:4px;font-weight:600;">Dashboard</span>
+        </div>
+        <div style="padding:12px;display:flex;gap:8px;">
+          <div style="flex:1;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Jobs</div>
+            <div style="font-size:20px;font-weight:700;color:#0f172a;">12</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:4px;"><div style="height:100%;width:65%;background:linear-gradient(90deg,#1e40af,#0891b2);border-radius:2px;"></div></div>
+          </div>
+          <div style="flex:1;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Models</div>
+            <div style="font-size:20px;font-weight:700;color:#0f172a;">8</div>
+            <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-top:4px;"><div style="height:100%;width:40%;background:linear-gradient(90deg,#059669,#34d399);border-radius:2px;"></div></div>
+          </div>
+          <div style="flex:1;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Status</div>
+            <div style="margin-top:4px;"><span style="background:rgba(5,150,105,0.1);color:#059669;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;">Running</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B: Blue + Emerald (medical fresh) -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="letter">B</div>
+    <div class="content" style="width:100%;">
+      <h3 style="margin:0 0 4px;">Blue + Emerald — Medico fresco</h3>
+      <p style="margin:0 0 12px;color:#888;font-size:13px;">Azul brillante como primary con emerald como acento. Mas vibrante, transmite innovacion en salud</p>
+
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <div style="flex:1;height:50px;background:#1e3a5f;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Primary</span>#1E3A5F
+        </div>
+        <div style="flex:1;height:50px;background:#2563eb;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Secondary</span>#2563EB
+        </div>
+        <div style="flex:1;height:50px;background:#10b981;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Accent</span>#10B981
+        </div>
+        <div style="flex:1;height:50px;background:#059669;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Success</span>#059669
+        </div>
+        <div style="flex:1;height:50px;background:#f59e0b;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Warning</span>#F59E0B
+        </div>
+        <div style="flex:1;height:50px;background:#ef4444;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Danger</span>#EF4444
+        </div>
+      </div>
+
+      <!-- Mini mockup -->
+      <div style="background:#f0f9ff;border-radius:10px;overflow:hidden;border:1px solid #dbeafe;">
+        <div style="background:white;padding:8px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #dbeafe;">
+          <div style="width:20px;height:20px;background:linear-gradient(135deg,#2563eb,#10b981);border-radius:5px;"></div>
+          <span style="font-family:Inter,system-ui;font-size:11px;font-weight:700;color:#1e3a5f;">MediNet</span>
+          <span style="font-size:10px;color:#2563eb;margin-left:auto;background:rgba(37,99,235,0.08);padding:2px 8px;border-radius:4px;font-weight:600;">Dashboard</span>
+        </div>
+        <div style="padding:12px;display:flex;gap:8px;">
+          <div style="flex:1;background:white;border:1px solid #dbeafe;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Jobs</div>
+            <div style="font-size:20px;font-weight:700;color:#1e3a5f;">12</div>
+            <div style="height:3px;background:#dbeafe;border-radius:2px;margin-top:4px;"><div style="height:100%;width:65%;background:linear-gradient(90deg,#2563eb,#3b82f6);border-radius:2px;"></div></div>
+          </div>
+          <div style="flex:1;background:white;border:1px solid #dbeafe;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Models</div>
+            <div style="font-size:20px;font-weight:700;color:#1e3a5f;">8</div>
+            <div style="height:3px;background:#d1fae5;border-radius:2px;margin-top:4px;"><div style="height:100%;width:40%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:2px;"></div></div>
+          </div>
+          <div style="flex:1;background:white;border:1px solid #dbeafe;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Status</div>
+            <div style="margin-top:4px;"><span style="background:rgba(16,185,129,0.1);color:#059669;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;">Running</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION C: Cyan + Slate (scientific cool) -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="letter">C</div>
+    <div class="content" style="width:100%;">
+      <h3 style="margin:0 0 4px;">Cyan + Slate — Cientifico frio</h3>
+      <p style="margin:0 0 12px;color:#888;font-size:13px;">Paleta recomendada por UI/UX Pro Max para healthcare. Cyan calmado como primary, verde salud como acento</p>
+
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <div style="flex:1;height:50px;background:#164e63;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Primary</span>#164E63
+        </div>
+        <div style="flex:1;height:50px;background:#0891b2;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Secondary</span>#0891B2
+        </div>
+        <div style="flex:1;height:50px;background:#059669;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Accent</span>#059669
+        </div>
+        <div style="flex:1;height:50px;background:#16a34a;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Success</span>#16A34A
+        </div>
+        <div style="flex:1;height:50px;background:#d97706;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Warning</span>#D97706
+        </div>
+        <div style="flex:1;height:50px;background:#dc2626;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:9px;gap:2px;">
+          <span style="font-weight:600;">Danger</span>#DC2626
+        </div>
+      </div>
+
+      <!-- Mini mockup -->
+      <div style="background:#ecfeff;border-radius:10px;overflow:hidden;border:1px solid #a5f3fc;">
+        <div style="background:white;padding:8px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #cffafe;">
+          <div style="width:20px;height:20px;background:linear-gradient(135deg,#0891b2,#059669);border-radius:5px;"></div>
+          <span style="font-family:Inter,system-ui;font-size:11px;font-weight:700;color:#164e63;">MediNet</span>
+          <span style="font-size:10px;color:#0891b2;margin-left:auto;background:rgba(8,145,178,0.08);padding:2px 8px;border-radius:4px;font-weight:600;">Dashboard</span>
+        </div>
+        <div style="padding:12px;display:flex;gap:8px;">
+          <div style="flex:1;background:white;border:1px solid #cffafe;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Jobs</div>
+            <div style="font-size:20px;font-weight:700;color:#164e63;">12</div>
+            <div style="height:3px;background:#cffafe;border-radius:2px;margin-top:4px;"><div style="height:100%;width:65%;background:linear-gradient(90deg,#0891b2,#22d3ee);border-radius:2px;"></div></div>
+          </div>
+          <div style="flex:1;background:white;border:1px solid #cffafe;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Models</div>
+            <div style="font-size:20px;font-weight:700;color:#164e63;">8</div>
+            <div style="height:3px;background:#d1fae5;border-radius:2px;margin-top:4px;"><div style="height:100%;width:40%;background:linear-gradient(90deg,#059669,#34d399);border-radius:2px;"></div></div>
+          </div>
+          <div style="flex:1;background:white;border:1px solid #cffafe;border-radius:8px;padding:10px;">
+            <div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Status</div>
+            <div style="margin-top:4px;"><span style="background:rgba(5,150,105,0.1);color:#059669;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;">Running</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px;text-align:center;">Click en la que prefieras. Despues iteramos sobre la elegida.</p>
