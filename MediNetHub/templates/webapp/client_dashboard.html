@@ -252,7 +252,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {    
-    // Chart data from backend
     const chartDataElement = document.getElementById('chart-data');
     const chartData = JSON.parse(chartDataElement.textContent);
     
@@ -379,7 +378,6 @@ document.addEventListener('DOMContentLoaded', function() {
     clientPerformanceChart.update();
 
     
-    // Client data from backend
     const clientsData = {
         {% for client in clients %}
         '{{ client.id }}': {
@@ -418,19 +416,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Client selection functionality
     document.querySelectorAll('.client-list-item').forEach(item => {
         item.addEventListener('click', function() {
-            // Remove active class from all items
             document.querySelectorAll('.client-list-item').forEach(i => i.classList.remove('active'));
-            // Add active class to clicked item
             this.classList.add('active');
-            
-            // Update client details and chart
+
             const clientId = this.dataset.clientId;
             updateClientDetails(clientId);
             updateClientChart(clientId);
         });
     });
     
-    // Function to update client details
     function updateClientDetails(clientId) {
         const data = clientsData[clientId];
         if (!data) {
@@ -451,7 +445,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('client-rounds').textContent = data.rounds;
     }
     
-    // Function to update client chart with specific client data
     function updateClientChart(clientId) {
         const data = clientsData[clientId];
         if (!data || !data.roundsHistory) {
@@ -463,7 +456,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const accuracyData = [];
         const lossData = [];
         
-        // Sort rounds by number
         const sortedRounds = Object.keys(roundsHistory).sort((a, b) => parseInt(a) - parseInt(b));
         
         sortedRounds.forEach(roundNum => {
@@ -473,7 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
             lossData.push(roundData.loss || 0);
         });
         
-        // Update chart data
         clientPerformanceChart.data.labels = labels;
         clientPerformanceChart.data.datasets[0].data = accuracyData;
         clientPerformanceChart.data.datasets[1].data = lossData;
@@ -484,7 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
             clientPerformanceChart.options.scales.y1.max = Math.max(1, maxLoss * 1.1);
         }
         
-        // Update the chart
         clientPerformanceChart.update();
     }
 
@@ -500,14 +490,12 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Exporting client data...');
     });
     
-    // Initialize with first client
     const firstClientId = Object.keys(clientsData)[0];
     if (firstClientId) {
         console.log('Initializing with first client:', firstClientId);
         updateClientDetails(firstClientId);
     }
 
-    // Initialize Lucide icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }

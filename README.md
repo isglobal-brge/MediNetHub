@@ -1,9 +1,9 @@
 # MediNetHub
 
-![Version](https://img.shields.io/badge/version-0.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2-blue.svg)
 ![Status](https://img.shields.io/badge/status-in%20development-orange.svg)
 >[!WARNING]
->This software is still in development (v0.1)
+>This software is still in development (v0.2)
 
 ## Overview
 

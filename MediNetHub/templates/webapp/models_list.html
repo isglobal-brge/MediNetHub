@@ -206,9 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         item.addEventListener('click', function() {
             console.log('🔍 DEBUG: Model item clicked');
             
-            // Remove active class from all items
             modelItems.forEach(i => i.classList.remove('active'));
-            // Add active class to clicked item
             this.classList.add('active');
             
             const modelId = this.getAttribute('data-model-id');

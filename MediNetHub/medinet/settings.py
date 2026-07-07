@@ -47,17 +47,39 @@ def load_secret_key():
     if env_secret:
         return env_secret
 
-    # Fallback for local development only
-    # WARNING: This should NEVER be used in production
-    return 'django-insecure-LOCAL-DEV-ONLY-m#v&3r-oet$@=^o(vv47^s)z1s)l@#)_&)&!5o8r7x&z*q@7)e'
+    # No configured key. Only fall back to a known dev key when explicitly in
+    # development; otherwise REFUSE to start rather than run production with a
+    # publicly-known SECRET_KEY (session/CSRF/password-reset forgery → admin
+    # auth bypass). Set config/secret_key.txt or DJANGO_SECRET_KEY in prod.
+    if os.getenv('DJANGO_DEBUG', 'True').strip().lower() in ('1', 'true', 'yes'):
+        return 'django-insecure-LOCAL-DEV-ONLY-m#v&3r-oet$@=^o(vv47^s)z1s)l@#)_&)&!5o8r7x&z*q@7)e'
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "No SECRET_KEY configured. Provide config/secret_key.txt or the "
+        "DJANGO_SECRET_KEY environment variable. Refusing to start with the "
+        "known development key outside DEBUG mode."
+    )
 
 SECRET_KEY = load_secret_key()
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# TODO: Set this to False in production and configure logging
-DEBUG = True
+# DEBUG defaults to True for local dev; production MUST set DJANGO_DEBUG=False
+# (which also switches SECRET_KEY to fail-closed above and disables the dev key).
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').strip().lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['*'] # TODO: Restrict this to specific domains in production
+# ALLOWED_HOSTS is env-driven and fails closed in production. In DEBUG we allow
+# any host for dev convenience; otherwise DJANGO_ALLOWED_HOSTS (comma-separated)
+# MUST be set explicitly — no wildcard fallback in production.
+_allowed_hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS', '').strip()
+if _allowed_hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS must be set (comma-separated) when DEBUG is False. "
+        "Refusing to start with a wildcard ALLOWED_HOSTS in production."
+    )
 
 # Scheme used when the Hub calls MediNetNode REST endpoints.
 # 'http' is fine for local dev; set MEDINET_NODE_SCHEME=https (or rely on

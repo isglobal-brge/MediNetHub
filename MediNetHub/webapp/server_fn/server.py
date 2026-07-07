@@ -17,25 +17,54 @@ SERVER_CERT_PATH = CERTS_DIR / "server.crt"
 SERVER_KEY_PATH = CERTS_DIR / "server.key"
 
 
+def _insecure_transport_allowed():
+    """Plaintext Flower transport requires an explicit, deliberate opt-in (H5).
+
+    Returns True only when `FLOWER_ALLOW_INSECURE` is truthy or the app runs in
+    DEBUG (dev). In production (DEBUG=False, flag unset) this is False, so a
+    missing certificate or `FLOWER_SSL_ENABLED=false` can never silently
+    downgrade a clinical training round to plaintext — the server fails closed.
+    """
+    if os.environ.get('FLOWER_ALLOW_INSECURE', 'false').strip().lower() in ('1', 'true', 'yes'):
+        return True
+    try:
+        return bool(settings.DEBUG)
+    except Exception:
+        return False
+
+
 def load_ssl_certificates():
     """Load SSL certificates for secure Flower server communication.
 
+    Fails closed: if SSL cannot be established and plaintext is not explicitly
+    permitted (see `_insecure_transport_allowed`), raises instead of silently
+    downgrading to an insecure listener.
+
     Returns:
-        tuple: (ca_cert, server_cert, server_key) as bytes, or None if SSL is disabled/unavailable
+        tuple: (ca_cert, server_cert, server_key) as bytes, or None only when
+        insecure transport is explicitly allowed (dev).
     """
     ssl_enabled = os.environ.get('FLOWER_SSL_ENABLED', 'true').lower() == 'true'
 
     if not ssl_enabled:
-        print("SSL disabled via FLOWER_SSL_ENABLED=false")
-        return None
+        if _insecure_transport_allowed():
+            print("WARNING: SSL disabled via FLOWER_SSL_ENABLED=false and insecure transport explicitly allowed (dev only)")
+            return None
+        raise RuntimeError(
+            "FLOWER_SSL_ENABLED=false but plaintext transport is not permitted. "
+            "Refusing to start the Flower server in the clear (fail-closed, H5). "
+            "Set FLOWER_ALLOW_INSECURE=true (dev only) to override."
+        )
 
     if not all([CA_CERT_PATH.exists(), SERVER_CERT_PATH.exists(), SERVER_KEY_PATH.exists()]):
-        print(f"WARNING: SSL certificates not found in {CERTS_DIR}")
-        print(f"   CA cert exists: {CA_CERT_PATH.exists()}")
-        print(f"   Server cert exists: {SERVER_CERT_PATH.exists()}")
-        print(f"   Server key exists: {SERVER_KEY_PATH.exists()}")
-        print("Starting server without SSL (insecure mode)")
-        return None
+        if _insecure_transport_allowed():
+            print(f"WARNING: SSL certificates not found in {CERTS_DIR}; insecure transport explicitly allowed (dev only)")
+            return None
+        raise RuntimeError(
+            f"SSL certificates not found in {CERTS_DIR} and insecure transport is not permitted. "
+            "Refusing to start the Flower server in the clear (fail-closed, H5). "
+            "Provide ca.crt/server.crt/server.key, or set FLOWER_ALLOW_INSECURE=true (dev only)."
+        )
 
     try:
         ca_cert = CA_CERT_PATH.read_bytes()
@@ -45,9 +74,10 @@ def load_ssl_certificates():
         print(f"SSL certificates loaded from {CERTS_DIR}")
         return (ca_cert, server_cert, server_key)
     except Exception as e:
-        print(f"ERROR: Error loading SSL certificates: {e}")
-        print("Starting server without SSL (insecure mode)")
-        return None
+        if _insecure_transport_allowed():
+            print(f"ERROR: Error loading SSL certificates: {e}; insecure transport explicitly allowed (dev only)")
+            return None
+        raise RuntimeError(f"Error loading SSL certificates from {CERTS_DIR}: {e}") from e
 
 
 def get_ca_certificate():
@@ -250,7 +280,12 @@ def get_strategy(server_manager: ServerManager, config: Dict):
     model_type = model_config.get('metadata', {}).get('model_type', 'dl')
     framework = model_config.get('metadata', {}).get('framework', 'pytorch')
 
-    ml_algorithm = model_config.get('algorithm', {}).get('ml_algorithm', {}).get('type', '')
+    # ML Designer stores the algorithm under architecture.ml_algorithm; keep the
+    # legacy top-level 'algorithm' location as fallback.
+    ml_algorithm = (
+        model_config.get('architecture', {}).get('ml_algorithm', {}).get('type', '')
+        or model_config.get('algorithm', {}).get('ml_algorithm', {}).get('type', '')
+    )
 
     print(f"Detecting strategy: model_type='{model_type}', framework='{framework}', ml_algorithm='{ml_algorithm}'")
 

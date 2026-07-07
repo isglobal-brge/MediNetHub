@@ -921,14 +921,12 @@
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
-        // Preview config JSON button
         document.getElementById('preview-config-json-btn').addEventListener('click', function() {
             updateConfigJsonPreview();
             const configJsonModal = new bootstrap.Modal(document.getElementById('configJsonModal'));
             configJsonModal.show();
         });
         
-        // Copy config JSON button
         document.getElementById('copy-config-json-btn').addEventListener('click', function() {
             const jsonText = document.getElementById('config-json-preview').textContent;
             navigator.clipboard.writeText(jsonText).then(function() {
@@ -936,7 +934,6 @@
             });
         });
         
-        // Start training button
         document.getElementById('start-training-btn').addEventListener('click', function() {
             const form = document.getElementById('trainingConfigForm');
             if (!form.checkValidity()) {
@@ -1065,7 +1062,6 @@
             document.getElementById('config-json-preview').textContent = JSON.stringify(unifiedConfig, null, 2);
         }
         
-        // Refresh jobs button
         document.getElementById('refresh-jobs-btn').addEventListener('click', function() {
             window.location.reload();
         });
@@ -1101,7 +1097,6 @@
                             progressBar.textContent = `${progress}%`;
                         }
 
-                        // Update status badge
                         const statusMap = {
                             'pending': { class: 'warning', text: 'Pending' },
                             'server_ready': { class: 'info', text: 'Server_ready' },
@@ -1129,7 +1124,6 @@
         }
 
         function startProgressPolling() {
-            // Get all job rows
             const jobRows = document.querySelectorAll('tbody tr');
             const activeJobs = [];
 
@@ -1207,7 +1201,6 @@
             }
         });
         
-        // View job details button
         document.querySelectorAll('.view-job-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const jobId = this.getAttribute('data-job-id');
@@ -1227,7 +1220,6 @@
             });
         }
         
-        // Download model button
         document.getElementById('download-model-btn').addEventListener('click', function() {
             const jobId = document.getElementById('export-job-id').value;
             const format = document.getElementById('export-format').value;
@@ -1276,15 +1268,12 @@
             document.getElementById('jobDetailsContent').style.display = 'none';
             document.getElementById('jobDetailsError').style.display = 'none';
             
-            // Fetch job details
             fetch(`/api/job-details/${jobId}/`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Hide loading
                         document.getElementById('jobDetailsLoading').style.display = 'none';
-                        
-                        // Populate details
+
                         document.getElementById('job-detail-name').textContent = data.job.name;
                         document.getElementById('job-detail-description').textContent = data.job.description || '-';
                         document.getElementById('job-detail-model').textContent = data.job.model_name;
@@ -1292,7 +1281,6 @@
                         document.getElementById('job-detail-created').textContent = data.job.created_at;
                         document.getElementById('job-detail-dataset').textContent = data.job.dataset || '-';
                         
-                        // Populate metrics table
                         const metricsTable = document.getElementById('job-metrics-table');
                         metricsTable.innerHTML = '';
                         
@@ -1312,10 +1300,8 @@
                             metricsTable.appendChild(row);
                         }
                         
-                        // Populate config
                         document.getElementById('job-config-json').textContent = JSON.stringify(data.job.config, null, 2);
-                        
-                        // Show content
+
                         document.getElementById('jobDetailsContent').style.display = 'block';
                     } else {
                         // Show error
@@ -1913,7 +1899,6 @@
             refreshBudgets();
         }
 
-        // Refresh button
         document.getElementById('refresh-budget-btn').addEventListener('click', function () {
             _budgetByNode = {};
             refreshBudgets();
